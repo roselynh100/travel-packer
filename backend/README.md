@@ -3,7 +3,7 @@
 Clone this repo:
 
 ```bash
-git clone https://github.com/yourusername/yourrepo.git
+git clone https://github.com/roselynh100/travel-packer
 ```
 
 **You do not need Python installed on your computer!** `uv` will handle it for us :)
