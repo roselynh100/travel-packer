@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Laptop",
+    "baseImportance": 80,
+    "weight_kg": 1.5,
+    "volume_L": 3.0
+  },
+  {
+    "name": "Laptop Charger",
+    "baseImportance": 80,
+    "weight_kg": 0.3,
+    "volume_L": 0.5
+  },
+  {
+    "name": "Toothbrush",
+    "baseImportance": 90,
+    "weight_kg": 0.05,
+    "volume_L": 0.1
+  },
+  {
+    "name": "Toothpaste",
+    "baseImportance": 90,
+    "weight_kg": 0.1,
+    "volume_L": 0.1
+  },
+  {
+    "name": "Clothing",
+    "baseImportance": 95,
+    "weight_kg": 2.0,
+    "volume_L": 5.0
+  },
+  {
+    "name": "Coat",
+    "baseImportance": 70,
+    "weight_kg": 1.2,
+    "volume_L": 4.0
+  },
+  {
+    "name": "Sunglasses",
+    "baseImportance": 30,
+    "weight_kg": 0.05,
+    "volume_L": 0.2
+  },
+  {
+    "name": "Snack",
+    "baseImportance": 20,
+    "weight_kg": 0.2,
+    "volume_L": 0.3
+  },
+  {
+    "name": "Umbrella",
+    "baseImportance": 35,
+    "weight_kg": 0.4,
+    "volume_L": 0.6
+  },
+  {
+    "name": "Socks",
+    "baseImportance": 95,
+    "weight_kg": 0.15,
+    "volume_L": 0.3
+  }
+]
