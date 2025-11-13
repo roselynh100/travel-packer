@@ -3,60 +3,91 @@
     "name": "Laptop",
     "baseImportance": 80,
     "weight_kg": 1.5,
-    "volume_L": 3.0
+    "volume_L": 3.0,
+    "height_cm": 1.5
   },
   {
     "name": "Laptop Charger",
-    "baseImportance": 80,
+    "baseImportance": 75,
     "weight_kg": 0.3,
-    "volume_L": 0.5
+    "volume_L": 0.5,
+    "height_cm": 5.0
   },
   {
     "name": "Toothbrush",
     "baseImportance": 90,
     "weight_kg": 0.05,
-    "volume_L": 0.1
+    "volume_L": 0.1,
+    "height_cm": 1.0
   },
   {
     "name": "Toothpaste",
     "baseImportance": 90,
     "weight_kg": 0.1,
-    "volume_L": 0.1
+    "volume_L": 0.1,
+    "height_cm": 2.0
   },
   {
-    "name": "Clothing",
+    "name": "Shirt",
     "baseImportance": 95,
-    "weight_kg": 2.0,
-    "volume_L": 5.0
+    "weight_kg": 0.2,
+    "volume_L": 0.6,
+    "height_cm": 1.0
+  },
+  {
+    "name": "Pants",
+    "baseImportance": 95,
+    "weight_kg": 0.3,
+    "volume_L": 0.7,
+    "height_cm": 1.0
+  },
+  {
+    "name": "Shoes",
+    "baseImportance": 95,
+    "weight_kg": 0.4,
+    "volume_L": 0.7,
+    "height_cm": 10.0
+  },
+  {
+    "name": "Shoes",
+    "baseImportance": 95,
+    "weight_kg": 0.4,
+    "volume_L": 0.7,
+    "height_cm": 10.0
   },
   {
     "name": "Coat",
     "baseImportance": 70,
     "weight_kg": 1.2,
-    "volume_L": 4.0
+    "volume_L": 4.0,
+    "height_cm": 15.0
   },
   {
     "name": "Sunglasses",
     "baseImportance": 30,
     "weight_kg": 0.05,
-    "volume_L": 0.2
+    "volume_L": 0.2,
+    "height_cm": 5.0
   },
   {
     "name": "Snack",
     "baseImportance": 20,
     "weight_kg": 0.2,
-    "volume_L": 0.3
+    "volume_L": 0.3,
+    "height_cm": 2.0
   },
   {
     "name": "Umbrella",
     "baseImportance": 35,
     "weight_kg": 0.4,
-    "volume_L": 0.6
+    "volume_L": 0.6,
+    "height_cm": 8.0
   },
   {
     "name": "Socks",
     "baseImportance": 95,
     "weight_kg": 0.15,
-    "volume_L": 0.3
+    "volume_L": 0.3,
+    "height_cm": 2.0
   }
 ]
