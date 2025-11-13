@@ -4,13 +4,25 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+class BoundingBox(BaseModel):
+    x_min: float
+    y_min: float
+    x_max: float
+    y_max: float
+
+class Dimensions(BaseModel):
+    length: float
+    width: float
+    height: float
 
 class Item(BaseModel):
     item_id: str = Field(default_factory=lambda: str(uuid4()))
-    name: Optional[str] = None
+    item_name: Optional[str] = None
+    class_name: Optional[str] = None
+    bounding_boxes: Optional[List[BoundingBox]] = None
     weight_kg: Optional[float] = None
     confidence: Optional[float] = None
-    dimensions_cm: Optional[Dict[str, float]] = None  # {length, width, height}
+    dimensions_cm: Optional[Dimensions] = None
     estimated_volume_cm3: Optional[float] = None
 
 
