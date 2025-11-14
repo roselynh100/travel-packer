@@ -58,7 +58,7 @@ class TestReadWeight(unittest.TestCase):
     def test_read_weight_update_existing_item(self, mock_get_weight):
         """Test updating an existing item's weight."""
         from app.models import Item
-        existing_item = Item(item_id="existing-item-123", name="Test Item", weight_kg=0.3)
+        existing_item = Item(item_id="existing-item-123", item_name="Test Item", weight_kg=0.3)
         item_store["existing-item-123"] = existing_item
 
         from app.routes.trip import trips_store
@@ -81,7 +81,7 @@ class TestReadWeight(unittest.TestCase):
         # Verify item was updated (not replaced)
         updated_item = item_store["existing-item-123"]
         self.assertEqual(updated_item.weight_kg, 0.7)
-        self.assertEqual(updated_item.name, "Test Item")  # Other fields preserved
+        self.assertEqual(updated_item.item_name, "Test Item")  # Other fields preserved
 
     @patch('app.routes.item.get_weight')
     def test_read_weight_scale_error(self, mock_get_weight):
@@ -133,6 +133,168 @@ class TestReadWeight(unittest.TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+class TestDetectEndpoint(unittest.TestCase):
+    """Test cases for the /items/detect endpoint."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.client = TestClient(app)
+        item_store.clear()
+        from app.routes.trip import trips_store
+        trips_store.clear()
+
+    def tearDown(self):
+        item_store.clear()
+        from app.routes.trip import trips_store
+        trips_store.clear()
+
+    @patch("app.routes.item.detect_objects_yolo")
+    def test_detect_creates_new_item(self, mock_yolo):
+        """Test creating a new item via image detection."""
+        mock_yolo.return_value = {
+            "item_name": "Shoes",
+            "class": "shoe",
+            "confidence_score": 0.85,
+            "bounding_boxes": [
+                [10.1, 20.2, 50.5, 80.8]
+            ]
+        }
+
+        test_image = ("test_image.jpg", b"fake-image-bytes", "image/jpeg")
+        response = self.client.post(
+            "/items/detect",
+            files={"image": test_image}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertEqual(data["item_name"], "Shoes")
+        self.assertEqual(data["class_name"], "shoe")
+        self.assertEqual(data["confidence"], 0.85)
+        self.assertEqual(len(data["bounding_boxes"]), 1)
+
+        bbox = data["bounding_boxes"][0]
+        self.assertEqual(bbox["x_min"], 10.1)
+        self.assertEqual(bbox["y_min"], 20.2)
+
+        # Item should be stored
+        item_id = data["item_id"]
+        self.assertIn(item_id, item_store)
+
+    @patch("app.routes.item.detect_objects_yolo")
+    def test_detect_updates_existing_item(self, mock_yolo):
+        """Test updating an existing item."""
+        from app.models import Item
+        existing_item = Item(
+            item_id="abc123",
+            item_name="OldName",
+            class_name="old_class",
+            confidence=0.55,
+        )
+        item_store["abc123"] = existing_item
+
+        mock_yolo.return_value = {
+            "item_name": "Backpack",
+            "class": "backpack",
+            "confidence_score": 0.95,
+            "bounding_boxes": [
+                [0, 0, 100, 100]
+            ]
+        }
+
+        test_image = ("image.jpg", b"bytes", "image/jpeg")
+        response = self.client.post(
+            "/items/detect?item_id=abc123",
+            files={"image": test_image}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        updated = response.json()
+
+        # Check updated fields
+        self.assertEqual(updated["item_name"], "Backpack")
+        self.assertEqual(updated["class_name"], "backpack")
+        self.assertEqual(updated["confidence"], 0.95)
+
+        # Original fields replaced correctly
+        self.assertIn("bounding_boxes", updated)
+        self.assertEqual(updated["bounding_boxes"][0]["x_min"], 0)
+
+        # Verify item_store is updated
+        stored = item_store["abc123"]
+        self.assertEqual(stored.item_name, "Backpack")
+
+    @patch("app.routes.item.detect_objects_yolo")
+    def test_detect_associates_with_trip(self, mock_yolo):
+        """Test that detection associates an item with a trip."""
+        mock_yolo.return_value = {
+            "item_name": "Laptop",
+            "class": "laptop",
+            "confidence_score": 0.98,
+            "bounding_boxes": [
+                [5, 5, 150, 200]
+            ]
+        }
+
+        # Create trip
+        from app.routes.trip import trips_store
+        from app.models import Trip
+        trip = Trip(trip_id="trip123", destination="Paris", duration_days=3, doing_laundry=True)
+        trips_store["trip123"] = trip
+
+        test_image = ("img.png", b"fake", "image/png")
+        response = self.client.post(
+            "/items/detect?trip_id=trip123",
+            files={"image": test_image}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        item_id = response.json()["item_id"]
+
+        # Should be associated with trip
+        self.assertIn(item_id, trips_store["trip123"].items)
+
+    @patch("app.routes.item.detect_objects_yolo")
+    def test_detect_invalid_yolo_output(self, mock_yolo):
+        """Test handling missing fields in YOLO output."""
+        # Missing bounding_boxes
+        mock_yolo.return_value = {
+            "item_name": "Shirt",
+            "class": "shirt",
+            "confidence_score": 0.77 
+        }
+
+        test_image = ("test.png", b"img", "image/png")
+        response = self.client.post(
+            "/items/detect",
+            files={"image": test_image}
+        )
+
+        self.assertEqual(response.status_code, 500)
+        data = response.json()
+        self.assertIn("detail", data)
+
+    @patch("app.routes.item.detect_objects_yolo")
+    def test_detect_malformed_bbox(self, mock_yolo):
+        """Test handling malformed bounding box formats."""
+        mock_yolo.return_value = {
+            "item_name": "Bottle",
+            "class": "bottle",
+            "confidence_score": 0.9,
+            "bounding_boxes": [
+                [1, 2, 3]  # missing 4th coordinate
+            ]
+        }
+
+        test_image = ("test.png", b"img", "image/png")
+        response = self.client.post(
+            "/items/detect",
+            files={"image": test_image}
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("Invalid bounding box", response.text)
 
 if __name__ == '__main__':
     unittest.main()
