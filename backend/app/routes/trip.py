@@ -68,6 +68,8 @@ def get_trip_items(trip_id: str):
         raise HTTPException(status_code=404, detail="Trip not found")
     
     trip = trips_store[trip_id]
+    if trip.items is None:
+        return []
     trip_items = [items_store[id] for id in trip.items if id in items_store]
     
     return trip_items
@@ -81,7 +83,10 @@ def get_packing_recommendation(trip_id: str):
 
     trip = trips_store[trip_id]
 
-    trip_items = [items_store[id] for id in trip.items if id in items_store]
+    if trip.items is None:
+        trip_items = []
+    else:
+        trip_items = [items_store[id] for id in trip.items if id in items_store]
 
     result = packing_algorithm(trip_items)
 

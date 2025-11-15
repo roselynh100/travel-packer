@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from hardware.readscale import get_weight
 from computer_vision.cv import detect_objects_yolo
-from app.models import Item, BoundingBox
+from app.models import Item, ItemUpdate, YoloResult
 from app.state.db import items_store, trips_store
 
 router = APIRouter()
@@ -20,6 +20,8 @@ def create_item(item: Item, trip_id: Optional[str] = Query(None)):
     if trip_id:
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
+        if trips_store[trip_id].items is None:
+            trips_store[trip_id].items = []
         if item.item_id not in trips_store[trip_id].items:
             trips_store[trip_id].items.append(item.item_id)
     
@@ -29,7 +31,7 @@ def create_item(item: Item, trip_id: Optional[str] = Query(None)):
 @router.get("/", response_model=List[Item])
 def get_items():
     """Get all items."""
-    return list[Item](items_store.values())
+    return list(items_store.values())
 
 @router.get("/{item_id}", response_model=Item)
 def get_item(item_id: str):
@@ -38,16 +40,18 @@ def get_item(item_id: str):
         raise HTTPException(status_code=404, detail="Item not found")
     return items_store[item_id]
 
-
-@router.put("/{item_id}", response_model=Item)
-def update_item(item_id: str, item: Item):
-    """Update an item."""
+@router.patch("/{item_id}", response_model=Item)
+def patch_item(item_id: str, patch: ItemUpdate):
     if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
-    item.item_id = item_id  # Ensure ID matches
-    items_store[item_id] = item
-    return item
 
+    item = items_store[item_id]
+
+    patch_data = patch.model_dump(exclude_unset=True)
+    updated = item.model_copy(update=patch_data)
+
+    items_store[item_id] = updated
+    return updated
 
 @router.delete("/{item_id}")
 def delete_item(item_id: str):
@@ -57,7 +61,7 @@ def delete_item(item_id: str):
     
     # Remove item from trip's items list
     for trip in trips_store.values():
-        if item_id in trip.items:
+        if trip.items is not None and item_id in trip.items:
             trip.items.remove(item_id)
     
     del items_store[item_id]
@@ -91,6 +95,8 @@ def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None))
     if trip_id:
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
+        if trips_store[trip_id].items is None:
+            trips_store[trip_id].items = []
         if item.item_id not in trips_store[trip_id].items:
             trips_store[trip_id].items.append(item.item_id)
 
@@ -110,59 +116,38 @@ async def detect_item_from_image(
     image_bytes = await image.read()
 
     try:
-        yolo_result = detect_objects_yolo(image_bytes)
+        raw_output = detect_objects_yolo(image_bytes)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CV model error: {str(e)}")
 
-    required_fields = ["confidence_score", "bounding_boxes", "class", "item_name"]
-    if not all(field in yolo_result for field in required_fields):
-        raise HTTPException(
-            status_code=500, 
-            detail=f"YOLO output missing fields: {yolo_result}"
-        )
+    try:
+        parsed = YoloResult.model_validate(raw_output)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"YOLO output validation failed: {str(e)}")
 
-    confidence = yolo_result["confidence_score"]
-    class_name = yolo_result["class"]
-    item_name = yolo_result["item_name"]
-    bounding_boxes = yolo_result["bounding_boxes"]
-    
-    # Validate bounding boxes format
-    for bb in bounding_boxes:
-        if not isinstance(bb, list) or len(bb) != 4:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Invalid bounding box format: {bb}. Expected list of 4 numbers [x_min, y_min, x_max, y_max]"
-            )
-    
-    bounding_boxes: List[BoundingBox] = [
-        BoundingBox(
-            x_min=bb[0],
-            y_min=bb[1],
-            x_max=bb[2],
-            y_max=bb[3]
-        )
-        for bb in bounding_boxes
-    ]
+    parsed_bboxes = parsed.bounding_boxes
 
     if item_id and item_id in items_store:
         item = items_store[item_id]
-        item.item_name = item_name
-        item.class_name = class_name
-        item.confidence = confidence
-        item.bounding_boxes = bounding_boxes
+        item.item_name = parsed.item_name
+        item.class_name = parsed.class_name
+        item.confidence = parsed.confidence_score
+        item.bounding_boxes = parsed_bboxes
 
     else:
         item = Item(
-            item_name=item_name,
-            class_name=class_name,
-            confidence=confidence,
-            bounding_boxes=bounding_boxes,
+            item_name=parsed.item_name,
+            class_name=parsed.class_name,
+            confidence=parsed.confidence_score,
+            bounding_boxes=parsed_bboxes,
         )
         items_store[item.item_id] = item
 
     if trip_id:
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
+        if trips_store[trip_id].items is None:
+            trips_store[trip_id].items = []
         if item.item_id not in trips_store[trip_id].items:
             trips_store[trip_id].items.append(item.item_id)
 

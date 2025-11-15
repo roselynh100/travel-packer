@@ -1,7 +1,7 @@
 import unittest
 import sys
 from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 import json
 
@@ -9,7 +9,124 @@ sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
 from app.state.db import items_store, trips_store
+from app.models import Item
 
+class TestItemEndpoints(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        items_store.clear()
+
+    def tearDown(self):
+        items_store.clear()
+
+    def test_get_item_success(self):
+        """GET /items/{id} returns the item."""
+        item = Item(item_id="123", item_name="Bottle", weight_kg=1.2)
+        items_store["123"] = item
+
+        response = self.client.get("/items/123")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["item_id"], "123")
+        self.assertEqual(data["item_name"], "Bottle")
+        self.assertEqual(data["weight_kg"], 1.2)
+
+    def test_get_item_not_found(self):
+        """GET /items/{id} returns 404 if not found."""
+        response = self.client.get("/items/does-not-exist")
+        self.assertEqual(response.status_code, 404)
+
+    def test_patch_item_partial_update(self):
+        """PATCH /items/{id} should update only provided fields."""
+        original = Item(
+            item_id="abc",
+            item_name="Shirt",
+            class_name="clothing",
+            weight_kg=0.3,
+            confidence=0.8
+        )
+        items_store["abc"] = original
+
+        patch_body = {
+            "item_name": "T-Shirt"
+            # no other fields -> should preserve existing ones
+        }
+
+        response = self.client.patch("/items/abc", json=patch_body)
+        self.assertEqual(response.status_code, 200)
+
+        updated = response.json()
+
+        self.assertEqual(updated["item_name"], "T-Shirt")
+        self.assertEqual(updated["class_name"], "clothing")  # preserved
+        self.assertEqual(updated["weight_kg"], 0.3)
+        self.assertEqual(updated["confidence"], 0.8)
+
+        stored = items_store["abc"]
+        self.assertEqual(stored.item_name, "T-Shirt")
+
+    def test_patch_item_set_field_to_null(self):
+        """PATCH /items/{id} with explicit null should overwrite field."""
+        original = Item(
+            item_id="def",
+            item_name="Laptop",
+            weight_kg=1.5,
+            confidence=0.99
+        )
+        items_store["def"] = original
+
+        patch_body = {
+            "weight_kg": None
+        }
+
+        response = self.client.patch("/items/def", json=patch_body)
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIsNone(data["weight_kg"])       # Explicit null applied
+        self.assertEqual(data["confidence"], 0.99)  # preserved
+
+    def test_patch_item_not_found(self):
+        """PATCH /items/{id} returns 404 for missing item."""
+        response = self.client.patch("/items/missing", json={"item_name": "Foo"})
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_item_success(self):
+        """DELETE /items/{id} should remove item from store."""
+        item = Item(item_id="del1", item_name="Socks")
+        items_store["del1"] = item
+
+        response = self.client.delete("/items/del1")
+        self.assertEqual(response.status_code, 200)
+
+        self.assertNotIn("del1", items_store)
+
+    def test_delete_item_not_found(self):
+        """DELETE /items/{id} returns 404 if missing."""
+        response = self.client.delete("/items/404")
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_item_removes_from_trip(self):
+        """DELETE should also remove item_id from any trip that contains it."""
+        from app.state.db import trips_store
+        from app.models import Trip
+
+        trips_store.clear()
+        trips_store["t1"] = Trip(
+            trip_id="t1",
+            destination="Paris",
+            duration_days=5,
+            doing_laundry=False,
+            items=["x1"]
+        )
+
+        items_store["x1"] = Item(item_id="x1", item_name="Camera")
+
+        response = self.client.delete("/items/x1")
+        self.assertEqual(response.status_code, 200)
+
+        self.assertNotIn("x1", trips_store["t1"].items)
 
 class TestReadWeight(unittest.TestCase):
     """Test cases for the read_weight endpoint."""
