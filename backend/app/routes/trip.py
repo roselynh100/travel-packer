@@ -98,4 +98,6 @@ def get_packing_recommendation(trip_id: str):
 
     result = packing_algorithm(trip_items)
 
-    return result
+    items = [Item(**d) for d in result]
+
+    return items
