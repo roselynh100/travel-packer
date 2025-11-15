@@ -6,8 +6,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.routes.item import item_store
-from app.routes.trip import trips_store
+from app.state.db import items_store, trips_store
 from app.models import Trip, Item
 
 # TO-DO: currently, im using just the weight to recommend what to remove, so when the actual
@@ -18,11 +17,11 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(app)
-        item_store.clear()
+        items_store.clear()
         trips_store.clear()
 
     def tearDown(self):
-        item_store.clear()
+        items_store.clear()
         trips_store.clear()
 
     def test_integration_recommends_heavy_items(self):
@@ -38,8 +37,8 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
 
         heavy = Item(item_id="a", item_name="Boots", weight_kg=4.2)
         light = Item(item_id="b", item_name="Towel", weight_kg=0.4)
-        item_store["a"] = heavy
-        item_store["b"] = light
+        items_store["a"] = heavy
+        items_store["b"] = light
         trip.items = ["a", "b"]
 
         response = self.client.post("/trips/tripX/packing-recommendation")
@@ -60,8 +59,8 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
         )
         trips_store["tripY"] = trip
 
-        item_store["a"] = Item(item_id="a", item_name="Shirt", weight_kg=1.0)
-        item_store["b"] = Item(item_id="b", item_name="Shorts", weight_kg=0.5)
+        items_store["a"] = Item(item_id="a", item_name="Shirt", weight_kg=1.0)
+        items_store["b"] = Item(item_id="b", item_name="Shorts", weight_kg=0.5)
         trip.items = ["a", "b"]
 
         response = self.client.post("/trips/tripY/packing-recommendation")

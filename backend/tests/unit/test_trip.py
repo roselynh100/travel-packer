@@ -7,8 +7,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.routes.item import item_store
-from app.routes.trip import trips_store
+from app.state.db import items_store, trips_store
 from app.models import Trip, Item
 
 class TestPackingRecommendationEndpoint(unittest.TestCase):
@@ -16,11 +15,11 @@ class TestPackingRecommendationEndpoint(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(app)
-        item_store.clear()
+        items_store.clear()
         trips_store.clear()
 
     def tearDown(self):
-        item_store.clear()
+        items_store.clear()
         trips_store.clear()
 
     @patch("app.routes.trip.packing_algorithm")
@@ -37,8 +36,8 @@ class TestPackingRecommendationEndpoint(unittest.TestCase):
 
         i1 = Item(item_id="a", item_name="Boots", weight_kg=4.0)
         i2 = Item(item_id="b", item_name="Socks", weight_kg=0.2)
-        item_store["a"] = i1
-        item_store["b"] = i2
+        items_store["a"] = i1
+        items_store["b"] = i2
         trip.items = ["a", "b"]
 
         mock_algo.return_value = [i1.model_dump()]
@@ -64,7 +63,7 @@ class TestPackingRecommendationEndpoint(unittest.TestCase):
         )
         trips_store["t2"] = trip
 
-        item_store["x"] = Item(item_id="x", item_name="Hat", weight_kg=0.5)
+        items_store["x"] = Item(item_id="x", item_name="Hat", weight_kg=0.5)
         trip.items = ["x"]
 
         mock_algo.return_value = []
@@ -81,7 +80,7 @@ class TestPackingRecommendationEndpoint(unittest.TestCase):
 
     @patch("app.routes.trip.packing_algorithm")
     def test_recommendation_ignores_missing_items(self, mock_algo):
-        """Trip references an item not present in item_store."""
+        """Trip references an item not present in items_store."""
 
         trip = Trip(
             trip_id="trip3",
@@ -93,7 +92,7 @@ class TestPackingRecommendationEndpoint(unittest.TestCase):
 
         # Trip references one real & one missing item
         real_item = Item(item_id="real", item_name="Laptop", weight_kg=2.5)
-        item_store["real"] = real_item
+        items_store["real"] = real_item
         trip.items = ["real", "ghost123"]
 
         mock_algo.return_value = [real_item.model_dump()]
@@ -106,6 +105,68 @@ class TestPackingRecommendationEndpoint(unittest.TestCase):
         args = mock_algo.call_args[0][0]
         self.assertEqual(len(args), 1)
         self.assertEqual(args[0].item_id, "real")
+
+class TestUpdatingTrip(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        trips_store.clear()
+
+        self.trip_id = "t1"
+        self.initial_trip = Trip(
+            trip_id=self.trip_id,
+            destination="Tokyo",
+            duration_days=5,
+            doing_laundry=False,
+            items=["item1", "item2"],
+        )
+        trips_store[self.trip_id] = self.initial_trip
+
+    def tearDown(self):
+        trips_store.clear()
+
+    def test_update_trip_omits_items_keeps_existing(self):
+        """If `items` is omitted, existing list should be preserved."""
+
+        payload = {
+            "destination": "Kyoto",
+            "duration_days": 7,
+            "doing_laundry": True
+        }
+
+        response = self.client.put(f"/trips/{self.trip_id}", json=payload)
+        self.assertEqual(response.status_code, 200)
+
+        updated = response.json()
+
+        self.assertEqual(updated["items"], ["item1", "item2"])
+
+        self.assertEqual(updated["destination"], "Kyoto")
+        self.assertEqual(updated["duration_days"], 7)
+        self.assertEqual(updated["doing_laundry"], True)
+
+    def test_update_trip_sets_items_to_empty_list(self):
+        """If client sends items=[], the list should become empty."""
+
+        from app.state.db import trips_store
+        trips_store[self.trip_id].items = ["itemA"]
+
+        payload = {
+            "destination": "Osaka",
+            "duration_days": 3,
+            "doing_laundry": False,
+            "items": []   # Explicit empty
+        }
+
+        response = self.client.put(f"/trips/{self.trip_id}", json=payload)
+        self.assertEqual(response.status_code, 200)
+
+        updated = response.json()
+
+        self.assertEqual(updated["items"], [])
+
+        self.assertEqual(updated["destination"], "Osaka")
+        self.assertEqual(updated["duration_days"], 3)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -2,10 +2,9 @@ from fastapi import APIRouter, HTTPException
 from typing import List, Dict
 
 from app.models import User, Trip
+from app.state.db import users_store, trips_store
 
 router = APIRouter()
-
-users_store: Dict[str, User] = {}  # user_id -> User
 
 
 @router.post("/", response_model=User)
@@ -53,8 +52,6 @@ def get_user_trips(user_id: str):
     """Get all trips for a specific user."""
     if user_id not in users_store:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    from app.routes.trip import trips_store
     
     user = users_store[user_id]
     trips = []

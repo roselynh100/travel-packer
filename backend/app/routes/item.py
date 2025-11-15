@@ -6,20 +6,18 @@ from uuid import uuid4
 from hardware.readscale import get_weight
 from computer_vision.cv import detect_objects_yolo
 from app.models import Item, BoundingBox
+from app.state.db import items_store, trips_store
 
 router = APIRouter()
-
-item_store: Dict[str, Item] = {}  # item_id -> Item
 
 
 @router.post("/", response_model=Item)
 def create_item(item: Item, trip_id: Optional[str] = Query(None)):
     """Create a new item and optionally associate it with a trip."""
-    item_store[item.item_id] = item
+    items_store[item.item_id] = item
     
     # Associate item with trip if trip_id provided
     if trip_id:
-        from app.routes.trip import trips_store
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
         if item.item_id not in trips_store[trip_id].items:
@@ -31,39 +29,38 @@ def create_item(item: Item, trip_id: Optional[str] = Query(None)):
 @router.get("/", response_model=List[Item])
 def get_items():
     """Get all items."""
-    return list[Item](item_store.values())
+    return list[Item](items_store.values())
 
 @router.get("/{item_id}", response_model=Item)
 def get_item(item_id: str):
     """Get a specific item by ID."""
-    if item_id not in item_store:
+    if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
-    return item_store[item_id]
+    return items_store[item_id]
 
 
 @router.put("/{item_id}", response_model=Item)
 def update_item(item_id: str, item: Item):
     """Update an item."""
-    if item_id not in item_store:
+    if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
     item.item_id = item_id  # Ensure ID matches
-    item_store[item_id] = item
+    items_store[item_id] = item
     return item
 
 
 @router.delete("/{item_id}")
 def delete_item(item_id: str):
     """Delete an item."""
-    if item_id not in item_store:
+    if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
     
     # Remove item from trip's items list
-    from app.routes.trip import trips_store
     for trip in trips_store.values():
         if item_id in trip.items:
             trip.items.remove(item_id)
     
-    del item_store[item_id]
+    del items_store[item_id]
     return {"message": "Item deleted successfully"}
 
 
@@ -81,18 +78,17 @@ def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None))
     if weight_kg is None:
         raise HTTPException(status_code=500, detail="Failed to get weight reading from the scale")
     
-    if item_id and item_id in item_store:
-        item = item_store[item_id]
+    if item_id and item_id in items_store:
+        item = items_store[item_id]
         item.weight_kg = weight_kg
     else:
         if item_id is None:
             item = Item(weight_kg=weight_kg)  # item_id will be auto-generated
         else:
             item = Item(item_id=item_id, weight_kg=weight_kg)
-        item_store[item.item_id] = item
+        items_store[item.item_id] = item
     
     if trip_id:
-        from app.routes.trip import trips_store
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
         if item.item_id not in trips_store[trip_id].items:
@@ -148,8 +144,8 @@ async def detect_item_from_image(
         for bb in bounding_boxes
     ]
 
-    if item_id and item_id in item_store:
-        item = item_store[item_id]
+    if item_id and item_id in items_store:
+        item = items_store[item_id]
         item.item_name = item_name
         item.class_name = class_name
         item.confidence = confidence
@@ -162,10 +158,9 @@ async def detect_item_from_image(
             confidence=confidence,
             bounding_boxes=bounding_boxes,
         )
-        item_store[item.item_id] = item
+        items_store[item.item_id] = item
 
     if trip_id:
-        from app.routes.trip import trips_store
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
         if item.item_id not in trips_store[trip_id].items:

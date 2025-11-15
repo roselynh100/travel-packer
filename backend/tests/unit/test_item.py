@@ -8,7 +8,7 @@ import json
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.routes.item import item_store
+from app.state.db import items_store, trips_store
 
 
 class TestReadWeight(unittest.TestCase):
@@ -17,15 +17,13 @@ class TestReadWeight(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.client = TestClient(app)
-        item_store.clear()
+        items_store.clear()
         # Also clear trips store to avoid test interference
-        from app.routes.trip import trips_store
         trips_store.clear()
 
     def tearDown(self):
         """Clean up after each test."""
-        item_store.clear()
-        from app.routes.trip import trips_store
+        items_store.clear()
         trips_store.clear()
 
     @patch('app.routes.item.get_weight')
@@ -35,7 +33,6 @@ class TestReadWeight(unittest.TestCase):
             "total_weight_kg": 0.5
         })
 
-        from app.routes.trip import trips_store
         from app.models import Trip
         test_trip = Trip(trip_id="test-trip-123", destination="Paris", duration_days=5, doing_laundry=False)
         trips_store["test-trip-123"] = test_trip
@@ -52,16 +49,15 @@ class TestReadWeight(unittest.TestCase):
         self.assertIn("item_id", data["item"])
         
         item_id = data["item"]["item_id"]
-        self.assertIn(item_id, item_store)
+        self.assertIn(item_id, items_store)
 
     @patch('app.routes.item.get_weight')
     def test_read_weight_update_existing_item(self, mock_get_weight):
         """Test updating an existing item's weight."""
         from app.models import Item
         existing_item = Item(item_id="existing-item-123", item_name="Test Item", weight_kg=0.3)
-        item_store["existing-item-123"] = existing_item
+        items_store["existing-item-123"] = existing_item
 
-        from app.routes.trip import trips_store
         from app.models import Trip
         test_trip = Trip(trip_id="test-trip-123", destination="Paris", duration_days=5, doing_laundry=False)
         trips_store["test-trip-123"] = test_trip
@@ -79,7 +75,7 @@ class TestReadWeight(unittest.TestCase):
         self.assertEqual(data["total_weight_kg"], 0.7)
         
         # Verify item was updated (not replaced)
-        updated_item = item_store["existing-item-123"]
+        updated_item = items_store["existing-item-123"]
         self.assertEqual(updated_item.weight_kg, 0.7)
         self.assertEqual(updated_item.item_name, "Test Item")  # Other fields preserved
 
@@ -105,7 +101,6 @@ class TestReadWeight(unittest.TestCase):
             "total_weight_kg": 0.5
         })
 
-        from app.routes.trip import trips_store
         from app.models import Trip
         test_trip = Trip(trip_id="test-trip-123", destination="Paris", duration_days=5, doing_laundry=False)
         trips_store["test-trip-123"] = test_trip
@@ -139,13 +134,11 @@ class TestDetectEndpoint(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.client = TestClient(app)
-        item_store.clear()
-        from app.routes.trip import trips_store
+        items_store.clear()
         trips_store.clear()
 
     def tearDown(self):
-        item_store.clear()
-        from app.routes.trip import trips_store
+        items_store.clear()
         trips_store.clear()
 
     @patch("app.routes.item.detect_objects_yolo")
@@ -180,7 +173,7 @@ class TestDetectEndpoint(unittest.TestCase):
 
         # Item should be stored
         item_id = data["item_id"]
-        self.assertIn(item_id, item_store)
+        self.assertIn(item_id, items_store)
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_updates_existing_item(self, mock_yolo):
@@ -192,7 +185,7 @@ class TestDetectEndpoint(unittest.TestCase):
             class_name="old_class",
             confidence=0.55,
         )
-        item_store["abc123"] = existing_item
+        items_store["abc123"] = existing_item
 
         mock_yolo.return_value = {
             "item_name": "Backpack",
@@ -221,8 +214,8 @@ class TestDetectEndpoint(unittest.TestCase):
         self.assertIn("bounding_boxes", updated)
         self.assertEqual(updated["bounding_boxes"][0]["x_min"], 0)
 
-        # Verify item_store is updated
-        stored = item_store["abc123"]
+        # Verify items_store is updated
+        stored = items_store["abc123"]
         self.assertEqual(stored.item_name, "Backpack")
 
     @patch("app.routes.item.detect_objects_yolo")
@@ -238,7 +231,6 @@ class TestDetectEndpoint(unittest.TestCase):
         }
 
         # Create trip
-        from app.routes.trip import trips_store
         from app.models import Trip
         trip = Trip(trip_id="trip123", destination="Paris", duration_days=3, doing_laundry=True)
         trips_store["trip123"] = trip

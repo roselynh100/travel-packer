@@ -31,7 +31,7 @@ class Trip(BaseModel):
     destination: str
     duration_days: int
     doing_laundry: bool
-    items: List[str] = Field(default_factory=list)  # List of item_ids
+    items: Optional[List[str]] = Field(default=None, description="Item IDs")
 
 
 class User(BaseModel):
