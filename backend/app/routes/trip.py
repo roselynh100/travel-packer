@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Optional
 
 from app.models import Trip, Item
+from machine_learning.poc_decision_model import packing_algorithm
+from app.routes.item import item_store
 
 router = APIRouter()
 
@@ -80,3 +82,20 @@ def get_trip_items(trip_id: str):
     
     return items
 
+@router.post("/{trip_id}/packing-recommendation")
+def get_packing_recommendation(trip_id: str):
+    """Suggest items to remove from a trip based on  recommendation algorithm."""
+
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    trip = trips_store[trip_id]
+
+    trip_items: List[Item] = []
+    for item_id in trip.items:
+        if item_id in item_store:
+            trip_items.append(item_store[item_id])
+
+    result = packing_algorithm(trip_items)
+
+    return result
