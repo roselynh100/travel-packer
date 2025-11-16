@@ -1,15 +1,132 @@
 import unittest
 import sys
 from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 import json
 
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.routes.item import item_store
+from app.state.db import items_store, trips_store
+from app.models import Item
 
+class TestItemEndpoints(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        items_store.clear()
+
+    def tearDown(self):
+        items_store.clear()
+
+    def test_get_item_success(self):
+        """GET /items/{id} returns the item."""
+        item = Item(item_id="123", item_name="Bottle", weight_kg=1.2)
+        items_store["123"] = item
+
+        response = self.client.get("/items/123")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["item_id"], "123")
+        self.assertEqual(data["item_name"], "Bottle")
+        self.assertEqual(data["weight_kg"], 1.2)
+
+    def test_get_item_not_found(self):
+        """GET /items/{id} returns 404 if not found."""
+        response = self.client.get("/items/does-not-exist")
+        self.assertEqual(response.status_code, 404)
+
+    def test_patch_item_partial_update(self):
+        """PATCH /items/{id} should update only provided fields."""
+        original = Item(
+            item_id="abc",
+            item_name="Shirt",
+            class_name="clothing",
+            weight_kg=0.3,
+            confidence=0.8
+        )
+        items_store["abc"] = original
+
+        patch_body = {
+            "item_name": "T-Shirt"
+            # no other fields -> should preserve existing ones
+        }
+
+        response = self.client.patch("/items/abc", json=patch_body)
+        self.assertEqual(response.status_code, 200)
+
+        updated = response.json()
+
+        self.assertEqual(updated["item_name"], "T-Shirt")
+        self.assertEqual(updated["class_name"], "clothing")  # preserved
+        self.assertEqual(updated["weight_kg"], 0.3)
+        self.assertEqual(updated["confidence"], 0.8)
+
+        stored = items_store["abc"]
+        self.assertEqual(stored.item_name, "T-Shirt")
+
+    def test_patch_item_set_field_to_null(self):
+        """PATCH /items/{id} with explicit null should overwrite field."""
+        original = Item(
+            item_id="def",
+            item_name="Laptop",
+            weight_kg=1.5,
+            confidence=0.99
+        )
+        items_store["def"] = original
+
+        patch_body = {
+            "weight_kg": None
+        }
+
+        response = self.client.patch("/items/def", json=patch_body)
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIsNone(data["weight_kg"])       # Explicit null applied
+        self.assertEqual(data["confidence"], 0.99)  # preserved
+
+    def test_patch_item_not_found(self):
+        """PATCH /items/{id} returns 404 for missing item."""
+        response = self.client.patch("/items/missing", json={"item_name": "Foo"})
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_item_success(self):
+        """DELETE /items/{id} should remove item from store."""
+        item = Item(item_id="del1", item_name="Socks")
+        items_store["del1"] = item
+
+        response = self.client.delete("/items/del1")
+        self.assertEqual(response.status_code, 200)
+
+        self.assertNotIn("del1", items_store)
+
+    def test_delete_item_not_found(self):
+        """DELETE /items/{id} returns 404 if missing."""
+        response = self.client.delete("/items/404")
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_item_removes_from_trip(self):
+        """DELETE should also remove item_id from any trip that contains it."""
+        from app.state.db import trips_store
+        from app.models import Trip
+
+        trips_store.clear()
+        trips_store["t1"] = Trip(
+            trip_id="t1",
+            destination="Paris",
+            duration_days=5,
+            doing_laundry=False,
+            items=["x1"]
+        )
+
+        items_store["x1"] = Item(item_id="x1", item_name="Camera")
+
+        response = self.client.delete("/items/x1")
+        self.assertEqual(response.status_code, 200)
+
+        self.assertNotIn("x1", trips_store["t1"].items)
 
 class TestReadWeight(unittest.TestCase):
     """Test cases for the read_weight endpoint."""
@@ -17,15 +134,13 @@ class TestReadWeight(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.client = TestClient(app)
-        item_store.clear()
+        items_store.clear()
         # Also clear trips store to avoid test interference
-        from app.routes.trip import trips_store
         trips_store.clear()
 
     def tearDown(self):
         """Clean up after each test."""
-        item_store.clear()
-        from app.routes.trip import trips_store
+        items_store.clear()
         trips_store.clear()
 
     @patch('app.routes.item.get_weight')
@@ -35,7 +150,6 @@ class TestReadWeight(unittest.TestCase):
             "total_weight_kg": 0.5
         })
 
-        from app.routes.trip import trips_store
         from app.models import Trip
         test_trip = Trip(trip_id="test-trip-123", destination="Paris", duration_days=5, doing_laundry=False)
         trips_store["test-trip-123"] = test_trip
@@ -52,16 +166,15 @@ class TestReadWeight(unittest.TestCase):
         self.assertIn("item_id", data["item"])
         
         item_id = data["item"]["item_id"]
-        self.assertIn(item_id, item_store)
+        self.assertIn(item_id, items_store)
 
     @patch('app.routes.item.get_weight')
     def test_read_weight_update_existing_item(self, mock_get_weight):
         """Test updating an existing item's weight."""
         from app.models import Item
         existing_item = Item(item_id="existing-item-123", item_name="Test Item", weight_kg=0.3)
-        item_store["existing-item-123"] = existing_item
+        items_store["existing-item-123"] = existing_item
 
-        from app.routes.trip import trips_store
         from app.models import Trip
         test_trip = Trip(trip_id="test-trip-123", destination="Paris", duration_days=5, doing_laundry=False)
         trips_store["test-trip-123"] = test_trip
@@ -79,7 +192,7 @@ class TestReadWeight(unittest.TestCase):
         self.assertEqual(data["total_weight_kg"], 0.7)
         
         # Verify item was updated (not replaced)
-        updated_item = item_store["existing-item-123"]
+        updated_item = items_store["existing-item-123"]
         self.assertEqual(updated_item.weight_kg, 0.7)
         self.assertEqual(updated_item.item_name, "Test Item")  # Other fields preserved
 
@@ -105,7 +218,6 @@ class TestReadWeight(unittest.TestCase):
             "total_weight_kg": 0.5
         })
 
-        from app.routes.trip import trips_store
         from app.models import Trip
         test_trip = Trip(trip_id="test-trip-123", destination="Paris", duration_days=5, doing_laundry=False)
         trips_store["test-trip-123"] = test_trip
@@ -139,13 +251,11 @@ class TestDetectEndpoint(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.client = TestClient(app)
-        item_store.clear()
-        from app.routes.trip import trips_store
+        items_store.clear()
         trips_store.clear()
 
     def tearDown(self):
-        item_store.clear()
-        from app.routes.trip import trips_store
+        items_store.clear()
         trips_store.clear()
 
     @patch("app.routes.item.detect_objects_yolo")
@@ -180,7 +290,7 @@ class TestDetectEndpoint(unittest.TestCase):
 
         # Item should be stored
         item_id = data["item_id"]
-        self.assertIn(item_id, item_store)
+        self.assertIn(item_id, items_store)
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_updates_existing_item(self, mock_yolo):
@@ -192,7 +302,7 @@ class TestDetectEndpoint(unittest.TestCase):
             class_name="old_class",
             confidence=0.55,
         )
-        item_store["abc123"] = existing_item
+        items_store["abc123"] = existing_item
 
         mock_yolo.return_value = {
             "item_name": "Backpack",
@@ -221,8 +331,8 @@ class TestDetectEndpoint(unittest.TestCase):
         self.assertIn("bounding_boxes", updated)
         self.assertEqual(updated["bounding_boxes"][0]["x_min"], 0)
 
-        # Verify item_store is updated
-        stored = item_store["abc123"]
+        # Verify items_store is updated
+        stored = items_store["abc123"]
         self.assertEqual(stored.item_name, "Backpack")
 
     @patch("app.routes.item.detect_objects_yolo")
@@ -238,7 +348,6 @@ class TestDetectEndpoint(unittest.TestCase):
         }
 
         # Create trip
-        from app.routes.trip import trips_store
         from app.models import Trip
         trip = Trip(trip_id="trip123", destination="Paris", duration_days=3, doing_laundry=True)
         trips_store["trip123"] = trip
