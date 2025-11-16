@@ -1,26 +1,27 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, File, UploadFile
 from typing import Dict, List, Optional
 import json
 from uuid import uuid4
 
 from hardware.readscale import get_weight
-from app.models import Item
+from computer_vision.cv import detect_objects_yolo
+from app.models import Item, ItemUpdate, YoloResult
+from app.state.db import items_store, trips_store
 
 router = APIRouter()
-
-item_store: Dict[str, Item] = {}  # item_id -> Item
 
 
 @router.post("/", response_model=Item)
 def create_item(item: Item, trip_id: Optional[str] = Query(None)):
     """Create a new item and optionally associate it with a trip."""
-    item_store[item.item_id] = item
+    items_store[item.item_id] = item
     
     # Associate item with trip if trip_id provided
     if trip_id:
-        from app.routes.trip import trips_store
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
+        if trips_store[trip_id].items is None:
+            trips_store[trip_id].items = []
         if item.item_id not in trips_store[trip_id].items:
             trips_store[trip_id].items.append(item.item_id)
     
@@ -30,44 +31,45 @@ def create_item(item: Item, trip_id: Optional[str] = Query(None)):
 @router.get("/", response_model=List[Item])
 def get_items():
     """Get all items."""
-    return list[Item](item_store.values())
+    return list(items_store.values())
 
 @router.get("/{item_id}", response_model=Item)
 def get_item(item_id: str):
     """Get a specific item by ID."""
-    if item_id not in item_store:
+    if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
-    return item_store[item_id]
+    return items_store[item_id]
 
-
-@router.put("/{item_id}", response_model=Item)
-def update_item(item_id: str, item: Item):
-    """Update an item."""
-    if item_id not in item_store:
+@router.patch("/{item_id}", response_model=Item)
+def patch_item(item_id: str, patch: ItemUpdate):
+    if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
-    item.item_id = item_id  # Ensure ID matches
-    item_store[item_id] = item
-    return item
 
+    item = items_store[item_id]
+
+    patch_data = patch.model_dump(exclude_unset=True)
+    updated = item.model_copy(update=patch_data)
+
+    items_store[item_id] = updated
+    return updated
 
 @router.delete("/{item_id}")
 def delete_item(item_id: str):
     """Delete an item."""
-    if item_id not in item_store:
+    if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
     
     # Remove item from trip's items list
-    from app.routes.trip import trips_store
     for trip in trips_store.values():
-        if item_id in trip.items:
+        if trip.items is not None and item_id in trip.items:
             trip.items.remove(item_id)
     
-    del item_store[item_id]
+    del items_store[item_id]
     return {"message": "Item deleted successfully"}
 
 
 @router.post("/weight")
-def read_weight(trip_id: str, item_id: Optional[str] = Query(None)):
+def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None)):
     """Get weight reading from the scale and optionally associate it with a trip and/or item."""
     result = get_weight(wait_time=6.0)
     result_dict = json.loads(result)
@@ -80,20 +82,21 @@ def read_weight(trip_id: str, item_id: Optional[str] = Query(None)):
     if weight_kg is None:
         raise HTTPException(status_code=500, detail="Failed to get weight reading from the scale")
     
-    if item_id and item_id in item_store:
-        item = item_store[item_id]
+    if item_id and item_id in items_store:
+        item = items_store[item_id]
         item.weight_kg = weight_kg
     else:
         if item_id is None:
             item = Item(weight_kg=weight_kg)  # item_id will be auto-generated
         else:
             item = Item(item_id=item_id, weight_kg=weight_kg)
-        item_store[item.item_id] = item
+        items_store[item.item_id] = item
     
     if trip_id:
-        from app.routes.trip import trips_store
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
+        if trips_store[trip_id].items is None:
+            trips_store[trip_id].items = []
         if item.item_id not in trips_store[trip_id].items:
             trips_store[trip_id].items.append(item.item_id)
 
@@ -103,3 +106,49 @@ def read_weight(trip_id: str, item_id: Optional[str] = Query(None)):
         "total_weight_kg": weight_kg,
     }
 
+@router.post("/detect", response_model=Item)
+async def detect_item_from_image(
+    image: UploadFile = File(...),
+    trip_id: Optional[str] = Query(None),
+    item_id: Optional[str] = Query(None),
+):
+    """Upload an image, run object detection (YOLO), and create/update an Item and optionally associate it with a trip."""
+    image_bytes = await image.read()
+
+    try:
+        raw_output = detect_objects_yolo(image_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"CV model error: {str(e)}")
+
+    try:
+        parsed = YoloResult.model_validate(raw_output)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"YOLO output validation failed: {str(e)}")
+
+    parsed_bboxes = parsed.bounding_boxes
+
+    if item_id and item_id in items_store:
+        item = items_store[item_id]
+        item.item_name = parsed.item_name
+        item.class_name = parsed.class_name
+        item.confidence = parsed.confidence_score
+        item.bounding_boxes = parsed_bboxes
+
+    else:
+        item = Item(
+            item_name=parsed.item_name,
+            class_name=parsed.class_name,
+            confidence=parsed.confidence_score,
+            bounding_boxes=parsed_bboxes,
+        )
+        items_store[item.item_id] = item
+
+    if trip_id:
+        if trip_id not in trips_store:
+            raise HTTPException(status_code=404, detail="Trip not found")
+        if trips_store[trip_id].items is None:
+            trips_store[trip_id].items = []
+        if item.item_id not in trips_store[trip_id].items:
+            trips_store[trip_id].items.append(item.item_id)
+
+    return item
