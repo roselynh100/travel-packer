@@ -1,22 +1,28 @@
+from typing import Tuple
+
 import cv2
 import numpy as np
-from ultralytics import YOLO
-# from backend.app.models import CVResult, BoundingBox, Dimensions
-from typing import Tuple
 from cv2 import aruco
+from ultralytics import YOLO
+
+from app.models import BoundingBox, CVResult, Dimensions
+
 
 def bytes_to_numpy(image_bytes: bytes):
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     return img
 
-def detect_objects_yolo(image_bytes: bytes):
-    model = YOLO('yolov5nu.pt')
+
+def detect_objects_yolo(image_bytes: bytes) -> CVResult:
+    model = YOLO("yolov5nu.pt")
     img = bytes_to_numpy(image_bytes)
     results = model(img)
 
     detections_list = []
-    for result in results:  # Loop through images (usually one image unless in stream mode)
+    for (
+        result
+    ) in results:  # Loop through images (usually one image unless in stream mode)
         for box in result.boxes:  # Loop through detections in the image
             # Extract the necessary data
             coords = box.xyxy.tolist()[0]
@@ -37,7 +43,7 @@ def detect_objects_yolo(image_bytes: bytes):
                 "x_min": round(x_min, 2),
                 "y_min": round(y_min, 2),
                 "x_max": round(x_max, 2),
-                "y_max": round(y_max, 2)
+                "y_max": round(y_max, 2),
             }
             detections_list.append(detection)
 
@@ -45,8 +51,12 @@ def detect_objects_yolo(image_bytes: bytes):
 
     return detections_list
 
-with open(r"C:\Users\kateh\Desktop\capstone\yolov8-custom-model\code\data\images\train2\000396ae942e8778.jpg", "rb") as image:
-  f = image.read()
-  b = bytearray(f)
 
-  detect_objects_yolo(b)
+# --- UNCOMMENT TO TEST ---
+# (not recommended - should run the server and use http://127.0.0.1:8000/docs#/items/detect_item_from_image_items_detect_post instead)
+
+# with open(r"(image file path)", "rb") as image:
+#   f = image.read()
+#   b = bytearray(f)
+
+#   detect_objects_yolo(b)
