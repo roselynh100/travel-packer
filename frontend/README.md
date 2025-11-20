@@ -23,3 +23,5 @@ You can now view the app on your laptop at [localhost:8081](http://localhost:808
 ## 💅 Development
 
 This project uses [Nativewind](https://www.nativewind.dev/) (mobile Tailwind CSS) for styling :)
+
+When adding an icon to the project, you need to find an iOS variant ([SF Symbols](https://developer.apple.com/sf-symbols)) and a Web/Android variant ([Material Icons](https://icons.expo.fyi)). Then add the mapping to `frontend/components/ui/icon-symbol.tsx`.

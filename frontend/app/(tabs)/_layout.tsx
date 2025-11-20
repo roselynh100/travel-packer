@@ -25,7 +25,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="list"
+        name="PackingList"
         options={{
           title: "Packing List",
           tabBarIcon: ({ color }) => (
@@ -34,7 +34,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="pack"
+        name="Scan"
         options={{
           title: "Pack Items",
           tabBarIcon: ({ color }) => (

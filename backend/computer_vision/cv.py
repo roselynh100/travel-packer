@@ -20,7 +20,7 @@ def bytes_to_numpy(image_bytes: bytes):
 # Can remove later
 def debug_test_image(image_bytes: bytes):
     # Verify image format and log info
-    print(f"Received image size={len(image_bytes)} bytes, type={type(image_bytes)}")
+    print(f"\nReceived image size={len(image_bytes)} bytes, type={type(image_bytes)}")
     print(
         f"First 20 bytes (hex): {image_bytes[:20].hex() if len(image_bytes) >= 20 else image_bytes.hex()}"
     )
