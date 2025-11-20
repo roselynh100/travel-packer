@@ -44,16 +44,29 @@ class ItemUpdate(BaseModel):
     estimated_volume_cm3: Optional[float] = None
     cv_result: Optional[CVResult] = None
 
+class RecommendedItem(BaseModel):
+    item_name: str
+    reason: Optional[str] = None
+    priority: Optional[int] = None
+
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
     destination: str
     duration_days: int
     doing_laundry: bool
-    items: Optional[List[str]] = Field(default=None, description="Item IDs")
+    activities: Optional[str] = None
+    items: List[str] = Field(default_factory=list, description="Item IDs")
+
+class TripUpdate(BaseModel):
+    destination: Optional[str] = None
+    duration_days: Optional[int] = None
+    doing_laundry: Optional[bool] = None
+    items: Optional[List[str]] = None
+    activities: Optional[str] = None
 
 class User(BaseModel):
     user_id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     email: str
     password: str
-    trips: List[str] = Field(default_factory=list)  # List of trip_ids
+    trips: List[str] = Field(default_factory=list, description="Trip IDs")
