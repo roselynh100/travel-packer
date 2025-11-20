@@ -1,6 +1,9 @@
 from collections import Counter
+from typing import Any, Dict, List
 
 import utils
+
+Item = Dict[str, Any]
 
 
 def get_trip_details():
@@ -92,11 +95,12 @@ def run_manual_removal(pack_list, leave_list, limits):
 # --- MAIN PACKING ALGORITHM ---
 
 
-def packing_algorithm():
+def packing_algorithm(items: List[Item]):
     """
     Runs the complete packing process.
+    Args:
+        items: a list of item objects
     """
-    item_database = utils.load_items()
     trip = get_trip_details()
 
     pack_list = []
@@ -174,4 +178,6 @@ def packing_algorithm():
 
 
 if __name__ == "__main__":
-    packing_algorithm()
+    item_database = utils.load_items()
+
+    packing_algorithm(item_database)
