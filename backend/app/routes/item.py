@@ -117,18 +117,18 @@ async def detect_item_from_image(
     """Upload an image, run object detection (YOLO), and create/update an Item and optionally associate it with a trip."""
     image_bytes = await image.read()
 
-    cv_result = detect_objects_yolo(image_bytes)
-    if cv_result is None:
+    cv_results = detect_objects_yolo(image_bytes)
+    if cv_results is None or len(cv_results) == 0:
         raise HTTPException(status_code=500, detail="Invalid YOLO output")
 
     if item_id and item_id in items_store:
         item = items_store[item_id]
-        item.cv_result = cv_result
+        item.cv_results = cv_results
     else:
         if item_id:
-            item = Item(item_id=item_id, cv_result=cv_result)
+            item = Item(item_id=item_id, cv_results=cv_results)
         else:
-            item = Item(cv_result=cv_result)  # item_id will be auto-generated
+            item = Item(cv_results=cv_results)  # item_id will be auto-generated
         items_store[item.item_id] = item
 
     if trip_id:

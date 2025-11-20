@@ -37,7 +37,7 @@ class Item(BaseModel):
     item_id: str = Field(default_factory=lambda: str(uuid4()))
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
-    cv_result: Optional[CVResult] = None
+    cv_results: Optional[List[CVResult]] = None
 
 class ItemUpdate(BaseModel):
     weight_kg: Optional[float] = None

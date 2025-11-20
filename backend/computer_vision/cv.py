@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import cv2
 import numpy as np
@@ -7,14 +7,13 @@ from ultralytics import YOLO
 
 from app.models import BoundingBox, CVResult, Dimensions
 
-
 def bytes_to_numpy(image_bytes: bytes):
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     return img
 
 
-def detect_objects_yolo(image_bytes: bytes) -> CVResult:
+def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
     model = YOLO("yolov5nu.pt")
     img = bytes_to_numpy(image_bytes)
     results = model(img)
