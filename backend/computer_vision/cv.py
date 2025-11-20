@@ -60,12 +60,7 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
                 y_max=y_max,
             )
 
-            length, width = detect_object_dimensions(image_bytes, bounding_box)
-            dimensions = Dimensions(
-                length=length,
-                width=width,
-                height=None,
-            )
+            dimensions = detect_object_dimensions(image_bytes, bounding_box)
 
             # Create CVResult object
             cv_result = CVResult(
@@ -84,8 +79,13 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
 # RACHEL THIS IS WHAT YOU IMPLEMENT
 def detect_object_dimensions(
     image_bytes: bytes, bounding_box: BoundingBox
-) -> Tuple[float, float]:
+) -> Dimensions:
     # convert image if needed and determine pixel:cm ratio
     # use pixel:cm ratio to determine the length and width of the object
-    # return as a tuple (length, width)
-    return (1.0, 1.0)
+
+    # These are placeholder values - need to calculate these numbers
+    length = 1.0
+    width = 1.0
+    height = None
+
+    return Dimensions(length=length, width=width, height=height)
