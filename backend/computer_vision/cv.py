@@ -17,7 +17,11 @@ def bytes_to_numpy(image_bytes: bytes):
 def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
     model = YOLO("yolov8n.pt")
     img = bytes_to_numpy(image_bytes)
-    results = model(img)
+    results = model(
+        img,
+        conf=0.3,  # Confidence threshold (at least 30% certainty required for a detection)
+        imgsz=640,  # Input image size (standard 640x640 for YOLOv8n)
+    )
 
     # Define the list of target class names
     TARGET_CLASSES = {
