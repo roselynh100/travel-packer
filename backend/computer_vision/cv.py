@@ -34,7 +34,7 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
             bounding_boxes=[
                 BoundingBox(x_min=120.5, y_min=80.2, x_max=300.1, y_max=600.9)
             ],
-            dimensions=Dimensions(length=1.0, width=1.0, height=None),
+            dimensions=Dimensions(width=1.0, length=1.0, height=None),
         )
 
         detections_list.append(example)
@@ -104,12 +104,12 @@ def detect_object_dimensions(image_bytes: bytes, bounding_box: BoundingBox) -> D
             px_per_cm = marker_width_px / physical_marker_cm
 
     # Taking in bounding box coordinates
-    length_px = bounding_box.x_max - bounding_box.x_min
-    width_px = bounding_box.y_max - bounding_box.y_min
+    width_px = bounding_box.x_max - bounding_box.x_min
+    length_px = bounding_box.y_max - bounding_box.y_min
 
     # Calculate dimensions
     return Dimensions(
-        length = round(length_px / px_per_cm, 2),
         width = round(width_px / px_per_cm, 2),
+        length = round(length_px / px_per_cm, 2),
         height = None
     )
