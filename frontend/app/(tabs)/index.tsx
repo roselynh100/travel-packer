@@ -11,8 +11,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-import { ThemedText } from "@/components/themed-text";
-import { ThemedTextInput } from "@/components/themed-text-input";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedTextInput } from "@/components/ThemedTextInput";
 
 export default function HomeScreen() {
   const router = useRouter();

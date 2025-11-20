@@ -2,7 +2,7 @@ import { useState } from "react";
 import { SectionList, View } from "react-native";
 import { Checkbox } from "expo-checkbox";
 
-import { ThemedText } from "@/components/themed-text";
+import { ThemedText } from "@/components/ThemedText";
 
 export default function PackingList() {
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());

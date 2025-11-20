@@ -4,16 +4,15 @@ import { useState, useRef } from "react";
 import {
   Alert,
   Button,
-  StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   Image,
   ActivityIndicator,
   Platform,
+  Text,
 } from "react-native";
 import { API_BASE_URL } from "@/constants/api";
-import { ThemedText } from "@/components/themed-text";
+import { ThemedText } from "@/components/ThemedText";
 
 const CAMERA_CAPTURE_DELAY = 1500;
 
@@ -36,10 +35,8 @@ export default function ScanningScreen() {
   // Camera permissions are not granted yet
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.message}>
-          We need your permission to use the camera.
-        </Text>
+      <View className="flex-1">
+        <ThemedText>We need your permission to use the camera.</ThemedText>
         <Button onPress={requestPermission} title="grant permission" />
       </View>
     );
@@ -122,78 +119,32 @@ export default function ScanningScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1">
       {isFocused && !capturedPhoto && (
-        <CameraView style={styles.camera} facing="back" ref={cameraRef} />
+        <CameraView facing="back" ref={cameraRef} style={{ flex: 1 }} />
       )}
       {capturedPhoto && (
-        <Image source={{ uri: capturedPhoto }} style={styles.camera} />
+        <Image source={{ uri: capturedPhoto }} className="flex-1" />
       )}
       {(isCapturing || isUploading) && (
-        <View style={styles.overlay}>
+        <View className="w-full h-full absolute bg-black/50 justify-center items-center">
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.overlayText}>
+          <Text className={CameraText + " mt-8"}>
             {isUploading ? "Uploading..." : "Capturing..."}
           </Text>
         </View>
       )}
-      <View style={styles.buttonContainer}>
+      <View className="w-full absolute bottom-8 items-center">
         <TouchableOpacity
-          style={[
-            styles.button,
-            (isCapturing || isUploading) && styles.buttonDisabled,
-          ]}
           onPress={handleScan}
+          className={isCapturing || isUploading ? "opacity-50" : ""}
           disabled={isCapturing || isUploading}
         >
-          <ThemedText type="subtitle">Scan Item</ThemedText>
+          <Text className={CameraText}>Scan Item</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  message: {
-    textAlign: "center",
-    paddingBottom: 10,
-  },
-  camera: {
-    flex: 1,
-  },
-  buttonContainer: {
-    position: "absolute",
-    bottom: 64,
-    flexDirection: "row",
-    backgroundColor: "transparent",
-    width: "100%",
-    paddingHorizontal: 64,
-  },
-  button: {
-    flex: 1,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  overlayText: {
-    color: "white",
-    fontSize: 18,
-    marginTop: 16,
-    fontWeight: "bold",
-  },
-});
+const CameraText = "text-white text-xl font-bold";
