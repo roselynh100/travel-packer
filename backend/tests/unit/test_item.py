@@ -38,13 +38,13 @@ class TestItemEndpoints(unittest.TestCase):
         original = Item(
             item_id="abc",
             weight_kg=0.3,
-            cv_result=CVResult(
+            cv_results=[CVResult(
                 item_name="Shirt",
                 class_name="clothing",
                 confidence_score=0.8,
                 bounding_boxes=[BoundingBox(x_min=1, y_min=1, x_max=2, y_max=2)],
                 dimensions=Dimensions(length=1, width=1)
-            )
+            )]
         )
         items_store["abc"] = original
 
@@ -53,7 +53,7 @@ class TestItemEndpoints(unittest.TestCase):
 
         updated = response.json()
         self.assertEqual(updated["weight_kg"], 2.0)
-        self.assertEqual(updated["cv_result"]["item_name"], "Shirt")
+        self.assertEqual(updated["cv_results"][0]["item_name"], "Shirt")
 
     def test_patch_item_set_field_to_null(self):
         original = Item(item_id="def", weight_kg=1.5)
@@ -169,35 +169,41 @@ class TestDetectEndpoint(unittest.TestCase):
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_creates_new_item(self, mock_yolo):
-        mock_yolo.return_value = CVResult(
+        """Test creating a new item via image detection."""
+        mock_yolo.return_value = [CVResult(
             item_name="Shoes",
             class_name="shoe",
             confidence_score=0.85,
             bounding_boxes=[BoundingBox(x_min=10.1, y_min=20.2, x_max=50.5, y_max=80.8)],
             dimensions=Dimensions(length=1, width=1)
-        )
+        )]
 
         test_image = ("img.jpg", b"fake", "image/jpeg")
         response = self.client.post("/items/detect", files={"image": test_image})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["cv_result"]["item_name"], "Shoes")
+        data = response.json()
+
+        self.assertEqual(data["cv_results"][0]["item_name"], "Shoes")
+        self.assertEqual(data["cv_results"][0]["class_name"], "shoe")
+        self.assertEqual(data["cv_results"][0]["confidence_score"], 0.85)
+        self.assertEqual(data["cv_results"][0]["bounding_boxes"][0]["x_min"], 10.1)
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_updates_existing_item(self, mock_yolo):
         items_store["abc"] = Item(item_id="abc")
 
-        mock_yolo.return_value = CVResult(
+        mock_yolo.return_value = [CVResult(
             item_name="Backpack",
             class_name="backpack",
             confidence_score=0.95,
             bounding_boxes=[BoundingBox(x_min=0, y_min=0, x_max=100, y_max=100)],
             dimensions=Dimensions(length=1, width=1)
-        )
+        )]
 
         test_image = ("img.jpg", b"fake", "image/jpeg")
         response = self.client.post("/items/detect?item_id=abc", files={"image": test_image})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(items_store["abc"].cv_result.item_name, "Backpack")
+        self.assertEqual(items_store["abc"].cv_results[0].item_name, "Backpack")
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_associates_with_trip(self, mock_yolo):
@@ -210,13 +216,13 @@ class TestDetectEndpoint(unittest.TestCase):
             doing_laundry=False
         )
 
-        mock_yolo.return_value = CVResult(
+        mock_yolo.return_value = [CVResult(
             item_name="Laptop",
             class_name="laptop",
             confidence_score=0.98,
             bounding_boxes=[BoundingBox(x_min=5, y_min=5, x_max=150, y_max=200)],
             dimensions=Dimensions(length=1, width=1)
-        )
+        )]
 
         test_image = ("img.png", b"fake", "image/png")
         response = self.client.post("/items/detect?trip_id=trip1", files={"image": test_image})
@@ -227,6 +233,17 @@ class TestDetectEndpoint(unittest.TestCase):
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_invalid_yolo_output(self, mock_yolo):
         mock_yolo.return_value = None
+
+        test_image = ("img.png", b"img", "image/png")
+        response = self.client.post("/items/detect", files={"image": test_image})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("Invalid YOLO output", response.text)
+    
+    @patch("app.routes.item.detect_objects_yolo")
+    def test_detect_empty_yolo_output(self, mock_yolo):
+        """Test handling empty list in YOLO output."""
+        mock_yolo.return_value = []
 
         test_image = ("img.png", b"img", "image/png")
         response = self.client.post("/items/detect", files={"image": test_image})
