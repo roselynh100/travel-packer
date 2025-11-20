@@ -15,9 +15,21 @@ def bytes_to_numpy(image_bytes: bytes):
 
 
 def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
-    model = YOLO("yolov5nu.pt")
+    model = YOLO("yolov8n.pt")
     img = bytes_to_numpy(image_bytes)
     results = model(img)
+
+    # Define the list of target class names
+    TARGET_CLASSES = {
+        "backpack",
+        "handbag",
+        "suitcase",
+        "bottle",
+        "laptop",
+        "cell phone",
+        "book",
+        "toothbrush",
+    }
 
     detections_list = []
 
@@ -26,6 +38,7 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
 
     # Exit early if no boxes (items detected)
     # Either something failed (we need to account for this) or we're just testing bad images
+
     if result.boxes is None or len(result.boxes) == 0:
         example = CVResult(
             item_name="Water Bottle",
@@ -43,35 +56,38 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
         # Loop through detections in the image
         for box in result.boxes:
             # Extract the necessary data
-            coords = box.xyxy.tolist()[0]
-            x_min = round(coords[0], 2)
-            y_min = round(coords[1], 2)
-            x_max = round(coords[2], 2)
-            y_max = round(coords[3], 2)
-
             confidence = box.conf.item()
             class_id = box.cls.item()
             class_name = model.names[int(class_id)]
 
-            bounding_box = BoundingBox(
-                x_min=x_min,
-                y_min=y_min,
-                x_max=x_max,
-                y_max=y_max,
-            )
+            # filter by class name
+            if class_name in TARGET_CLASSES:
+                coords = box.xyxy.tolist()[0]
+                x_min = round(coords[0], 2)
+                y_min = round(coords[1], 2)
+                x_max = round(coords[2], 2)
+                y_max = round(coords[3], 2)
 
-            dimensions = detect_object_dimensions(image_bytes, bounding_box)
+                bounding_box = BoundingBox(
+                    x_min=x_min,
+                    y_min=y_min,
+                    x_max=x_max,
+                    y_max=y_max,
+                )
 
-            # Create CVResult object
-            cv_result = CVResult(
-                item_name=class_name,
-                class_name=class_name,
-                confidence_score=round(confidence, 2),
-                bounding_boxes=[bounding_box],
-                dimensions=dimensions,
-            )
+                dimensions = detect_object_dimensions(image_bytes, bounding_box)
 
-            detections_list.append(cv_result)
+                # Create CVResult object
+                cv_result = CVResult(
+                    item_name=class_name,
+                    class_name=class_name,
+                    confidence_score=round(confidence, 2),
+                    bounding_boxes=[bounding_box],
+                    dimensions=dimensions,
+                )
+
+                detections_list.append(cv_result)
+            # If the class name is not in TARGET_CLASSES, we just skip it
 
     return detections_list
 
