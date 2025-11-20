@@ -76,16 +76,40 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
     return detections_list
 
 
-# RACHEL THIS IS WHAT YOU IMPLEMENT
-def detect_object_dimensions(
-    image_bytes: bytes, bounding_box: BoundingBox
-) -> Dimensions:
-    # convert image if needed and determine pixel:cm ratio
-    # use pixel:cm ratio to determine the length and width of the object
+def detect_object_dimensions(image_bytes: bytes, bounding_box: BoundingBox) -> Dimensions:
+    # Constants based on the marker I chose
+    physical_marker_cm = 5.0
+    marker_id = 2
 
-    # These are placeholder values - need to calculate these numbers
-    length = 1.0
-    width = 1.0
-    height = None
+    img = bytes_to_numpy(image_bytes)
 
-    return Dimensions(length=length, width=width, height=height)
+    # Converting image to black and white for contrast
+    greyscale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Detect marker 
+    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
+    detector = aruco.ArucoDetector(aruco_dict)
+    corners, ids, _ = detector.detectMarkers(greyscale)
+
+    # Default fallback for debugging (large dimension will indicate marker wasn't detected)
+    px_per_cm = 1.0
+
+    # Check marker against dictionary
+    if ids is not None:
+        marker_corners = next(
+            (corners[i][0] for i, id_ in enumerate(ids) if id_[0] == marker_id), None
+        )
+        if marker_corners is not None:
+            marker_width_px = np.linalg.norm(marker_corners[0] - marker_corners[1])
+            px_per_cm = marker_width_px / physical_marker_cm
+
+    # Taking in bounding box coordinates
+    length_px = bounding_box.x_max - bounding_box.x_min
+    width_px = bounding_box.y_max - bounding_box.y_min
+
+    # Calculate dimensions
+    return Dimensions(
+        length = round(length_px / px_per_cm, 2),
+        width = round(width_px / px_per_cm, 2),
+        height = None
+    )
