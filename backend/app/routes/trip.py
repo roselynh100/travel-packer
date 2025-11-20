@@ -76,7 +76,7 @@ def get_trip_items(trip_id: str):
     
     return trip_items
 
-@router.post("/{trip_id}/packing-recommendation", response_model=List[Item])
+@router.post("/{trip_id}/removal-recommendations", response_model=List[Item])
 def get_removal_recommendations(trip_id: str):
     """Suggest items to remove from a trip based on  recommendation algorithm"""
 

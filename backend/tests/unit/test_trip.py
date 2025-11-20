@@ -42,7 +42,7 @@ class TestPackingRecommendationEndpoint(unittest.TestCase):
 
         mock_algo.return_value = [i1.model_dump()]
 
-        response = self.client.post("/trips/trip1/packing-recommendation")
+        response = self.client.post("/trips/trip1/removal-recommendations")
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(response.json(), [i1.model_dump()])
@@ -68,14 +68,14 @@ class TestPackingRecommendationEndpoint(unittest.TestCase):
 
         mock_algo.return_value = []
 
-        response = self.client.post("/trips/t2/packing-recommendation")
+        response = self.client.post("/trips/t2/removal-recommendations")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
     def test_recommendation_trip_not_found(self):
         """Should return 404 if trip doesn't exist."""
 
-        response = self.client.post("/trips/unknown/packing-recommendation")
+        response = self.client.post("/trips/unknown/removal-recommendations")
         self.assertEqual(response.status_code, 404)
 
     @patch("app.routes.trip.packing_algorithm")
@@ -97,7 +97,7 @@ class TestPackingRecommendationEndpoint(unittest.TestCase):
 
         mock_algo.return_value = [real_item.model_dump()]
 
-        response = self.client.post("/trips/trip3/packing-recommendation")
+        response = self.client.post("/trips/trip3/removal-recommendations")
         self.assertEqual(response.status_code, 200)
 
         # Should only pass existing items to algorithm
