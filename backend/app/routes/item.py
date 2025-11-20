@@ -1,15 +1,13 @@
 from fastapi import APIRouter, HTTPException, Query, File, UploadFile
-from typing import Dict, List, Optional
+from typing import List, Optional
 import json
-from uuid import uuid4
 
 from hardware.readscale import get_weight
 from computer_vision.cv import detect_objects_yolo
-from app.models import Item, ItemUpdate, YoloResult
+from app.models import Item, ItemUpdate, CVResult
 from app.state.db import items_store, trips_store
 
 router = APIRouter()
-
 
 @router.post("/", response_model=Item)
 def create_item(item: Item, trip_id: Optional[str] = Query(None)):
@@ -24,9 +22,8 @@ def create_item(item: Item, trip_id: Optional[str] = Query(None)):
             trips_store[trip_id].items = []
         if item.item_id not in trips_store[trip_id].items:
             trips_store[trip_id].items.append(item.item_id)
-    
-    return item
 
+    return item
 
 @router.get("/", response_model=List[Item])
 def get_items():
@@ -40,13 +37,21 @@ def get_item(item_id: str):
         raise HTTPException(status_code=404, detail="Item not found")
     return items_store[item_id]
 
+@router.put("/{item_id}", response_model=Item)
+def update_item(item_id: str, item: Item):
+    """Update an item."""
+    if item_id not in items_store:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    items_store[item_id] = item.model_copy(update={"item_id": item_id})
+    return items_store[item_id]
+
 @router.patch("/{item_id}", response_model=Item)
 def patch_item(item_id: str, patch: ItemUpdate):
     if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
 
     item = items_store[item_id]
-
     patch_data = patch.model_dump(exclude_unset=True)
     updated = item.model_copy(update=patch_data)
 
@@ -61,9 +66,9 @@ def delete_item(item_id: str):
     
     # Remove item from trip's items list
     for trip in trips_store.values():
-        if trip.items is not None and item_id in trip.items:
+        if trip.items and item_id in trip.items:
             trip.items.remove(item_id)
-    
+
     del items_store[item_id]
     return {"message": "Item deleted successfully"}
 
@@ -86,10 +91,7 @@ def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None))
         item = items_store[item_id]
         item.weight_kg = weight_kg
     else:
-        if item_id is None:
-            item = Item(weight_kg=weight_kg)  # item_id will be auto-generated
-        else:
-            item = Item(item_id=item_id, weight_kg=weight_kg)
+        item = Item(item_id=item_id, weight_kg=weight_kg) if item_id else Item(weight_kg=weight_kg)
         items_store[item.item_id] = item
     
     if trip_id:
@@ -115,32 +117,18 @@ async def detect_item_from_image(
     """Upload an image, run object detection (YOLO), and create/update an Item and optionally associate it with a trip."""
     image_bytes = await image.read()
 
-    try:
-        raw_output = detect_objects_yolo(image_bytes)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"CV model error: {str(e)}")
-
-    try:
-        parsed = YoloResult.model_validate(raw_output)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"YOLO output validation failed: {str(e)}")
-
-    parsed_bboxes = parsed.bounding_boxes
+    cv_results = detect_objects_yolo(image_bytes)
+    if cv_results is None or len(cv_results) == 0:
+        raise HTTPException(status_code=500, detail="Invalid YOLO output")
 
     if item_id and item_id in items_store:
         item = items_store[item_id]
-        item.item_name = parsed.item_name
-        item.class_name = parsed.class_name
-        item.confidence = parsed.confidence_score
-        item.bounding_boxes = parsed_bboxes
-
+        item.cv_results = cv_results
     else:
-        item = Item(
-            item_name=parsed.item_name,
-            class_name=parsed.class_name,
-            confidence=parsed.confidence_score,
-            bounding_boxes=parsed_bboxes,
-        )
+        if item_id:
+            item = Item(item_id=item_id, cv_results=cv_results)
+        else:
+            item = Item(cv_results=cv_results)  # item_id will be auto-generated
         items_store[item.item_id] = item
 
     if trip_id:
