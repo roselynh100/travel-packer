@@ -34,7 +34,7 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
             bounding_boxes=[
                 BoundingBox(x_min=120.5, y_min=80.2, x_max=300.1, y_max=600.9)
             ],
-            dimensions=Dimensions(width=1.0, length=1.0, height=None),
+            dimensions=Dimensions(length=1.0, width=1.0, height=None),
         )
 
         detections_list.append(example)
