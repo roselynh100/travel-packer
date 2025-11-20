@@ -1,93 +1,132 @@
 [
   {
-    "name": "Laptop",
-    "baseImportance": 80,
+    "item_id": "550e8400-e29b-41d4-a716-446655440000",
+    "item_name": "Laptop",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 1.5,
-    "volume_L": 3.0,
-    "height_cm": 1.5
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 3000.0
   },
   {
-    "name": "Laptop Charger",
-    "baseImportance": 75,
+    "item_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Laptop Charger",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.3,
-    "volume_L": 0.5,
-    "height_cm": 5.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 500.0
   },
   {
-    "name": "Toothbrush",
-    "baseImportance": 90,
+    "item_id": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Toothbrush",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.05,
-    "volume_L": 0.1,
-    "height_cm": 1.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 100.0
   },
   {
-    "name": "Toothpaste",
-    "baseImportance": 90,
+    "item_id": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Toothpaste",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.1,
-    "volume_L": 0.1,
-    "height_cm": 2.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 100.0
   },
   {
-    "name": "Shirt",
-    "baseImportance": 95,
+    "item_id": "6ba7b813-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Shirt",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.2,
-    "volume_L": 0.6,
-    "height_cm": 1.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 600.0
   },
   {
-    "name": "Pants",
-    "baseImportance": 95,
+    "item_id": "6ba7b814-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Pants",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.3,
-    "volume_L": 0.7,
-    "height_cm": 1.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 700.0
   },
   {
-    "name": "Shoes",
-    "baseImportance": 95,
+    "item_id": "6ba7b815-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Shoes",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.4,
-    "volume_L": 0.7,
-    "height_cm": 10.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 700.0
   },
   {
-    "name": "Shoes",
-    "baseImportance": 95,
+    "item_id": "6ba7b816-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Shoes",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.4,
-    "volume_L": 0.7,
-    "height_cm": 10.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 700.0
   },
   {
-    "name": "Coat",
-    "baseImportance": 70,
+    "item_id": "6ba7b817-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Coat",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 1.2,
-    "volume_L": 4.0,
-    "height_cm": 15.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 4000.0
   },
   {
-    "name": "Sunglasses",
-    "baseImportance": 30,
+    "item_id": "6ba7b818-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Sunglasses",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.05,
-    "volume_L": 0.2,
-    "height_cm": 5.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 200.0
   },
   {
-    "name": "Snack",
-    "baseImportance": 20,
+    "item_id": "6ba7b819-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Snack",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.2,
-    "volume_L": 0.3,
-    "height_cm": 2.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 300.0
   },
   {
-    "name": "Umbrella",
-    "baseImportance": 35,
+    "item_id": "6ba7b81a-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Umbrella",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.4,
-    "volume_L": 0.6,
-    "height_cm": 8.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 600.0
   },
   {
-    "name": "Socks",
-    "baseImportance": 95,
+    "item_id": "6ba7b81b-9dad-11d1-80b4-00c04fd430c8",
+    "item_name": "Socks",
+    "class_name": "",
+    "bounding_boxes": null,
     "weight_kg": 0.15,
-    "volume_L": 0.3,
-    "height_cm": 2.0
+    "confidence": null,
+    "dimensions_cm": null,
+    "estimated_volume_cm3": 300.0
   }
 ]
