@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Optional
 
-from app.models import Trip, Item
-from machine_learning.poc_decision_model import packing_algorithm
+from app.models import Trip, TripUpdate, Item, RecommendedItem
+from machine_learning.poc_decision_model import packing_algorithm, generate_recommendation_list
 from app.state.db import trips_store, items_store, users_store
 
 router = APIRouter()
@@ -36,15 +36,17 @@ def get_trip(trip_id: str):
 
 
 @router.put("/{trip_id}", response_model=Trip)
-def update_trip(trip_id: str, trip: Trip):
+def update_trip(trip_id: str, trip: TripUpdate):
     """Update a trip."""
     if trip_id not in trips_store:
         raise HTTPException(status_code=404, detail="Trip not found")
-    trip.trip_id = trip_id 
-    if trip.items is None:
-        trip.items = trips_store[trip_id].items
-    trips_store[trip_id] = trip
-    return trip
+    existing = trips_store[trip_id]
+    patch_data = trip.model_dump(exclude_unset=True)
+
+    updated = existing.model_copy(update=patch_data)
+
+    trips_store[trip_id] = updated
+    return updated
 
 
 @router.delete("/{trip_id}")
@@ -74,9 +76,9 @@ def get_trip_items(trip_id: str):
     
     return trip_items
 
-@router.post("/{trip_id}/packing-recommendation", response_model=List[Item])
-def get_packing_recommendation(trip_id: str):
-    """Suggest items to remove from a trip based on  recommendation algorithm."""
+@router.post("/{trip_id}/removal-recommendations", response_model=List[Item])
+def get_removal_recommendations(trip_id: str):
+    """Suggest items to remove from a trip based on  recommendation algorithm"""
 
     if trip_id not in trips_store:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -93,3 +95,24 @@ def get_packing_recommendation(trip_id: str):
     items = [Item(**d) for d in result]
 
     return items
+
+@router.post("/{trip_id}/recommendations", response_model=List[RecommendedItem])
+def get_trip_recommendations(trip_id: str):
+    """Generate packing recommendations from the trip metadata and activities"""
+
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    trip = trips_store[trip_id]
+
+    recs = generate_recommendation_list(
+        destination=trip.destination,
+        duration_days=trip.duration_days,
+        doing_laundry=trip.doing_laundry,
+        activities=trip.activities,
+    )
+
+    if recs is None or not isinstance(recs, list):
+        raise HTTPException(status_code=500, detail="Input should be a valid list")
+
+    return recs

@@ -16,12 +16,10 @@ def create_item(item: Item, trip_id: Optional[str] = Query(None)):
     """Create a new item and optionally associate it with a trip."""
     items_store[item.item_id] = item
 
-    # Associate item with trip if trip_id provided
     if trip_id:
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
-        if trips_store[trip_id].items is None:
-            trips_store[trip_id].items = []
+
         if item.item_id not in trips_store[trip_id].items:
             trips_store[trip_id].items.append(item.item_id)
 
@@ -44,7 +42,7 @@ def get_item(item_id: str):
 
 @router.put("/{item_id}", response_model=Item)
 def update_item(item_id: str, item: Item):
-    """Update an item."""
+    """Fully replace an item."""
     if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
 
@@ -54,6 +52,7 @@ def update_item(item_id: str, item: Item):
 
 @router.patch("/{item_id}", response_model=Item)
 def patch_item(item_id: str, patch: ItemUpdate):
+    """Partially update an item."""
     if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
 
@@ -67,13 +66,13 @@ def patch_item(item_id: str, patch: ItemUpdate):
 
 @router.delete("/{item_id}")
 def delete_item(item_id: str):
-    """Delete an item."""
+    """Delete an item and remove it from any trips that reference it."""
     if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Remove item from trip's items list
+    # Remove from all trips
     for trip in trips_store.values():
-        if trip.items and item_id in trip.items:
+        if item_id in trip.items:
             trip.items.remove(item_id)
 
     del items_store[item_id]
@@ -82,19 +81,16 @@ def delete_item(item_id: str):
 
 @router.post("/weight")
 def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None)):
-    """Get weight reading from the scale and optionally associate it with a trip and/or item."""
+    """Read weight from the scale and associate with item/trip."""
     result = get_weight(wait_time=6.0)
     result_dict = json.loads(result)
 
     if "error" in result_dict:
         raise HTTPException(status_code=500, detail=result_dict["error"])
 
-    weight_kg = result_dict["total_weight_kg"]
-
+    weight_kg = result_dict.get("total_weight_kg")
     if weight_kg is None:
-        raise HTTPException(
-            status_code=500, detail="Failed to get weight reading from the scale"
-        )
+        raise HTTPException(status_code=500, detail="Failed to get weight reading")
 
     if item_id and item_id in items_store:
         item = items_store[item_id]
@@ -107,13 +103,11 @@ def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None))
         )
         items_store[item.item_id] = item
 
-    if trip_id:
-        if trip_id not in trips_store:
-            raise HTTPException(status_code=404, detail="Trip not found")
-        if trips_store[trip_id].items is None:
-            trips_store[trip_id].items = []
-        if item.item_id not in trips_store[trip_id].items:
-            trips_store[trip_id].items.append(item.item_id)
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    if item.item_id not in trips_store[trip_id].items:
+        trips_store[trip_id].items.append(item.item_id)
 
     return {
         "status": "success",
@@ -128,7 +122,7 @@ async def detect_item_from_image(
     trip_id: Optional[str] = Query(None),
     item_id: Optional[str] = Query(None),
 ):
-    """Upload an image, run object detection (YOLO), and create/update an Item and optionally associate it with a trip."""
+    """Run YOLO detection, create/update an item, and optionally associate with a trip."""
     image_bytes = await image.read()
 
     cv_results = detect_objects_yolo(image_bytes)
@@ -148,8 +142,6 @@ async def detect_item_from_image(
     if trip_id:
         if trip_id not in trips_store:
             raise HTTPException(status_code=404, detail="Trip not found")
-        if trips_store[trip_id].items is None:
-            trips_store[trip_id].items = []
         if item.item_id not in trips_store[trip_id].items:
             trips_store[trip_id].items.append(item.item_id)
 
