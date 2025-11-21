@@ -1,13 +1,15 @@
-from fastapi import APIRouter, HTTPException, Query, File, UploadFile
-from typing import List, Optional
 import json
+from typing import List, Optional
 
-from hardware.readscale import get_weight
-from computer_vision.cv import detect_objects_yolo
-from app.models import Item, ItemUpdate, CVResult
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+
+from app.models import CVResult, Item, ItemUpdate
 from app.state.db import items_store, trips_store
+from computer_vision.cv import detect_objects_yolo
+from hardware.readscale import get_weight
 
 router = APIRouter()
+
 
 @router.post("/", response_model=Item)
 def create_item(item: Item, trip_id: Optional[str] = Query(None)):
@@ -23,10 +25,12 @@ def create_item(item: Item, trip_id: Optional[str] = Query(None)):
 
     return item
 
+
 @router.get("/", response_model=List[Item])
 def get_items():
     """Get all items."""
     return list(items_store.values())
+
 
 @router.get("/{item_id}", response_model=Item)
 def get_item(item_id: str):
@@ -34,6 +38,7 @@ def get_item(item_id: str):
     if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
     return items_store[item_id]
+
 
 @router.put("/{item_id}", response_model=Item)
 def update_item(item_id: str, item: Item):
@@ -43,6 +48,7 @@ def update_item(item_id: str, item: Item):
 
     items_store[item_id] = item.model_copy(update={"item_id": item_id})
     return items_store[item_id]
+
 
 @router.patch("/{item_id}", response_model=Item)
 def patch_item(item_id: str, patch: ItemUpdate):
@@ -57,6 +63,7 @@ def patch_item(item_id: str, patch: ItemUpdate):
     items_store[item_id] = updated
     return updated
 
+
 @router.delete("/{item_id}")
 def delete_item(item_id: str):
     """Delete an item and remove it from any trips that reference it."""
@@ -70,6 +77,7 @@ def delete_item(item_id: str):
 
     del items_store[item_id]
     return {"message": "Item deleted successfully"}
+
 
 @router.post("/weight")
 def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None)):
@@ -88,7 +96,11 @@ def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None))
         item = items_store[item_id]
         item.weight_kg = weight_kg
     else:
-        item = Item(item_id=item_id, weight_kg=weight_kg) if item_id else Item(weight_kg=weight_kg)
+        item = (
+            Item(item_id=item_id, weight_kg=weight_kg)
+            if item_id
+            else Item(weight_kg=weight_kg)
+        )
         items_store[item.item_id] = item
 
     if trip_id not in trips_store:
@@ -102,6 +114,7 @@ def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None))
         "item": item.model_dump(),
         "total_weight_kg": weight_kg,
     }
+
 
 @router.post("/detect", response_model=Item)
 async def detect_item_from_image(

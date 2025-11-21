@@ -39,7 +39,7 @@ This will install the correct Python version, create a local virtual environment
 To start the backend, run:
 
 ```bash
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Our backend server will be available at [localhost:8000](http://localhost:8000) 🤩🎉💃

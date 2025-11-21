@@ -1,3 +1,5 @@
+import os
+from datetime import datetime
 from typing import List, Tuple
 
 import cv2
@@ -14,7 +16,49 @@ def bytes_to_numpy(image_bytes: bytes):
     return img
 
 
+# Debug function that saves image locally
+# Can remove later
+def debug_test_image(image_bytes: bytes):
+    # Verify image format and log info
+    print(f"\nReceived image size={len(image_bytes)} bytes, type={type(image_bytes)}")
+    print(
+        f"First 20 bytes (hex): {image_bytes[:20].hex() if len(image_bytes) >= 20 else image_bytes.hex()}"
+    )
+
+    # Check for JPEG signature (FF D8 FF)
+    is_jpeg = image_bytes[:3] == b"\xff\xd8\xff"
+    # Check for PNG signature (89 50 4E 47)
+    is_png = image_bytes[:4] == b"\x89PNG"
+
+    if is_jpeg:
+        print(f"Image format: JPEG (detected by magic bytes)")
+    elif is_png:
+        print(f"Image format: PNG (detected by magic bytes)")
+    else:
+        print(f"WARNING: Unknown image format")
+        print(f"First 20 bytes (hex): {image_bytes[:20].hex()}")
+
+    # Save the raw image bytes to verify it's valid (for debugging)
+    try:
+        debug_dir = "debug_images"
+        os.makedirs(debug_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        extension = "jpg" if is_jpeg else ("png" if is_png else "bin")
+        debug_path = os.path.join(debug_dir, f"received_image_{timestamp}.{extension}")
+
+        with open(debug_path, "wb") as f:
+            f.write(image_bytes)
+        print(f"Saved debug image to: {debug_path}")
+    except Exception as e:
+        print(f"WARNING: Could not save debug image: {e}")
+
+    print("=== End Image Verification ===\n")
+    return
+
+
 def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
+    debug_test_image(image_bytes)
+
     model = YOLO("yolov8n.pt")
     img = bytes_to_numpy(image_bytes)
     results = model(
@@ -96,7 +140,9 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
     return detections_list
 
 
-def detect_object_dimensions(image_bytes: bytes, bounding_box: BoundingBox) -> Dimensions:
+def detect_object_dimensions(
+    image_bytes: bytes, bounding_box: BoundingBox
+) -> Dimensions:
     # Constants based on the marker I chose
     physical_marker_cm = 5.0
     marker_id = 2
@@ -106,7 +152,7 @@ def detect_object_dimensions(image_bytes: bytes, bounding_box: BoundingBox) -> D
     # Converting image to black and white for contrast
     greyscale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Detect marker 
+    # Detect marker
     aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
     detector = aruco.ArucoDetector(aruco_dict)
     corners, ids, _ = detector.detectMarkers(greyscale)
@@ -129,7 +175,7 @@ def detect_object_dimensions(image_bytes: bytes, bounding_box: BoundingBox) -> D
 
     # Calculate dimensions
     return Dimensions(
-        width = round(width_px / px_per_cm, 2),
-        length = round(length_px / px_per_cm, 2),
-        height = None
+        width=round(width_px / px_per_cm, 2),
+        length=round(length_px / px_per_cm, 2),
+        height=None,
     )
