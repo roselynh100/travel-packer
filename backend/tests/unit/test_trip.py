@@ -238,12 +238,13 @@ class TestTripRecommendations(unittest.TestCase):
         response = self.client.post("/trips/t1/recommendations")
         self.assertEqual(response.status_code, 200)
 
-        mock_gen.assert_called_once_with(
-            destination="Banff",
-            duration_days=3,
-            doing_laundry=False,
-            activities="hiking"
-        )
+        mock_gen.assert_called_once()
+        # Verify the trip object passed has the correct fields
+        called_trip = mock_gen.call_args[0][0]
+        self.assertEqual(called_trip.destination, "Banff")
+        self.assertEqual(called_trip.duration_days, 3)
+        self.assertEqual(called_trip.doing_laundry, False)
+        self.assertEqual(called_trip.activities, "hiking")
 
     @patch("app.routes.trip.generate_recommendation_list")
     def test_recommendations_invalid_algorithm_output(self, mock_gen):

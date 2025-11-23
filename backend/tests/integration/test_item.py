@@ -51,18 +51,21 @@ class TestRealScaleIntegration(unittest.TestCase):
     @unittest.skipUnless(scale_available(), "DYMO scale not connected")
     def test_real_scale_read_creates_item(self):
         """Create an item"""
-
-        response = self.client.post("/items/weight?trip_id=realtrip")
+        from uuid import uuid4
+        
+        # Note: item_id must be provided due to current implementation
+        new_item_id = str(uuid4())
+        response = self.client.post(f"/items/weight?trip_id=realtrip&item_id={new_item_id}")
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertEqual(data["status"], "success")
-
-        weight = data["total_weight_kg"]
+        # Endpoint now returns Item directly, not a dict with status
+        weight = data["weight_kg"]
         self.assertIsNotNone(weight)
         self.assertGreater(weight, 0.0)
 
-        item_id = data["item"]["item_id"]
+        item_id = data["item_id"]
+        self.assertEqual(item_id, new_item_id)
         self.assertIn(item_id, items_store)
 
     @unittest.skipUnless(scale_available(), "DYMO scale not connected")
@@ -71,6 +74,7 @@ class TestRealScaleIntegration(unittest.TestCase):
 
         from app.models import Item
         item = Item(item_id="i1")
+        item.trips.append("t1")
         items_store["i1"] = item
 
         from app.state.db import trips_store
@@ -80,7 +84,8 @@ class TestRealScaleIntegration(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertEqual(data["item"]["item_id"], "i1")
+        # Endpoint now returns Item directly
+        self.assertEqual(data["item_id"], "i1")
 
         updated = items_store["i1"]
         self.assertIsNotNone(updated.weight_kg)
@@ -89,11 +94,16 @@ class TestRealScaleIntegration(unittest.TestCase):
     @unittest.skipUnless(scale_available(), "DYMO scale not connected")
     def test_real_scale_association_with_trip(self):
         """Ensure scale readings associate item to the trip."""
-
-        response = self.client.post("/items/weight?trip_id=t1")
+        from uuid import uuid4
+        
+        # Note: item_id must be provided due to current implementation
+        new_item_id = str(uuid4())
+        response = self.client.post(f"/items/weight?trip_id=t1&item_id={new_item_id}")
         self.assertEqual(response.status_code, 200)
 
-        item_id = response.json()["item"]["item_id"]
+        # Endpoint now returns Item directly
+        item_id = response.json()["item_id"]
+        self.assertEqual(item_id, new_item_id)
 
         from app.state.db import trips_store
         self.assertIn(item_id, trips_store["t1"].items)
