@@ -38,16 +38,21 @@ class Item(BaseModel):
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_results: Optional[List[CVResult]] = None
+    trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 class ItemUpdate(BaseModel):
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
-    cv_result: Optional[CVResult] = None
+    cv_results: Optional[List[CVResult]] = None
 
 class RecommendedItem(BaseModel):
     item_name: str
     reason: Optional[str] = None
     priority: Optional[int] = None
+
+class RemovalRecommendation(BaseModel):
+    should_remove: bool
+    reason: Optional[str] = None
 
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
@@ -56,6 +61,8 @@ class Trip(BaseModel):
     doing_laundry: bool
     activities: Optional[str] = None
     items: List[str] = Field(default_factory=list, description="Item IDs")
+    total_items_weight: float = 0.0
+    total_items_volume: float = 0.0
 
 class TripUpdate(BaseModel):
     destination: Optional[str] = None

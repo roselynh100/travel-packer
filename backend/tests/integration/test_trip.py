@@ -35,13 +35,16 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
         )
         trips_store["tripX"] = trip
 
-        heavy = Item(item_id="a", item_name="Boots", weight_kg=4.2)
-        light = Item(item_id="b", item_name="Towel", weight_kg=0.4)
+        heavy = Item(item_id="a", weight_kg=4.2)
+        heavy.trips.append("tripX")
+        light = Item(item_id="b", weight_kg=0.4)
+        light.trips.append("tripX")
         items_store["a"] = heavy
         items_store["b"] = light
         trip.items = ["a", "b"]
 
-        response = self.client.post("/trips/tripX/packing-recommendation")
+        # Endpoint is now /removal-recommendations (plural)
+        response = self.client.post("/trips/tripX/removal-recommendations")
         self.assertEqual(response.status_code, 200)
 
         result = response.json()
@@ -59,11 +62,16 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
         )
         trips_store["tripY"] = trip
 
-        items_store["a"] = Item(item_id="a", item_name="Shirt", weight_kg=1.0)
-        items_store["b"] = Item(item_id="b", item_name="Shorts", weight_kg=0.5)
+        item_a = Item(item_id="a", weight_kg=1.0)
+        item_a.trips.append("tripY")
+        item_b = Item(item_id="b", weight_kg=0.5)
+        item_b.trips.append("tripY")
+        items_store["a"] = item_a
+        items_store["b"] = item_b
         trip.items = ["a", "b"]
 
-        response = self.client.post("/trips/tripY/packing-recommendation")
+        # Endpoint is now /removal-recommendations (plural)
+        response = self.client.post("/trips/tripY/removal-recommendations")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
