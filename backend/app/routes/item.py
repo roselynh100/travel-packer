@@ -1,13 +1,16 @@
-from fastapi import APIRouter, HTTPException, Query, File, UploadFile
-from typing import List, Optional
 import json
+from typing import List, Optional
 
-from hardware.readscale import get_weight
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+
+from app.models import CVResult, Item, ItemUpdate
+from app.state.db import items_store, trips_store
 from computer_vision.cv import detect_objects_yolo
 from app.models import Item, ItemUpdate
 from app.state.db import items_store, trips_store
 
 router = APIRouter()
+
 
 @router.post("/", response_model=Item)
 def create_item(item: Item, trip_id: Optional[str] = Query(None)):
@@ -28,10 +31,12 @@ def create_item(item: Item, trip_id: Optional[str] = Query(None)):
 
     return item
 
+
 @router.get("/", response_model=List[Item])
 def get_items():
     """Get all items."""
     return list(items_store.values())
+
 
 @router.get("/{item_id}", response_model=Item)
 def get_item(item_id: str):
@@ -39,6 +44,7 @@ def get_item(item_id: str):
     if item_id not in items_store:
         raise HTTPException(status_code=404, detail="Item not found")
     return items_store[item_id]
+
 
 @router.put("/{item_id}", response_model=Item)
 def update_item(item_id: str, updated_item: Item):
@@ -49,6 +55,7 @@ def update_item(item_id: str, updated_item: Item):
     updated = updated_item.model_copy(update={"item_id": item_id})
     items_store[item_id] = updated
     return updated
+
 
 @router.patch("/{item_id}", response_model=Item)
 def patch_item(item_id: str, patch: ItemUpdate):
@@ -63,6 +70,7 @@ def patch_item(item_id: str, patch: ItemUpdate):
     items_store[item_id] = updated
 
     return updated
+
 
 @router.delete("/{item_id}")
 def delete_item(item_id: str):
@@ -146,6 +154,7 @@ def read_weight(
     trip.total_items_weight = max(trip.total_items_weight, 0.0)
 
     return item
+
 
 
 @router.post("/detect", response_model=Item)
