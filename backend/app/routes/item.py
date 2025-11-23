@@ -8,6 +8,7 @@ from app.state.db import items_store, trips_store
 from computer_vision.cv import detect_objects_yolo
 from app.models import Item, ItemUpdate
 from app.state.db import items_store, trips_store
+from hardware.readscale import get_weight
 
 router = APIRouter()
 
