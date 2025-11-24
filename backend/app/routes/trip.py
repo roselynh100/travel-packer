@@ -93,6 +93,9 @@ def get_trip_recommendations(trip_id: str):
     trip = trips_store[trip_id]
 
     recs = generate_recommendation_list(trip)
+    
+    if recs is None:
+        raise HTTPException(status_code=500, detail="No recommendations generated")
 
     return recs
 
