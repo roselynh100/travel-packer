@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
+import requests
 
 from app.models import Trip, TripUpdate, Item, RecommendedItem, RemovalRecommendation
 from machine_learning.poc_decision_model import generate_recommendation_list, removal_recommendation_algorithm
 from app.state.db import trips_store, items_store, users_store
+from constants import TOMORROW_IO_API_KEY
 
 router = APIRouter()
 
@@ -115,3 +117,14 @@ def get_removal_recommendation(trip_id: str, item_id: str):
         raise HTTPException(status_code=400, detail="Item does not belong to this trip")
 
     return removal_recommendation_algorithm(item, trip)
+
+@router.get("/{trip_id}/weather")
+def get_weather(trip_id: str):
+    api_url = f"https://api.tomorrow.io/v4/weather/forecast?location=42.3478,-71.0466&apikey={TOMORROW_IO_API_KEY}"
+    headers = {
+        "accept": "application/json",
+        "accept-encoding": "deflate, gzip, br"
+    }
+    response = requests.get(api_url, headers=headers)
+    response.json()
+    return response.json()

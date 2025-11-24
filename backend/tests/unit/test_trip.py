@@ -249,6 +249,33 @@ class TestUpdatingTrip(unittest.TestCase):
         self.assertEqual(updated["destination"], "Osaka")
         self.assertEqual(updated["duration_days"], 3)
 
+class TestWeatherEndpoint(unittest.TestCase):
+    """Unit tests for weather endpoints"""
+
+    def setUp(self):
+        self.client = TestClient(app)
+        items_store.clear()
+        trips_store.clear()
+
+    def tearDown(self):
+        items_store.clear()
+        trips_store.clear()
+
+    def test_get_weather(self):
+        """Should return weather data"""
+
+        trip = Trip(
+            trip_id="t1",
+            destination="New York",
+            duration_days=3,
+            doing_laundry=False,
+            items=[""]
+        )
+        trips_store["t1"] = trip
+
+        response = self.client.get("/trips/t1/weather")
+        print(response.text)
+        self.assertEqual(response.status_code, 200)
 
 if __name__ == '__main__':
     unittest.main()
