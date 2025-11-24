@@ -1,6 +1,6 @@
-from datetime import datetime
-from typing import Dict, Optional, List
+from typing import Optional, List
 from uuid import uuid4
+from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -50,9 +50,22 @@ class RecommendedItem(BaseModel):
     reason: Optional[str] = None
     priority: Optional[int] = None
 
+class RemovalRecommendationStatus(str, Enum):
+    pack='pack'
+    remove='remove'
+    swap='swap'
+
+class RemovalRecommendationReason(str, Enum):
+    overweight='Luggage is too heavy!'
+    over_volume='Luggage is over volume!'
+
 class RemovalRecommendation(BaseModel):
-    should_remove: bool
-    reason: Optional[str] = None
+    status: RemovalRecommendationStatus
+    reason: Optional[RemovalRecommendationReason] = None
+    swap_candidates: Optional[List[Item]] = None
+    
+    class Config:  
+        use_enum_values = True
 
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))

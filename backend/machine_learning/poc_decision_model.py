@@ -1,10 +1,10 @@
-from app.models import Item, RecommendedItem, Trip, RemovalRecommendation
+from app.models import Item, RecommendedItem, Trip, RemovalRecommendation, RemovalRecommendationReason, RemovalRecommendationStatus
 from typing import List
 
 def removal_recommendation_algorithm(item: Item, trip: Trip) -> RemovalRecommendation:
     """Returns items to remove."""
     # TO-DO: replace with our actual packing_algorithm once thats ready (run with integration tests to ensure compatibility with endpoint)
-    rec = RemovalRecommendation(should_remove=True, reason="Exceeded baggage limit")
+    rec = RemovalRecommendation(status=RemovalRecommendationStatus.remove, reason=RemovalRecommendationReason.overweight)
     return rec
 
 def generate_recommendation_list(trip: Trip) -> List[RecommendedItem]:
