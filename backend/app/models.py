@@ -35,6 +35,7 @@ class CVResult(BaseModel):
 
 class Item(BaseModel):
     item_id: str = Field(default_factory=lambda: str(uuid4()))
+    item_importance: Optional[int] = 0
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_results: Optional[List[CVResult]] = None
