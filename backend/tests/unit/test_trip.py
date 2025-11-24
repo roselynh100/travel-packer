@@ -253,11 +253,9 @@ class TestWeatherEndpoint(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(app)
-        items_store.clear()
         trips_store.clear()
 
     def tearDown(self):
-        items_store.clear()
         trips_store.clear()
 
     def test_get_weather(self):
