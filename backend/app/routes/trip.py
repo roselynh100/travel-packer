@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 import requests
+import json
 
 from app.models import Trip, TripUpdate, Item, RecommendedItem, RemovalRecommendation
 from machine_learning.poc_decision_model import generate_recommendation_list, removal_recommendation_algorithm
@@ -118,13 +119,37 @@ def get_removal_recommendation(trip_id: str, item_id: str):
 
     return removal_recommendation_algorithm(item, trip)
 
-@router.get("/{trip_id}/weather")
+@router.post("/{trip_id}/weather")
 def get_weather(trip_id: str):
-    api_url = f"https://api.tomorrow.io/v4/weather/forecast?location=42.3478,-71.0466&apikey={TOMORROW_IO_API_KEY}"
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    trip = trips_store[trip_id]
+    destination = trip.destination
+
+    print(destination)
+    if destination != "New York":
+        raise HTTPException(status_code=404, detail="Location not supported")
+
+    api_url = f"https://api.tomorrow.io/v4/weather/forecast?location={destination}&apikey={TOMORROW_IO_API_KEY}"
     headers = {
         "accept": "application/json",
         "accept-encoding": "deflate, gzip, br"
     }
     response = requests.get(api_url, headers=headers)
-    response.json()
-    return response.json()
+    weather_json_str = response.text
+    weather_data = json.loads(weather_json_str)
+    
+
+    lowest_temp = 1000
+    highest_temp = -1000
+    for timestamp in weather_data['timelines']['minutely']:
+        temperature = timestamp['values']['temperature']
+        lowest_temp = min(lowest_temp, temperature)
+        highest_temp = max(highest_temp, temperature)
+
+    print(lowest_temp)
+    print(highest_temp)
+    
+    trip.highest_temp = highest_temp
+    trip.lowest_temp = lowest_temp

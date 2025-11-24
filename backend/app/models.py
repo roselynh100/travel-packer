@@ -72,6 +72,8 @@ class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
     destination: str
     duration_days: int
+    highest_temp: Optional[float] = None
+    lowest_temp: Optional[float] = None
     doing_laundry: bool
     activities: Optional[str] = None
     items: List[str] = Field(default_factory=list, description="Item IDs")

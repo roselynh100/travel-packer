@@ -38,7 +38,6 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
         items_store["i1"] = item
 
         response = self.client.post("/trips/t1/item/i1/removal-recommendation")
-        print(response.text)
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
@@ -273,9 +272,10 @@ class TestWeatherEndpoint(unittest.TestCase):
         )
         trips_store["t1"] = trip
 
-        response = self.client.get("/trips/t1/weather")
-        print(response.text)
+        response = self.client.post("/trips/t1/weather")
         self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(trip.highest_temp)
+        self.assertIsNotNone(trip.lowest_temp)
 
 if __name__ == '__main__':
     unittest.main()
