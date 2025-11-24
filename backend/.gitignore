@@ -18,3 +18,4 @@ __pycache__/
 *.pt
 debug_images/
 
+constants.py
