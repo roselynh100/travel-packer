@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -14,6 +15,8 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedButton } from "@/components/ThemedButton";
 import { Checkbox } from "expo-checkbox";
+import { API_BASE_URL } from "@/constants/api";
+import { TripInput } from "@/constants/types";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -24,16 +27,55 @@ export default function HomeScreen() {
   const [activities, onChangeActivities] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSave = async () => {
-    setIsLoading(true);
+  async function handleSave() {
+    try {
+      setIsLoading(true);
 
-    // Wait for 5 seconds
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+      const trip: TripInput = {
+        destination,
+        duration_days: 5, // TODO: fix, currently hardcoded, figure out date input
+        doing_laundry: laundry,
+        activities,
+      };
 
-    // Navigate to list page
-    router.push("/PackingList");
-    setIsLoading(false);
-  };
+      await saveToAPI(trip);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      // Navigate to list page
+      router.push("/PackingList");
+    } catch (error) {
+      console.error("Error saving trip details:", error);
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to save trip details"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function saveToAPI(tripInput: TripInput) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/trips`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(tripInput),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `API error (${response.status}): ${errorText || response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("Save success:", result);
+    } catch (error) {
+      throw error;
+    }
+  }
 
   return (
     <KeyboardAvoidingView
