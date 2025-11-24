@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Button,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -13,6 +12,7 @@ import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
+import { ThemedButton } from "@/components/ThemedButton";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function HomeScreen() {
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
     // Navigate to list page
-    router.push("/list");
+    router.push("/PackingList");
     setIsLoading(false);
   };
 
@@ -70,7 +70,7 @@ export default function HomeScreen() {
               placeholder="Hiking, Fancy Dinner, Clubbing..."
             />
 
-            <Button title="Save" onPress={handleSave} />
+            <ThemedButton title="Save" onPress={handleSave} />
           </View>
         </TouchableWithoutFeedback>
       </ScrollView>
