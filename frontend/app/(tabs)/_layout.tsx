@@ -7,8 +7,13 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "var(--color-tab-selected)",
         headerShown: false,
+        tabBarActiveTintColor: "var(--color-tab-selected)",
+        tabBarStyle: {
+          backgroundColor: "var(--color-bg-nav)",
+          borderTopWidth: 0,
+        },
+        sceneStyle: { backgroundColor: "var(--color-bg)" },
       }}
     >
       <Tabs.Screen

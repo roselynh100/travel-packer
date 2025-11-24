@@ -4,6 +4,7 @@
 
 :root {
   --color-bg: #ffffff;
+  --color-bg-nav: #e4e4e4;
   --color-text: #000000;
   --color-primary: #00c3d0;
   --color-primary-action: #11acb6;
@@ -12,9 +13,15 @@
 
 .dark {
   --color-bg: #141414;
+  --color-bg-nav: #1d1d1d;
   --color-text: #e3e3e3;
+  --color-text-placeholder: #484848;
   --color-primary: #007a82;
   --color-primary-action: #00a3ae;
-  --color-tab: #7c7c7d;
-  --color-tab-selected: #135559;
+  --color-tab-selected: #316064;
+}
+
+input,
+textarea {
+  outline: none !important;
 }
