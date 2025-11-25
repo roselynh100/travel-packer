@@ -14,9 +14,10 @@ import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedButton } from "@/components/ThemedButton";
-import { Checkbox } from "expo-checkbox";
 import { API_BASE_URL } from "@/constants/api";
-import { TripInput } from "@/constants/types";
+import { Trip } from "@/constants/types";
+import { ThemedCheckbox } from "@/components/ThemedCheckbox";
+import { useAppContext } from "@/helpers/AppContext";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -27,11 +28,13 @@ export default function HomeScreen() {
   const [activities, onChangeActivities] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const { setTripId } = useAppContext();
+
   async function handleSave() {
     try {
       setIsLoading(true);
 
-      const trip: TripInput = {
+      const trip: Trip = {
         destination,
         duration_days: 5, // TODO: fix, currently hardcoded, figure out date input
         doing_laundry: laundry,
@@ -40,7 +43,7 @@ export default function HomeScreen() {
 
       await saveToAPI(trip);
       await new Promise((resolve) => setTimeout(resolve, 5000));
-      // Navigate to list page
+
       router.push("/PackingList");
     } catch (error) {
       console.error("Error saving trip details:", error);
@@ -53,7 +56,7 @@ export default function HomeScreen() {
     }
   }
 
-  async function saveToAPI(tripInput: TripInput) {
+  async function saveToAPI(tripInput: Trip) {
     try {
       const response = await fetch(`${API_BASE_URL}/trips`, {
         method: "POST",
@@ -70,8 +73,9 @@ export default function HomeScreen() {
         );
       }
 
-      const result = await response.json();
+      const result: Trip = await response.json();
       console.log("Save success:", result);
+      setTripId(result.trip_id ?? "No trip id saved");
     } catch (error) {
       throw error;
     }
@@ -124,17 +128,12 @@ export default function HomeScreen() {
               />
             </View>
 
-            <View className="flex-row gap-4">
-              <Checkbox
-                value={laundry}
-                onValueChange={onChangeLaundry}
-                color="var(--color-primary)"
-                className="w-6 h-6"
-              />
-              <ThemedText type="subtitle">
-                I am planning to do laundry
-              </ThemedText>
-            </View>
+            <ThemedCheckbox
+              label="I am planning to do laundry"
+              value={laundry}
+              onValueChange={onChangeLaundry}
+              size="medium"
+            />
           </View>
 
           <ThemedButton

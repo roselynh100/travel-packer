@@ -5,11 +5,12 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColorScheme } from "react-native";
 import { cn } from "@/helpers/cn";
+import { AppProvider } from "@/helpers/AppContext";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
-    <>
+    <AppProvider>
       <SafeAreaView
         className={cn("flex-1", colorScheme === "dark" ? "dark" : "")}
       >
@@ -28,6 +29,6 @@ export default function RootLayout() {
         </Stack>
       </SafeAreaView>
       <StatusBar style="auto" />
-    </>
+    </AppProvider>
   );
 }
