@@ -6,7 +6,7 @@ import json
 from app.models import Trip, TripUpdate, Item, RecommendedItem, RemovalRecommendation
 from machine_learning.poc_decision_model import generate_recommendation_list, removal_recommendation_algorithm
 from app.state.db import trips_store, items_store, users_store
-from constants import TOMORROW_IO_API_KEY
+from constants import TOMORROW_WEATHER_URL
 
 router = APIRouter()
 
@@ -131,7 +131,10 @@ def get_weather(trip_id: str):
     if destination != "New York":
         raise HTTPException(status_code=404, detail="Location not supported")
 
-    api_url = f"https://api.tomorrow.io/v4/weather/forecast?location={destination}&apikey={TOMORROW_IO_API_KEY}"
+    api_url = TOMORROW_WEATHER_URL.format(
+        location=destination
+    )
+    
     headers = {
         "accept": "application/json",
         "accept-encoding": "deflate, gzip, br"
