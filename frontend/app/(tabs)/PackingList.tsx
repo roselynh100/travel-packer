@@ -59,7 +59,7 @@ export default function PackingList() {
 
   return (
     <View className="flex flex-col gap-4 p-12">
-      <ThemedText type="title">Packing List</ThemedText>
+      <ThemedText type="title">Packing List 📜</ThemedText>
       <ThemedText type="subtitle">Trip ID: {TRIP_ID}</ThemedText>
       {recommendedItems?.map((item, i) => (
         <ThemedCheckbox

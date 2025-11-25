@@ -15,52 +15,55 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedButton } from "@/components/ThemedButton";
 import { API_BASE_URL } from "@/constants/api";
-import { User } from "@/constants/types";
+import { Trip } from "@/constants/types";
+import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
 
-export default function HomeScreen() {
+export default function TripInfo() {
   const router = useRouter();
 
-  const [name, onChangeName] = useState("");
-  const [email, onChangeEmail] = useState("");
-  const [password, onChangePassword] = useState("");
+  const [destination, onChangeDestination] = useState("");
+  const [dates, onChangeDates] = useState("");
+  const [laundry, onChangeLaundry] = useState(false);
+  const [activities, onChangeActivities] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { setUserId } = useAppContext();
+  const { setTripId } = useAppContext();
 
   async function handleSave() {
     try {
       setIsLoading(true);
 
-      const user: User = {
-        name,
-        email,
-        password,
+      const trip: Trip = {
+        destination,
+        duration_days: 5, // TODO: fix, currently hardcoded, figure out date input
+        doing_laundry: laundry,
+        activities,
       };
 
-      await saveToAPI(user);
+      await saveToAPI(trip);
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      router.push("/TripInfo");
+      router.push("/PackingList");
     } catch (error) {
-      console.error("Error creating user:", error);
+      console.error("Error saving trip details:", error);
       Alert.alert(
         "Error",
-        error instanceof Error ? error.message : "Failed to create user"
+        error instanceof Error ? error.message : "Failed to save trip details"
       );
     } finally {
       setIsLoading(false);
     }
   }
 
-  async function saveToAPI(userInput: User) {
+  async function saveToAPI(tripInput: Trip) {
     try {
-      const response = await fetch(`${API_BASE_URL}/users`, {
+      const response = await fetch(`${API_BASE_URL}/trips`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(userInput),
+        body: JSON.stringify(tripInput),
       });
 
       if (!response.ok) {
@@ -70,9 +73,9 @@ export default function HomeScreen() {
         );
       }
 
-      const result: User = await response.json();
+      const result: Trip = await response.json();
       console.log("Save success:", result);
-      setUserId(result.user_id ?? "No user id saved");
+      setTripId(result.trip_id ?? "No trip id saved");
     } catch (error) {
       throw error;
     }
@@ -95,33 +98,42 @@ export default function HomeScreen() {
             </View>
           </Modal>
           <View className="flex-col gap-12">
-            <ThemedText type="title">Input your information 🤸</ThemedText>
+            <ThemedText type="title">Input your trip details 🌴</ThemedText>
             <View className="gap-4">
-              <ThemedText type="subtitle">Name</ThemedText>
+              <ThemedText type="subtitle">Destination</ThemedText>
               <ThemedTextInput
-                value={name}
-                onChangeText={onChangeName}
-                placeholder="John Doe"
+                value={destination}
+                onChangeText={onChangeDestination}
+                placeholder="Toronto, Canada"
               />
             </View>
 
             <View className="gap-4">
-              <ThemedText type="subtitle">Email</ThemedText>
+              <ThemedText type="subtitle">Trip Dates</ThemedText>
               <ThemedTextInput
-                value={email}
-                onChangeText={onChangeEmail}
-                placeholder="john.doe@gmail.com"
+                value={dates}
+                onChangeText={onChangeDates}
+                placeholder="May 1, 2026 - May 31, 2026"
               />
             </View>
 
             <View className="gap-4">
-              <ThemedText type="subtitle">Password</ThemedText>
+              <ThemedText type="subtitle">
+                Activities Planned (Optional)
+              </ThemedText>
               <ThemedTextInput
-                value={password}
-                onChangeText={onChangePassword}
-                secureTextEntry={true}
+                value={activities}
+                onChangeText={onChangeActivities}
+                placeholder="Hiking, Fancy Dinner, Clubbing..."
               />
             </View>
+
+            <ThemedCheckbox
+              label="I am planning to do laundry"
+              value={laundry}
+              onValueChange={onChangeLaundry}
+              size="medium"
+            />
           </View>
 
           <ThemedButton
