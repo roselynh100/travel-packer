@@ -1,9 +1,12 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
+import requests
+import json
 
 from app.models import Trip, TripUpdate, Item, RecommendedItem, RemovalRecommendation
 from machine_learning.poc_decision_model import generate_recommendation_list, removal_recommendation_algorithm
 from app.state.db import trips_store, items_store, users_store
+from constants import TOMORROW_WEATHER_URL
 
 router = APIRouter()
 
@@ -115,3 +118,41 @@ def get_removal_recommendation(trip_id: str, item_id: str):
         raise HTTPException(status_code=400, detail="Item does not belong to this trip")
 
     return removal_recommendation_algorithm(item, trip)
+
+@router.post("/{trip_id}/weather")
+def get_weather(trip_id: str):
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    trip = trips_store[trip_id]
+    destination = trip.destination
+
+    print(destination)
+    if destination != "New York":
+        raise HTTPException(status_code=404, detail="Location not supported")
+
+    api_url = TOMORROW_WEATHER_URL.format(
+        location=destination
+    )
+    
+    headers = {
+        "accept": "application/json",
+        "accept-encoding": "deflate, gzip, br"
+    }
+    response = requests.get(api_url, headers=headers)
+    weather_json_str = response.text
+    weather_data = json.loads(weather_json_str)
+    
+
+    lowest_temp = 1000
+    highest_temp = -1000
+    for timestamp in weather_data['timelines']['minutely']:
+        temperature = timestamp['values']['temperature']
+        lowest_temp = min(lowest_temp, temperature)
+        highest_temp = max(highest_temp, temperature)
+
+    print(lowest_temp)
+    print(highest_temp)
+    
+    trip.highest_temp = highest_temp
+    trip.lowest_temp = lowest_temp

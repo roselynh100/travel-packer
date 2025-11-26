@@ -38,7 +38,6 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
         items_store["i1"] = item
 
         response = self.client.post("/trips/t1/item/i1/removal-recommendation")
-        print(response.text)
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
@@ -249,6 +248,32 @@ class TestUpdatingTrip(unittest.TestCase):
         self.assertEqual(updated["destination"], "Osaka")
         self.assertEqual(updated["duration_days"], 3)
 
+class TestWeatherEndpoint(unittest.TestCase):
+    """Unit tests for weather endpoints"""
+
+    def setUp(self):
+        self.client = TestClient(app)
+        trips_store.clear()
+
+    def tearDown(self):
+        trips_store.clear()
+
+    def test_get_weather(self):
+        """Should return weather data"""
+
+        trip = Trip(
+            trip_id="t1",
+            destination="New York",
+            duration_days=3,
+            doing_laundry=False,
+            items=[""]
+        )
+        trips_store["t1"] = trip
+
+        response = self.client.post("/trips/t1/weather")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(trip.highest_temp)
+        self.assertIsNotNone(trip.lowest_temp)
 
 if __name__ == '__main__':
     unittest.main()
