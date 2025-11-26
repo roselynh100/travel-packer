@@ -148,16 +148,48 @@ def removal_recommendation_algorithm(
 
 def generate_recommendation_list(trip: Trip) -> List[RecommendedItem]:
     """Returns a list of things that the user should pack based on trip details"""
-    # access trip info like this:
-    activities = trip.activities
-
-    # TO-DO: replace with our actual generate_recommendation_list algorithm once thats ready
     recs = [
         RecommendedItem(
-            item_name="Passport", reason="Required for international travel", priority=1
+            item_name="Shirt", reason="Needed for everyday wear", priority=1
         ),
         RecommendedItem(
-            item_name="Phone Charger", reason="Daily essential", priority=2
+            item_name="Pants", reason="Needed for everyday wear", priority=1
+        ),
+        RecommendedItem(
+            item_name="Socks", reason="Needed for everyday wear", priority=1
+        ),
+        RecommendedItem(
+            item_name="Shoes", reason="Needed for everyday wear", priority=1
+        ),
+        RecommendedItem(
+            item_name="Sunglasses", reason="Needed for sunny weather", priority=1
+        ),
+        RecommendedItem(
+            item_name="Umbrella", reason="Needed for rainy weather", priority=1
+        ),
+        RecommendedItem(
+            item_name="Toothpaste", reason="Needed for oral hygiene", priority=1
+        ),
+        RecommendedItem(
+            item_name="Toothbrush", reason="Needed for oral hygiene", priority=1
         ),
     ]
+
+    if "work" in (trip.activities or "").lower():
+        recs.append(
+            RecommendedItem(item_name="Laptop", reason="Needed for work", priority=1)
+        )
+        recs.append(
+            RecommendedItem(
+                item_name="Laptop Charger", reason="Needed for work", priority=2
+            )
+        )
+
+    if trip.lowest_temp is not None and trip.lowest_temp < 10:
+        recs.append(
+            RecommendedItem(
+                item_name="Coat", reason="Needed for cold weather", priority=1
+            )
+        )
+
     return recs
