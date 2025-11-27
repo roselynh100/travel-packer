@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from app.models import (
     Item,
@@ -8,6 +8,12 @@ from app.models import (
     RemovalRecommendationStatus,
     Trip,
 )
+
+from .item_groups import ACCESSORIES, CLOTHING, TOILETRIES
+
+# Hard coded limits for now TODO: figure out where to put these
+WEIGHT_LIMIT_KG = 20.0
+VOLUME_LIMIT_CM3 = 50000.0
 
 
 def get_item_importance(item: Item, trip: Trip) -> int:
@@ -50,16 +56,10 @@ def get_item_importance(item: Item, trip: Trip) -> int:
     return score
 
 
-def removal_recommendation_algorithm(
+def packing_decision_algorithm(
     new_item: Item, trip: Trip, current_items: List[Item]
 ) -> RemovalRecommendation:
     """Returns packing status i.e. whether items must be removed."""
-    # current_items would be something like:
-    # current_items_objects = []
-    #    for item_id in trip.items:
-    #        if item_id in items_store:
-    #            current_items_objects.append(items_store[item_id])
-    # removal_recommendation_algorithm(new_item=new_item, trip=trip, current_items=current_items_objects)
 
     # Calculate importance of new item
     get_item_importance(new_item, trip)
@@ -71,15 +71,11 @@ def removal_recommendation_algorithm(
             get_item_importance(i, trip)
         min_item_importance = min(i.item_importance for i in current_items)
 
-    # Hard coded limits for now TODO: figure out where to put these
-    WEIGHT_LIMIT_KG = 20.0
-    VOLUME_LIMIT_CM3 = 50000.0
-
     # Check Weight
     if trip.total_items_weight + new_item.weight_kg > WEIGHT_LIMIT_KG:
         if new_item.item_importance > min_item_importance:
 
-            # Order by importance DESC and add items to list until overflow is fixed
+            # Order by importance ASC and add items to list until overflow is fixed
             weight_overflow = (
                 trip.total_items_weight + new_item.weight_kg
             ) - WEIGHT_LIMIT_KG
@@ -109,7 +105,7 @@ def removal_recommendation_algorithm(
     if trip.total_items_volume + new_item.estimated_volume_cm3 > VOLUME_LIMIT_CM3:
         if new_item.item_importance > min_item_importance:
 
-            # Order by importance DESC and add items to list until overflow is fixed
+            # Order by importance ASC and add items to list until overflow is fixed
             volume_overflow = (
                 trip.total_items_volume + new_item.estimated_volume_cm3
             ) - VOLUME_LIMIT_CM3
@@ -135,61 +131,50 @@ def removal_recommendation_algorithm(
                 swap_candidates=None,
             )
 
-    # Item is successfully packed:
-    trip.total_items_weight += new_item.weight_kg
-    trip.total_items_volume += new_item.estimated_volume_cm3
-
-    trip.items.append(new_item.item_id)
-
     return RemovalRecommendation(
         status=RemovalRecommendationStatus.pack, reason=None, swap_candidates=None
     )
 
 
-def generate_recommendation_list(trip: Trip) -> List[RecommendedItem]:
-    """Returns a list of things that the user should pack based on trip details"""
-    recs = [
-        RecommendedItem(
-            item_name="Shirt", reason="Needed for everyday wear", priority=1
-        ),
-        RecommendedItem(
-            item_name="Pants", reason="Needed for everyday wear", priority=1
-        ),
-        RecommendedItem(
-            item_name="Socks", reason="Needed for everyday wear", priority=1
-        ),
-        RecommendedItem(
-            item_name="Shoes", reason="Needed for everyday wear", priority=1
-        ),
-        RecommendedItem(
-            item_name="Sunglasses", reason="Needed for sunny weather", priority=1
-        ),
-        RecommendedItem(
-            item_name="Umbrella", reason="Needed for rainy weather", priority=1
-        ),
-        RecommendedItem(
-            item_name="Toothpaste", reason="Needed for oral hygiene", priority=1
-        ),
-        RecommendedItem(
-            item_name="Toothbrush", reason="Needed for oral hygiene", priority=1
-        ),
-    ]
+def get_base_items() -> List[RecommendedItem]:
+    """Returns the static list of items needed for every trip."""
+    return CLOTHING + ACCESSORIES + TOILETRIES
 
-    if "work" in (trip.activities or "").lower():
-        recs.append(
+
+def get_work_items(activities: Optional[str]) -> List[RecommendedItem]:
+    """Returns items specific to work trips."""
+    items = []
+    if "work" in (activities or "").lower():
+        items.append(
             RecommendedItem(item_name="Laptop", reason="Needed for work", priority=1)
         )
-        recs.append(
+        items.append(
             RecommendedItem(
                 item_name="Laptop Charger", reason="Needed for work", priority=2
             )
         )
+    return items
 
-    if trip.lowest_temp is not None and trip.lowest_temp < 10:
-        recs.append(
+
+def get_weather_items(lowest_temp: Optional[float]) -> List[RecommendedItem]:
+    """Returns items based on temperature logic."""
+    items = []
+    if lowest_temp is not None and lowest_temp < 10:
+        items.append(
             RecommendedItem(
                 item_name="Coat", reason="Needed for cold weather", priority=1
             )
         )
+    return items
+
+
+def baseline_list_algorithm(trip: Trip) -> List[RecommendedItem]:
+    """Returns a list of things that the user should pack based on trip details."""
+    recs = []
+
+    # Compose the final list using the helpers
+    recs.extend(get_base_items())
+    recs.extend(get_work_items(trip.activities))
+    recs.extend(get_weather_items(trip.lowest_temp))
 
     return recs
