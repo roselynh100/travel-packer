@@ -9,7 +9,7 @@ export function ThemedTextInput({ style, ...otherProps }: TextInputProps) {
 
   const text = "text-[var(--color-text)]";
 
-  const border = "border border-2 border-[var(--color-text-placeholder)]";
+  const border = "border-2 border-[var(--color-text-placeholder)]";
 
   return (
     <View

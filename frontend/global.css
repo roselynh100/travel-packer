@@ -4,11 +4,12 @@
 
 :root {
   --color-bg: #ffffff;
-  --color-bg-nav: #e4e4e4;
+  --color-bg-nav: #f5f5f5;
   --color-text: #000000;
+  --color-text-placeholder: #cfcfcf;
   --color-primary: #00c3d0;
   --color-primary-action: #11acb6;
-  --color-tab-selected: #d0a9f5;
+  --color-tab-selected: #2eb2bb;
 }
 
 .dark {

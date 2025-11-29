@@ -2,12 +2,32 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useAppContext } from "@/helpers/AppContext";
+import { View } from "react-native";
+import { ThemedText } from "@/components/ThemedText";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TabLayout() {
+  const { userId } = useAppContext();
+
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        header: () => (
+          <SafeAreaView edges={["top"]} className="bg-[var(--color-bg-nav)]">
+            <View className="h-16 w-full px-4 flex-row items-center justify-between gap-4">
+              <ThemedText type="subtitle" className="flex-shrink-0">
+                Packulus 🧳
+              </ThemedText>
+              {userId && (
+                <ThemedText className="text-sm truncate">
+                  User:
+                  <br /> {userId}
+                </ThemedText>
+              )}
+            </View>
+          </SafeAreaView>
+        ),
         tabBarActiveTintColor: "var(--color-tab-selected)",
         tabBarStyle: {
           backgroundColor: "var(--color-bg-nav)",

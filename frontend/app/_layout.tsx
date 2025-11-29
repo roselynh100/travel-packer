@@ -9,6 +9,7 @@ import { AppProvider } from "@/helpers/AppContext";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
   return (
     <AppProvider>
       <SafeAreaView
@@ -18,12 +19,7 @@ export default function RootLayout() {
           <Stack.Screen
             name="(tabs)"
             options={{
-              title: "Packulus 🧳",
-              headerStyle: {
-                backgroundColor: "var(--color-bg-nav)",
-              },
-              headerTitleStyle: { color: "var(--color-text)" },
-              headerShadowVisible: false,
+              headerShown: false,
             }}
           />
         </Stack>
