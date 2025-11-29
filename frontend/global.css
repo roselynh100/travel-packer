@@ -26,3 +26,10 @@ input,
 textarea {
   outline: none !important;
 }
+
+input,
+input::placeholder,
+select,
+button {
+  font-family: "StackSansText_400Regular", system-ui, sans-serif;
+}
