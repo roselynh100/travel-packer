@@ -5,23 +5,24 @@ import { ThemedText } from "@/components/ThemedText";
 import { API_BASE_URL } from "@/constants/api";
 import { RecommendedItem } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
-// import { useAppContext } from "@/helpers/AppContext";
-
-const TRIP_ID = "e82e3d60-074c-427a-aa5c-95dd4d91e0f6";
+import { useAppContext } from "@/helpers/AppContext";
+import { ThemedButton } from "@/components/ThemedButton";
+import { useRouter } from "expo-router";
 
 export default function PackingList() {
+  const { tripId } = useAppContext();
+  const router = useRouter();
+
   const [recommendedItems, setRecommendedItems] = useState<RecommendedItem[]>(
     []
   );
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
 
-  // const { tripId } = useAppContext();
-
   useEffect(() => {
     const fetchTrips = async () => {
       try {
         const response = await fetch(
-          `${API_BASE_URL}/trips/${TRIP_ID}/recommendations`,
+          `${API_BASE_URL}/trips/${tripId}/recommendations`,
           { method: "POST" }
         );
 
@@ -41,7 +42,7 @@ export default function PackingList() {
     };
 
     fetchTrips();
-  }, []);
+  }, [tripId]);
 
   const toggleItem = (id: string) => {
     setCheckedItems((prev) => {
@@ -58,17 +59,31 @@ export default function PackingList() {
   };
 
   return (
-    <View className="flex flex-col gap-4 p-12">
-      <ThemedText type="title">Packing List 📜</ThemedText>
-      <ThemedText type="subtitle">Trip ID: {TRIP_ID}</ThemedText>
-      {recommendedItems?.map((item, i) => (
-        <ThemedCheckbox
-          key={i}
-          label={item.item_name}
-          value={checkedItems.has(item.item_name)}
-          onValueChange={() => toggleItem(item.item_name)}
-        />
-      ))}
+    <View className="flex-1 justify-between p-12">
+      <View className="flex-col gap-12">
+        <ThemedText type="title">Packing List 📜</ThemedText>
+        {tripId ? (
+          <>
+            <ThemedText type="subtitle">Trip ID: {tripId}</ThemedText>{" "}
+            {recommendedItems?.map((item, i) => (
+              <ThemedCheckbox
+                key={i}
+                label={item.item_name}
+                value={checkedItems.has(item.item_name)}
+                onValueChange={() => toggleItem(item.item_name)}
+              />
+            ))}
+          </>
+        ) : (
+          <ThemedText type="subtitle">There is no current trip!</ThemedText>
+        )}
+      </View>
+
+      <ThemedButton
+        title="Add trip details"
+        variant="outline"
+        onPress={() => router.push("/TripInfo")}
+      />
     </View>
   );
 }

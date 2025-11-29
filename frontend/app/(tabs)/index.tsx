@@ -124,11 +124,7 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <ThemedButton
-            title="Save"
-            onPress={handleSave}
-            className="justify-end"
-          />
+          <ThemedButton title="Save" onPress={handleSave} />
         </View>
       </Pressable>
     </KeyboardAvoidingView>
