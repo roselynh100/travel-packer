@@ -8,7 +8,6 @@
   --color-text: #000000;
   --color-text-placeholder: #cfcfcf;
   --color-primary: #00c3d0;
-  --color-primary-action: #11acb6;
   --color-tab-selected: #2eb2bb;
 }
 
@@ -18,12 +17,12 @@
   --color-text: #e3e3e3;
   --color-text-placeholder: #484848;
   --color-primary: #007a82;
-  --color-primary-action: #00a3ae;
   --color-tab-selected: #316064;
 }
 
 input,
-textarea {
+textarea,
+select {
   outline: none !important;
 }
 

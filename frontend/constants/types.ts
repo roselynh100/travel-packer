@@ -2,9 +2,18 @@ export type User = {
   name: string;
   email: string;
   password: string; // TODO: how to safely save their password (this is a BE thing)
+  age?: number;
+  gender?: Gender;
   user_id?: string;
-  // TODO: gender for user
 };
+
+export enum Gender {
+  Male = "male",
+  Female = "female",
+  NonBinary = "non-binary",
+  Other = "other",
+  PrefNotToDisclose = "prefer not to disclose",
+}
 
 export type Trip = {
   destination: string;

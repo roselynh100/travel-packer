@@ -15,8 +15,9 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedButton } from "@/components/ThemedButton";
 import { API_BASE_URL } from "@/constants/api";
-import { User } from "@/constants/types";
+import { Gender, User } from "@/constants/types";
 import { useAppContext } from "@/helpers/AppContext";
+import { ThemedPicker } from "@/components/ThemedPicker";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -24,6 +25,8 @@ export default function HomeScreen() {
   const [name, onChangeName] = useState("");
   const [email, onChangeEmail] = useState("");
   const [password, onChangePassword] = useState("");
+  const [age, onChangeAge] = useState("");
+  const [gender, onChangeGender] = useState<Gender>(Gender.Other);
   const [isLoading, setIsLoading] = useState(false);
 
   const { setUserId } = useAppContext();
@@ -32,10 +35,13 @@ export default function HomeScreen() {
     try {
       setIsLoading(true);
 
+      // TODO: Fix stuff about password
       const user: User = {
         name,
         email,
         password,
+        age: parseInt(age),
+        gender,
       };
 
       await saveToAPI(user);
@@ -114,12 +120,30 @@ export default function HomeScreen() {
               />
             </View>
 
+            {/* <View className="gap-4">
+                <ThemedText type="subtitle">Password</ThemedText>
+                <ThemedTextInput
+                  value={password}
+                  onChangeText={onChangePassword}
+                  secureTextEntry={true}
+                />
+              </View> */}
+
             <View className="gap-4">
-              <ThemedText type="subtitle">Password</ThemedText>
+              <ThemedText type="subtitle">Age</ThemedText>
               <ThemedTextInput
-                value={password}
-                onChangeText={onChangePassword}
-                secureTextEntry={true}
+                value={age}
+                onChangeText={onChangeAge}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View className="gap-4">
+              <ThemedText type="subtitle">Gender</ThemedText>
+              <ThemedPicker
+                value={gender}
+                onChange={onChangeGender}
+                options={Object.values(Gender)}
               />
             </View>
           </View>

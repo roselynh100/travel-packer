@@ -60,30 +60,36 @@ export default function PackingList() {
 
   return (
     <View className="flex-1 justify-between p-12">
-      <View className="flex-col gap-12">
-        <ThemedText type="title">Packing List 📜</ThemedText>
+      <View className="flex-col">
+        <ThemedText type="title" className="mb-12">
+          Packing List 📜
+        </ThemedText>
         {tripId ? (
           <>
-            <ThemedText type="subtitle">Trip ID: {tripId}</ThemedText>{" "}
-            {recommendedItems?.map((item, i) => (
-              <ThemedCheckbox
-                key={i}
-                label={item.item_name}
-                value={checkedItems.has(item.item_name)}
-                onValueChange={() => toggleItem(item.item_name)}
-              />
-            ))}
+            <View className="gap-4">
+              <ThemedText>Trip ID: {tripId}</ThemedText>
+              {recommendedItems?.map((item, i) => (
+                <ThemedCheckbox
+                  key={i}
+                  label={item.item_name}
+                  value={checkedItems.has(item.item_name)}
+                  onValueChange={() => toggleItem(item.item_name)}
+                />
+              ))}
+            </View>
           </>
         ) : (
           <ThemedText type="subtitle">There is no current trip!</ThemedText>
         )}
       </View>
 
-      <ThemedButton
-        title="Add trip details"
-        variant="outline"
-        onPress={() => router.push("/TripInfo")}
-      />
+      {!tripId && (
+        <ThemedButton
+          title="Add trip details"
+          variant="outline"
+          onPress={() => router.push("/TripInfo")}
+        />
+      )}
     </View>
   );
 }
