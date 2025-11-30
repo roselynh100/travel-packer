@@ -125,9 +125,10 @@ def get_packing_decision(trip_id: str, item_id: str):
 
     if item_id not in trip.items:
         raise HTTPException(status_code=400, detail="Item does not belong to this trip")
+    
+    items = get_trip_items(trip_id)
 
-    return packing_decision_algorithm(item, trip)
-
+    return packing_decision_algorithm(item, trip, items)
 
 @router.post("/{trip_id}/weather")
 def get_weather(trip_id: str):
