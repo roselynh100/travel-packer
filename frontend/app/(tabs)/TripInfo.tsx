@@ -7,6 +7,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -90,16 +91,24 @@ export default function TripInfo() {
         onPress={Platform.OS === "web" ? undefined : Keyboard.dismiss}
         className="flex-1"
       >
-        <View className="flex-1 justify-between p-12">
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "space-between",
+          }}
+          className={Platform.OS === "web" ? "p-12" : "p-6"}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Modal visible={isLoading} transparent={true} animationType="fade">
             <View className="flex-1 justify-center items-center gap-8 bg-black/70">
               <ActivityIndicator size="large" />
               <ThemedText type="subtitle">Saving your trip...</ThemedText>
             </View>
           </Modal>
-          <View className="flex-col gap-12">
+          <View className="flex-col gap-6">
             <ThemedText type="title">Input your trip details 🌴</ThemedText>
-            <View className="gap-4">
+            <View className="gap-2">
               <ThemedText type="subtitle">Destination</ThemedText>
               <ThemedTextInput
                 value={destination}
@@ -108,7 +117,7 @@ export default function TripInfo() {
               />
             </View>
 
-            <View className="gap-4">
+            <View className="gap-2">
               <ThemedText type="subtitle">Trip Dates</ThemedText>
               <ThemedTextInput
                 value={dates}
@@ -117,7 +126,7 @@ export default function TripInfo() {
               />
             </View>
 
-            <View className="gap-4">
+            <View className="gap-2">
               <ThemedText type="subtitle">
                 Activities Planned (Optional)
               </ThemedText>
@@ -137,7 +146,7 @@ export default function TripInfo() {
           </View>
 
           <ThemedButton title="Save" onPress={handleSave} />
-        </View>
+        </ScrollView>
       </Pressable>
     </KeyboardAvoidingView>
   );

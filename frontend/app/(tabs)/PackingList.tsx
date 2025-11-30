@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { Platform, ScrollView, View } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { API_BASE_URL } from "@/constants/api";
@@ -59,7 +59,15 @@ export default function PackingList() {
   };
 
   return (
-    <View className="flex-1 justify-between p-12">
+    <ScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: "space-between",
+      }}
+      className={Platform.OS === "web" ? "p-12" : "p-6"}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <View className="flex-col">
         <ThemedText type="title" className="mb-12">
           Packing List 📜
@@ -90,6 +98,6 @@ export default function PackingList() {
           onPress={() => router.push("/TripInfo")}
         />
       )}
-    </View>
+    </ScrollView>
   );
 }

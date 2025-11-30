@@ -20,13 +20,13 @@ export function ThemedButton({
 
   const border =
     variant === "outline"
-      ? "border border-2 border-[var(--color-primary)]"
-      : "";
+      ? "border-[var(--color-primary)]"
+      : "border-transparent";
 
   return (
     <Pressable
       className={cn(
-        "rounded-full items-center justify-center py-3 active:opacity-80",
+        "rounded-full items-center justify-center py-3 active:opacity-80 border-2",
         backgroundColor,
         border,
         className
