@@ -4,7 +4,7 @@ import requests
 import json
 
 from app.models import Trip, TripUpdate, Item, RecommendedItem, RemovalRecommendation
-from machine_learning.poc_decision_model import generate_recommendation_list, removal_recommendation_algorithm
+from machine_learning.poc_decision_model import packing_decision_algorithm, baseline_list_algorithm
 from app.state.db import trips_store, items_store, users_store
 from constants import TOMORROW_WEATHER_URL
 
@@ -95,7 +95,7 @@ def get_trip_recommendations(trip_id: str):
 
     trip = trips_store[trip_id]
 
-    recs = generate_recommendation_list(trip)
+    recs = baseline_list_algorithm(trip)
     
     if recs is None:
         raise HTTPException(status_code=500, detail="No recommendations generated")
@@ -116,8 +116,10 @@ def get_removal_recommendation(trip_id: str, item_id: str):
 
     if item_id not in trip.items:
         raise HTTPException(status_code=400, detail="Item does not belong to this trip")
+    
+    items = get_trip_items(trip_id)
 
-    return removal_recommendation_algorithm(item, trip)
+    return packing_decision_algorithm(item, trip, items)
 
 @router.post("/{trip_id}/weather")
 def get_weather(trip_id: str):

@@ -42,6 +42,7 @@ class Item(BaseModel):
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 class ItemUpdate(BaseModel):
+    item_importance: Optional[int] = 0
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_results: Optional[List[CVResult]] = None
