@@ -18,7 +18,7 @@ from app.models import (
 )
 from machine_learning.poc_decision_model import (
     get_item_importance,
-    removal_recommendation_algorithm,
+    packing_decision_algorithm,
 )
 
 
@@ -87,7 +87,7 @@ class TestPackingAlgorithm(unittest.TestCase):
         current_items = []
         new_item = self.create_dummy_item("Socks", weight=0.1)
 
-        result = removal_recommendation_algorithm(new_item, trip, current_items)
+        result = packing_decision_algorithm(new_item, trip, current_items)
 
         self.assertEqual(result.status, RemovalRecommendationStatus.pack)
         self.assertAlmostEqual(trip.total_items_weight, 0.1)
@@ -118,7 +118,7 @@ class TestPackingAlgorithm(unittest.TestCase):
         new_item = self.create_dummy_item("Snack", weight=0.5)
 
         # 4. Run
-        result = removal_recommendation_algorithm(new_item, trip, current_items)
+        result = packing_decision_algorithm(new_item, trip, current_items)
 
         self.assertEqual(result.status, RemovalRecommendationStatus.remove)
         self.assertEqual(result.reason, RemovalRecommendationReason.overweight)
@@ -146,7 +146,7 @@ class TestPackingAlgorithm(unittest.TestCase):
         # New important item
         laptop = self.create_dummy_item("Laptop", weight=1.0)
 
-        result = removal_recommendation_algorithm(laptop, trip, current_items)
+        result = packing_decision_algorithm(laptop, trip, current_items)
 
         self.assertEqual(result.status, RemovalRecommendationStatus.swap)
         self.assertEqual(result.reason, RemovalRecommendationReason.overweight)
@@ -164,7 +164,7 @@ class TestPackingAlgorithm(unittest.TestCase):
 
         # Should not raise ValueError for min() sequence
         try:
-            result = removal_recommendation_algorithm(item, trip, current_items)
+            result = packing_decision_algorithm(item, trip, current_items)
             self.assertEqual(result.status, RemovalRecommendationStatus.pack)
         except ValueError:
             self.fail("Algorithm crashed on empty list check!")

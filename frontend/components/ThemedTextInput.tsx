@@ -1,37 +1,29 @@
-import { TextInput, type TextInputProps } from "react-native";
+import { cn } from "@/helpers/cn";
+import { useState } from "react";
+import { TextInput, View, type TextInputProps } from "react-native";
 
-import { useThemeColor } from "@/hooks/use-theme-color";
+export function ThemedTextInput({ style, ...otherProps }: TextInputProps) {
+  const [focused, setFocused] = useState(false);
 
-export type ThemedTextInputProps = TextInputProps & {
-  lightColor?: string;
-  darkColor?: string;
-};
+  const ringColor = focused
+    ? "border-[var(--color-primary)]"
+    : "border-transparent";
 
-export function ThemedTextInput({
-  style,
-  lightColor,
-  darkColor,
-  ...otherProps
-}: ThemedTextInputProps) {
-  const backgroundColor = useThemeColor(
-    { light: lightColor, dark: darkColor },
-    "background"
-  );
+  const backgroundColor = "bg-[var(--color-bg-nav)]";
 
-  const borderColor = useThemeColor(
-    { light: lightColor, dark: darkColor },
-    "tabIconDefault"
-  );
+  const text = "text-[var(--color-text)]";
 
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, "text");
-
-  const padding = 12;
+  const border = "border-2 border-[var(--color-text-placeholder)]";
 
   return (
-    <TextInput
-      style={[{ backgroundColor, borderColor, color, padding }, style]}
-      placeholderTextColor={borderColor}
-      {...otherProps}
-    />
+    <View className={cn("rounded-2xl border-2", ringColor)}>
+      <TextInput
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        className={cn("p-3 rounded-xl", backgroundColor, text, border)}
+        placeholderTextColor="var(--color-text-placeholder)"
+        {...otherProps}
+      />
+    </View>
   );
 }

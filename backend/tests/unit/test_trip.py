@@ -1,14 +1,16 @@
-import unittest
 import sys
+import unittest
 from pathlib import Path
 from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
+from app.models import Item, RecommendedItem, Trip
 from app.state.db import items_store, trips_store
-from app.models import Trip, Item, RecommendedItem
+
 
 class TestRemovalRecommendationEndpoint(unittest.TestCase):
     """Unit tests for the single-item removal recommendation endpoint"""
@@ -30,7 +32,7 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
             destination="Rome",
             duration_days=3,
             doing_laundry=False,
-            items=["i1"]
+            items=["i1"],
         )
         trips_store["t1"] = trip
 
@@ -61,7 +63,7 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
             destination="Rome",
             duration_days=3,
             doing_laundry=False,
-            items=[]
+            items=[],
         )
         trips_store["t1"] = trip
 
@@ -76,7 +78,7 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
             destination="Rome",
             duration_days=3,
             doing_laundry=False,
-            items=[]
+            items=[],
         )
         trips_store["t1"] = trip
 
@@ -84,6 +86,7 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
 
         response = self.client.post("/trips/t1/item/i1/removal-recommendation")
         self.assertEqual(response.status_code, 400)
+
 
 class TestTripRecommendationsEndpoint(unittest.TestCase):
     """Unit tests for /trips/{trip_id}/recommendations endpoint"""
@@ -101,7 +104,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertIn("Trip not found", response.text)
 
-    @patch("app.routes.trip.generate_recommendation_list")
+    @patch("app.routes.trip.baseline_list_algorithm")
     def test_recommendations_success(self, mock_gen):
         """Valid trip should return recommendations."""
         trips_store["t1"] = Trip(
@@ -109,7 +112,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
             destination="Tokyo",
             duration_days=7,
             doing_laundry=True,
-            activities="lots of walking"
+            activities="lots of walking",
         )
 
         mock_gen.return_value = [
@@ -129,7 +132,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
         passed_trip = mock_gen.call_args[0][0]
         self.assertEqual(passed_trip.trip_id, "t1")
 
-    @patch("app.routes.trip.generate_recommendation_list")
+    @patch("app.routes.trip.baseline_list_algorithm")
     def test_recommendations_empty_list(self, mock_gen):
         """If algorithm returns empty list, endpoint returns empty list."""
         trips_store["t1"] = Trip(
@@ -137,7 +140,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
             destination="Paris",
             duration_days=3,
             doing_laundry=False,
-            activities="sightseeing"
+            activities="sightseeing",
         )
 
         mock_gen.return_value = []
@@ -146,7 +149,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
-    @patch("app.routes.trip.generate_recommendation_list")
+    @patch("app.routes.trip.baseline_list_algorithm")
     def test_recommendations_invalid_output(self, mock_gen):
         """If algorithm returns invalid output, endpoint should error."""
         trips_store["t1"] = Trip(
@@ -154,7 +157,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
             destination="London",
             duration_days=5,
             doing_laundry=True,
-            activities="museums"
+            activities="museums",
         )
 
         mock_gen.return_value = None
@@ -163,7 +166,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 500)
         self.assertIn("no recommendations generated", response.text.lower())
 
-    @patch("app.routes.trip.generate_recommendation_list")
+    @patch("app.routes.trip.baseline_list_algorithm")
     def test_recommendations_forwards_correct_trip_data(self, mock_gen):
         """Ensure the trip object passed to algorithm contains correct fields."""
         trips_store["t1"] = Trip(
@@ -171,7 +174,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
             destination="Banff",
             duration_days=4,
             doing_laundry=False,
-            activities="hiking trails"
+            activities="hiking trails",
         )
 
         mock_gen.return_value = [RecommendedItem(item_name="Jacket")]
@@ -208,11 +211,7 @@ class TestUpdatingTrip(unittest.TestCase):
     def test_update_trip_omits_items_keeps_existing(self):
         """If `items` is omitted, existing list should be preserved."""
 
-        payload = {
-            "destination": "Kyoto",
-            "duration_days": 7,
-            "doing_laundry": True
-        }
+        payload = {"destination": "Kyoto", "duration_days": 7, "doing_laundry": True}
 
         response = self.client.put(f"/trips/{self.trip_id}", json=payload)
         self.assertEqual(response.status_code, 200)
@@ -229,13 +228,14 @@ class TestUpdatingTrip(unittest.TestCase):
         """If client sends items=[], the list should become empty."""
 
         from app.state.db import trips_store
+
         trips_store[self.trip_id].items = ["itemA"]
 
         payload = {
             "destination": "Osaka",
             "duration_days": 3,
             "doing_laundry": False,
-            "items": []   # Explicit empty
+            "items": [],  # Explicit empty
         }
 
         response = self.client.put(f"/trips/{self.trip_id}", json=payload)
@@ -247,6 +247,7 @@ class TestUpdatingTrip(unittest.TestCase):
 
         self.assertEqual(updated["destination"], "Osaka")
         self.assertEqual(updated["duration_days"], 3)
+
 
 class TestWeatherEndpoint(unittest.TestCase):
     """Unit tests for weather endpoints"""
@@ -266,7 +267,7 @@ class TestWeatherEndpoint(unittest.TestCase):
             destination="New York",
             duration_days=3,
             doing_laundry=False,
-            items=[""]
+            items=[""],
         )
         trips_store["t1"] = trip
 
@@ -275,6 +276,6 @@ class TestWeatherEndpoint(unittest.TestCase):
         self.assertIsNotNone(trip.highest_temp)
         self.assertIsNotNone(trip.lowest_temp)
 
-if __name__ == '__main__':
-    unittest.main()
 
+if __name__ == "__main__":
+    unittest.main()
