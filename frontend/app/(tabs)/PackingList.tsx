@@ -69,7 +69,7 @@ export default function PackingList() {
       showsVerticalScrollIndicator={false}
     >
       <View className="flex-col">
-        <ThemedText type="title" className="mb-12">
+        <ThemedText type="title" className="mb-6">
           Packing List 📜
         </ThemedText>
         {tripId ? (

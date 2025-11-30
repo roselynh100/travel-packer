@@ -27,6 +27,7 @@ export function ThemedCheckbox({
       <Checkbox
         value={value}
         onValueChange={onValueChange}
+        color="var(--color-tab-selected)"
         className={cn(boxSize, className)}
         {...rest}
       />

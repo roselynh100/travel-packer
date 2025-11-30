@@ -29,7 +29,7 @@ export default function TripInfo() {
   const [activities, onChangeActivities] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { setTripId } = useAppContext();
+  const { userId, setTripId } = useAppContext();
 
   async function handleSave() {
     try {
@@ -59,7 +59,11 @@ export default function TripInfo() {
 
   async function saveToAPI(tripInput: Trip) {
     try {
-      const response = await fetch(`${API_BASE_URL}/trips`, {
+      const url = userId
+        ? `${API_BASE_URL}/trips/?user_id=${userId}`
+        : `${API_BASE_URL}/trips`;
+
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
