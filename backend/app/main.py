@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import item_router, sample_router, trip_router, user_router
+from app.routes import item_router, trip_router, user_router
 
 app = FastAPI(
     title="Travel Packer API",
@@ -21,7 +21,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(sample_router, prefix="/sample", tags=["sample"])
 app.include_router(user_router, prefix="/users", tags=["users"])
 app.include_router(trip_router, prefix="/trips", tags=["trips"])
 app.include_router(item_router, prefix="/items", tags=["items"])
