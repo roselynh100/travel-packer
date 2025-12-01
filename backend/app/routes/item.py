@@ -6,8 +6,6 @@ from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from app.models import CVResult, Item, ItemUpdate
 from app.state.db import items_store, trips_store
 from computer_vision.cv import detect_objects_yolo
-from app.models import Item, ItemUpdate
-from app.state.db import items_store, trips_store
 from hardware.readscale import get_weight
 
 router = APIRouter()
@@ -90,14 +88,12 @@ def delete_item(item_id: str):
 
             if item.weight_kg is not None:
                 trip.total_items_weight = max(
-                    0.0,
-                    (trip.total_items_weight or 0.0) - item.weight_kg
+                    0.0, (trip.total_items_weight or 0.0) - item.weight_kg
                 )
 
             if item.estimated_volume_cm3 is not None:
                 trip.total_items_volume = max(
-                    0.0,
-                    (trip.total_items_volume or 0.0) - item.estimated_volume_cm3
+                    0.0, (trip.total_items_volume or 0.0) - item.estimated_volume_cm3
                 )
 
     del items_store[item_id]
@@ -105,10 +101,7 @@ def delete_item(item_id: str):
 
 
 @router.post("/weight", response_model=Item)
-def read_weight(
-    trip_id: str = Query(...),
-    item_id: Optional[str] = Query(None)
-):
+def read_weight(trip_id: str = Query(...), item_id: Optional[str] = Query(None)):
     """Read weight from the scale and associate with item/trip."""
     if trip_id not in trips_store:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -157,14 +150,13 @@ def read_weight(
     return item
 
 
-
 @router.post("/detect", response_model=Item)
 async def detect_item_from_image(
     image: UploadFile = File(...),
     trip_id: str = Query(...),
     item_id: Optional[str] = Query(None),
 ):
-    """Run YOLO detection, create/update an item, and optionally associate with a trip."""
+    """Run YOLO detection, create/update an item, and associate with a trip."""
     if trip_id not in trips_store:
         raise HTTPException(status_code=404, detail="Trip not found")
 
@@ -178,7 +170,7 @@ async def detect_item_from_image(
         item = items_store[item_id]
         item.cv_results = cv_results
     else:
-        item = Item(item_id=item_id, cv_results=cv_results)
+        item = Item(cv_results=cv_results)
         items_store[item.item_id] = item
 
     # associate bidirectionally

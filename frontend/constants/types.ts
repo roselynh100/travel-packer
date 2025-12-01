@@ -28,3 +28,33 @@ export type RecommendedItem = {
   reason?: string;
   priority?: number;
 };
+
+export type Item = {
+  item_id: string;
+  item_importance: number;
+  estimated_volume_cm3: number | null;
+  weight_kg: number | null;
+  cv_results: CVResult[];
+  trips: string[];
+};
+
+export type CVResult = {
+  item_name: string;
+  class_name: string;
+  confidence_score: number;
+  bounding_boxes: BoundingBox[];
+  dimensions: Dimensions;
+};
+
+export type BoundingBox = {
+  x_min: number;
+  y_min: number;
+  x_max: number;
+  y_max: number;
+};
+
+export type Dimensions = {
+  length: number;
+  width: number;
+  height: number | null;
+};
