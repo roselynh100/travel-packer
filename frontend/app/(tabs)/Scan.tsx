@@ -1,22 +1,19 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useIsFocused } from "@react-navigation/native";
 import { useState, useRef } from "react";
-import {
-  Alert,
-  Button,
-  TouchableOpacity,
-  View,
-  Image,
-  ActivityIndicator,
-  Platform,
-  Text,
-} from "react-native";
+import { Button, View, ActivityIndicator, Platform } from "react-native";
+
 import { API_BASE_URL } from "@/constants/api";
+import { CVResult, Item } from "@/constants/types";
+import { useAppContext } from "@/helpers/AppContext";
 import { ThemedText } from "@/components/ThemedText";
+import { ThemedButton } from "@/components/ThemedButton";
+import { BoundingBoxOverlay } from "@/components/BoundingBoxOverlay";
 
 const CAMERA_CAPTURE_DELAY = 1500;
 
 export default function ScanningScreen() {
+  const { tripId } = useAppContext();
   const [permission, requestPermission] = useCameraPermissions();
 
   const cameraRef = useRef<CameraView>(null);
@@ -24,6 +21,8 @@ export default function ScanningScreen() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [cvResult, setCvResult] = useState<CVResult | null>(null);
+  const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
   const isFocused = useIsFocused();
 
@@ -46,6 +45,10 @@ export default function ScanningScreen() {
     if (!cameraRef.current || isCapturing || isUploading) return;
 
     try {
+      // Clear any previous results when starting a new scan
+      setErrorBanner(null);
+      setCvResult(null);
+
       setIsCapturing(true);
 
       const photo = await cameraRef.current.takePictureAsync();
@@ -59,13 +62,19 @@ export default function ScanningScreen() {
       await uploadPhotoToAPI(photo.uri);
     } catch (error) {
       console.error("Error capturing photo:", error);
-      Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Failed to scan item"
-      );
+
+      const apiError = error as any;
+      if (apiError.status === 500) {
+        setErrorBanner("YOLO error - object not in target list");
+      } else if (apiError.status === 404) {
+        setErrorBanner("App error - trip not found");
+      } else {
+        setErrorBanner(
+          error instanceof Error ? error.message : "Failed to scan item"
+        );
+      }
     } finally {
       setIsCapturing(false);
-      setCapturedPhoto(null);
     }
   }
 
@@ -94,25 +103,29 @@ export default function ScanningScreen() {
         } as any);
       }
 
-      const response = await fetch(`${API_BASE_URL}/items/detect`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/items/detect?trip_id=${tripId}`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
+        const error: any = new Error(
           `API error (${response.status}): ${errorText || response.statusText}`
         );
+        error.status = response.status;
+        throw error;
       }
 
-      const result = await response.json();
+      const result: Item = await response.json();
       console.log("Upload success:", result);
 
+      setCvResult(result.cv_results[0]);
+
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
-    } catch (error) {
-      console.error("Error uploading photo to API:", error);
-      throw error; // Re-throw so handleScan can handle it
     } finally {
       setIsUploading(false);
     }
@@ -121,30 +134,51 @@ export default function ScanningScreen() {
   return (
     <View className="flex-1">
       {isFocused && !capturedPhoto && (
-        <CameraView facing="back" ref={cameraRef} style={{ flex: 1 }} />
+        <CameraView
+          facing="back"
+          ref={cameraRef}
+          zoom={0.1}
+          style={{ flex: 1 }}
+        />
       )}
       {capturedPhoto && (
-        <Image source={{ uri: capturedPhoto }} className="flex-1" />
+        <BoundingBoxOverlay
+          uri={capturedPhoto}
+          cvResult={cvResult}
+          isCapturing={isCapturing}
+          isUploading={isUploading}
+        />
+      )}
+      {capturedPhoto && errorBanner && (
+        <View className="w-full absolute top-0 left-0 right-0 bg-red-600 py-3 items-center">
+          <ThemedText type="subtitle" className="text-white">
+            {errorBanner}
+          </ThemedText>
+        </View>
       )}
       {(isCapturing || isUploading) && (
         <View className="w-full h-full absolute bg-black/50 justify-center items-center">
           <ActivityIndicator size="large" color="#fff" />
-          <Text className={CameraText + " mt-8"}>
+          <ThemedText type="subtitle" className="text-white mt-8">
             {isUploading ? "Uploading..." : "Capturing..."}
-          </Text>
+          </ThemedText>
         </View>
       )}
       <View className="w-full absolute bottom-8 items-center">
-        <TouchableOpacity
-          onPress={handleScan}
-          className={isCapturing || isUploading ? "opacity-50" : ""}
-          disabled={isCapturing || isUploading}
-        >
-          <Text className={CameraText}>Scan Item</Text>
-        </TouchableOpacity>
+        {!capturedPhoto && (
+          <ThemedButton title="Scan Item" onPress={handleScan} />
+        )}
+        {capturedPhoto && !isUploading && !isCapturing && (
+          <ThemedButton
+            title="Scan Again"
+            onPress={() => {
+              setCapturedPhoto(null);
+              setErrorBanner(null);
+              setCvResult(null);
+            }}
+          />
+        )}
       </View>
     </View>
   );
 }
-
-const CameraText = "text-white text-xl font-bold";
