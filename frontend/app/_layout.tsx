@@ -35,6 +35,7 @@ export default function RootLayout() {
   return (
     <AppProvider>
       <SafeAreaView
+        edges={["top"]}
         className={cn("flex-1", colorScheme === "dark" ? "dark" : "")}
       >
         <Stack>

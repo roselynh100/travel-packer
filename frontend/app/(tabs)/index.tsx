@@ -62,7 +62,7 @@ export default function HomeScreen() {
 
   async function saveToAPI(userInput: User) {
     try {
-      const response = await fetch(`${API_BASE_URL}/users`, {
+      const response = await fetch(`${API_BASE_URL}/users/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

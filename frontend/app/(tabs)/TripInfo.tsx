@@ -61,7 +61,7 @@ export default function TripInfo() {
     try {
       const url = userId
         ? `${API_BASE_URL}/trips/?user_id=${userId}`
-        : `${API_BASE_URL}/trips`;
+        : `${API_BASE_URL}/trips/`;
 
       const response = await fetch(url, {
         method: "POST",

@@ -41,7 +41,7 @@ export default function PackingList() {
       }
     };
 
-    fetchTrips();
+    if (tripId) fetchTrips();
   }, [tripId]);
 
   const toggleItem = (id: string) => {
