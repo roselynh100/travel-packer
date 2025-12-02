@@ -77,6 +77,25 @@ def delete_trip(trip_id: str):
     del trips_store[trip_id]
     return {"message": "Trip deleted successfully"}
 
+@router.post("/{trip_id}/item/{item_id}")
+def add_item_to_trip(trip_id: str, item_id: str):
+    """Add existing item to a trip."""
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    if item_id not in items_store:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    trip = trips_store[trip_id]
+    item = items_store[item_id]
+    if item.item_id not in trip.items:
+        trip.items.append(item.item_id)
+
+    if trip_id not in item.trips:
+        item.trips.append(trip_id)
+    
+    if item.estimated_volume_cm3 is not None or item.weight_kg is not None:
+        recalculate_trip_totals(trip_id)
 
 @router.get("/{trip_id}/items", response_model=List[Item])
 def get_trip_items(trip_id: str):
@@ -91,8 +110,30 @@ def get_trip_items(trip_id: str):
 
     return trip_items
 
+@router.post("/{trip_id}/recalculate-totals")
+def recalculate_trip_totals(trip_id: str):
+    """Recalculate total weight and volume for a trip."""
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
 
-@router.post("/{trip_id}/recommendations", response_model=List[RecommendedItem])
+    trip = trips_store[trip_id]
+
+    trip.total_items_weight = sum(
+        (items_store[item_id].weight_kg or 0.0) for item_id in trip.items
+    )
+    trip.total_items_volume = sum(
+        (items_store[item_id].estimated_volume_cm3 or 0.0) for item_id in trip.items
+    )
+
+    # TO-DO: can remove the return if not useful
+    return {
+        "trip_id": trip_id,
+        "total_weight": trip.total_items_weight,
+        "total_volume": trip.total_items_volume,
+    }
+
+
+@router.get("/{trip_id}/recommendations", response_model=List[RecommendedItem])
 def get_trip_recommendations(trip_id: str):
     """Generate packing recommendations from the trip metadata and activities"""
 
@@ -109,7 +150,7 @@ def get_trip_recommendations(trip_id: str):
     return recs
 
 
-@router.post(
+@router.get(
     "/{trip_id}/item/{item_id}/packing-decision", response_model=RemovalRecommendation
 )
 def get_packing_decision(trip_id: str, item_id: str):

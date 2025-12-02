@@ -19,8 +19,8 @@ VOLUME_LIMIT_CM3 = 50000.0
 def get_item_importance(item: Item, trip: Trip) -> int:
     """Generates item importance score."""
     name = "Unknown Item"
-    if item.cv_results and len(item.cv_results) > 0:
-        name = item.cv_results[0].item_name
+    if item.cv_result:
+        name = item.cv_result.item_name
 
     score = 0
     if name in ["Laptop", "Laptop Charger"]:
@@ -102,7 +102,7 @@ def packing_decision_algorithm(
             )
 
     # Check Volume
-    if trip.total_items_volume + new_item.estimated_volume_cm3 > VOLUME_LIMIT_CM3:
+    if new_item.estimated_volume_cm3 is not None and (trip.total_items_volume + new_item.estimated_volume_cm3 > VOLUME_LIMIT_CM3):
         if new_item.item_importance > min_item_importance:
 
             # Order by importance ASC and add items to list until overflow is fixed
