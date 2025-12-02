@@ -21,6 +21,8 @@ export type Trip = {
   doing_laundry: boolean;
   activities?: string;
   trip_id?: string;
+  total_items_weight?: number;
+  total_items_volume?: number;
 };
 
 export type RecommendedItem = {

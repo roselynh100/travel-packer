@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { API_BASE_URL } from "@/constants/api";
-import { RecommendedItem } from "@/constants/types";
+import { RecommendedItem, Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedButton } from "@/components/ThemedButton";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
 export default function PackingList() {
   const { tripId } = useAppContext();
@@ -17,9 +17,35 @@ export default function PackingList() {
     []
   );
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [tripInfo, setTripInfo] = useState<Trip | null>(null);
+
+  const fetchTripInfo = useCallback(async () => {
+    if (!tripId) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/trips/${tripId}`, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `API error (${response.status}): ${errorText || response.statusText}`
+        );
+      }
+
+      const result: Trip = await response.json();
+      setTripInfo(result);
+      console.log("Fetched trip info:", result);
+    } catch (error) {
+      console.error("Error fetching trip info:", error);
+    }
+  }, [tripId]);
 
   useEffect(() => {
-    const fetchTrips = async () => {
+    async function fetchRecommendations() {
+      if (!tripId) return;
+
       try {
         const response = await fetch(
           `${API_BASE_URL}/trips/${tripId}/recommendations`,
@@ -39,10 +65,17 @@ export default function PackingList() {
       } catch (error) {
         console.error("Error fetching recommendations:", error);
       }
-    };
+    }
 
-    if (tripId) fetchTrips();
-  }, [tripId]);
+    fetchRecommendations();
+    fetchTripInfo();
+  }, [tripId, fetchTripInfo]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchTripInfo();
+    }, [fetchTripInfo])
+  );
 
   const toggleItem = (id: string) => {
     setCheckedItems((prev) => {
@@ -76,6 +109,12 @@ export default function PackingList() {
           <>
             <View className="gap-4">
               <ThemedText>Trip ID: {tripId}</ThemedText>
+              <ThemedText>
+                Current bag weight: {tripInfo?.total_items_weight || 0} kg
+              </ThemedText>
+              <ThemedText>
+                Current bag volume: {tripInfo?.total_items_volume || 0} cm3
+              </ThemedText>
               {recommendedItems?.map((item, i) => (
                 <ThemedCheckbox
                   key={i}

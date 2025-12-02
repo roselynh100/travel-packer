@@ -9,6 +9,7 @@ import { useAppContext } from "@/helpers/AppContext";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { BoundingBoxOverlay } from "@/components/BoundingBoxOverlay";
+import { cn } from "@/helpers/cn";
 
 const CAMERA_CAPTURE_DELAY = 1500;
 
@@ -22,7 +23,10 @@ export default function ScanningScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [cvResult, setCvResult] = useState<CVResult | null>(null);
-  const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [infoBanner, setInfoBanner] = useState<{
+    type: "error" | "info";
+    message: string;
+  } | null>(null);
 
   const isFocused = useIsFocused();
 
@@ -46,7 +50,7 @@ export default function ScanningScreen() {
 
     try {
       // Clear any previous results when starting a new scan
-      setErrorBanner(null);
+      setInfoBanner(null);
       setCvResult(null);
 
       setIsCapturing(true);
@@ -57,7 +61,6 @@ export default function ScanningScreen() {
 
       // Let the "capturing" load for a bit, then send to API and reset camera
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
-      setIsCapturing(false);
 
       await uploadPhotoToAPI(photo.uri);
     } catch (error) {
@@ -65,13 +68,21 @@ export default function ScanningScreen() {
 
       const apiError = error as any;
       if (apiError.status === 500) {
-        setErrorBanner("YOLO error - object not in target list");
+        setInfoBanner({
+          type: "error",
+          message: "YOLO error - object not in target list",
+        });
       } else if (apiError.status === 404) {
-        setErrorBanner("App error - trip not found");
+        setInfoBanner({
+          type: "error",
+          message: "App error - trip not found",
+        });
       } else {
-        setErrorBanner(
-          error instanceof Error ? error.message : "Failed to scan item"
-        );
+        setInfoBanner({
+          type: "error",
+          message:
+            error instanceof Error ? error.message : "Failed to scan item",
+        });
       }
     } finally {
       setIsCapturing(false);
@@ -149,10 +160,15 @@ export default function ScanningScreen() {
           isUploading={isUploading}
         />
       )}
-      {capturedPhoto && errorBanner && (
-        <View className="w-full absolute top-0 left-0 right-0 bg-red-600 py-3 items-center">
+      {capturedPhoto && infoBanner && !isUploading && (
+        <View
+          className={cn(
+            "w-full absolute top-0 left-0 right-0 py-3 items-center",
+            infoBanner.type === "error" ? "bg-red-600" : "bg-blue-600"
+          )}
+        >
           <ThemedText type="subtitle" className="text-white">
-            {errorBanner}
+            {infoBanner.message}
           </ThemedText>
         </View>
       )}
@@ -173,7 +189,7 @@ export default function ScanningScreen() {
             title="Scan Again"
             onPress={() => {
               setCapturedPhoto(null);
-              setErrorBanner(null);
+              setInfoBanner(null);
               setCvResult(null);
             }}
           />
