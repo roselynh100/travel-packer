@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.models import RecommendedItem, Trip
-from machine_learning.item_groups import ACCESSORIES, CLOTHING, TOILETRIES
+from machine_learning.item_groups import ACCESSORIES, CLOTHING, ESSENTIALS, TOILETRIES
 
 # UPDATE: Import the functions to be tested
 from machine_learning.poc_decision_model import (
@@ -28,28 +28,31 @@ class TestBaselineAlgorithm(unittest.TestCase):
     def test_get_base_items(self):
         """
         Test that get_base_items returns the exact combination of
-        CLOTHING + ACCESSORIES + TOILETRIES from item_groups.py.
+        CLOTHING + ACCESSORIES + TOILETRIES + ESSENTIALS from item_groups.py.
         """
         items = get_base_items()
 
         # Calculate expected length dynamically based on the real lists
-        expected_len = len(CLOTHING) + len(ACCESSORIES) + len(TOILETRIES)
+        expected_len = (
+            len(CLOTHING) + len(ACCESSORIES) + len(TOILETRIES) + len(ESSENTIALS)
+        )
 
         self.assertEqual(len(items), expected_len)
 
         # Verify specific items from your lists appear in the result
         item_names = [i.item_name for i in items]
-        self.assertIn("Shirt", item_names)  # From CLOTHING
-        self.assertIn("Sunglasses", item_names)  # From ACCESSORIES
-        self.assertIn("Toothbrush", item_names)  # From TOILETRIES
+        self.assertIn("shirt", item_names)  # From CLOTHING
+        self.assertIn("sunglasses", item_names)  # From ACCESSORIES
+        self.assertIn("toothbrush", item_names)  # From TOILETRIES
+        self.assertIn("cell phone", item_names)  # From ESSENTIALS
 
     def test_get_work_items_positive(self):
         """Test that 'work' in activities triggers laptop recommendations."""
         items = get_work_items("Business Work")
 
         item_names = [i.item_name for i in items]
-        self.assertIn("Laptop", item_names)
-        self.assertIn("Laptop Charger", item_names)
+        self.assertIn("laptop", item_names)
+        self.assertIn("laptop charger", item_names)
 
     def test_get_work_items_negative(self):
         """Test that non-work activities return an empty list."""
@@ -60,7 +63,7 @@ class TestBaselineAlgorithm(unittest.TestCase):
         """Test that temp < 10 triggers a coat."""
         items = get_weather_items(5.0)
         self.assertEqual(len(items), 1)
-        self.assertEqual(items[0].item_name, "Coat")
+        self.assertEqual(items[0].item_name, "coat")
 
     def test_get_weather_items_warm(self):
         """Test that temp >= 10 returns no weather items."""
@@ -82,16 +85,18 @@ class TestBaselineAlgorithm(unittest.TestCase):
         item_names = [i.item_name for i in results]
 
         # 1. Check for Base Items (from item_groups.py)
-        self.assertIn("Socks", item_names)
-        self.assertIn("Toothpaste", item_names)
+        self.assertIn("socks", item_names)
+        self.assertIn("cell phone", item_names)
 
         # 2. Check for Logic Items
-        self.assertIn("Laptop", item_names)  # From Work logic
-        self.assertIn("Coat", item_names)  # From Weather logic
+        self.assertIn("laptop", item_names)  # From Work logic
+        self.assertIn("coat", item_names)  # From Weather logic
 
         # 3. Check Total Count
-        # Base items (4+2+2 = 8) + Work (2) + Weather (1) = 11 items total
-        expected_count = len(CLOTHING) + len(ACCESSORIES) + len(TOILETRIES) + 2 + 1
+        # Base items (4+2+2+1 = 8) + Work (2) + Weather (1) = 11 items total
+        expected_count = (
+            len(CLOTHING) + len(ACCESSORIES) + len(TOILETRIES) + len(ESSENTIALS) + 2 + 1
+        )
         self.assertEqual(len(results), expected_count)
 
 
