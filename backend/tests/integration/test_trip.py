@@ -69,7 +69,7 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
 
         trip.items = ["a", "b"]
 
-        response = self.client.get("/trips/tripY/recommendations")
+        response = self.client.get("/trips/tripY/wrecommendations")
         self.assertEqual(response.status_code, 200)
 
 if __name__ == '__main__':

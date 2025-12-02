@@ -138,27 +138,27 @@ async def detect_item_from_image(
 
     image_bytes = await image.read()
     cv_results = detect_objects_yolo(image_bytes)
-
     if not cv_results:
         raise HTTPException(status_code=500, detail="Invalid YOLO output")
     
-    total_volume = 0
+    # assuming cv_results only ever returns result of one item
+    cv_result = cv_results[0]
+    
+    volume = 0
+    
     # calculate volume for item
-    if cv_results:
-        for r in cv_results:
-            if r.dimensions:
-                h = r.dimensions.height or 1
-                total_volume += r.dimensions.length * r.dimensions.width * h
+    if cv_result.dimensions:
+        h = cv_result.dimensions.height or 1
+        volume = cv_result.dimensions.length * cv_result.dimensions.width * h
 
     if item_id and item_id in items_store:
         item = items_store[item_id]
-        # assuming cv_results only ever returns result of one item
         item.cv_result = cv_results[0]
-        item.estimated_volume_cm3 = total_volume
+        item.estimated_volume_cm3 = volume
         for trip_id in item.trips:
             recalculate_trip_totals(trip_id)
     else:
-        item = Item(cv_result=cv_results[0])
+        item = Item(cv_result=cv_results[0], estimated_volume_cm3=volume)
         # need to store so we can update this item when we read weight
         items_store[item.item_id] = item
 

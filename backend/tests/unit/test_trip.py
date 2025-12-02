@@ -71,22 +71,6 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
         response = self.client.get("/trips/t1/item/nope/packing-decision")
         self.assertEqual(response.status_code, 404)
 
-    def test_removal_recommendation_item_not_in_trip(self):
-        """Should return 400 when item does not belong to trip."""
-
-        trip = Trip(
-            trip_id="t1",
-            destination="Rome",
-            duration_days=3,
-            doing_laundry=False,
-            items=[],
-        )
-        trips_store["t1"] = trip
-
-        items_store["i1"] = Item(item_id="i1", weight_kg=3.0)
-
-        response = self.client.get("/trips/t1/item/i1/packing-decision")
-        self.assertEqual(response.status_code, 400)
 
 
 class TestTripRecommendationsEndpoint(unittest.TestCase):

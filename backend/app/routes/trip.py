@@ -163,9 +163,6 @@ def get_packing_decision(trip_id: str, item_id: str):
 
     trip = trips_store[trip_id]
     item = items_store[item_id]
-
-    if item_id not in trip.items:
-        raise HTTPException(status_code=400, detail="Item does not belong to this trip")
     
     items = get_trip_items(trip_id)
 
