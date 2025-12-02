@@ -153,12 +153,12 @@ async def detect_item_from_image(
 
     if item_id and item_id in items_store:
         item = items_store[item_id]
-        item.cv_result = cv_results[0]
+        item.cv_result = cv_result
         item.estimated_volume_cm3 = volume
         for trip_id in item.trips:
             recalculate_trip_totals(trip_id)
     else:
-        item = Item(cv_result=cv_results[0], estimated_volume_cm3=volume)
+        item = Item(cv_result=cv_result, estimated_volume_cm3=volume)
         # need to store so we can update this item when we read weight
         items_store[item.item_id] = item
 
