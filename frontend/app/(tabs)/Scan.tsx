@@ -231,6 +231,23 @@ export default function ScanningScreen() {
         // If item changed, don't update (user scanned a new item)
         return prevItem;
       });
+
+      if (result.status === "pack") {
+        setInfoBanner({
+          type: "info",
+          message: "This item should be packed!",
+        });
+      } else if (result.status === "remove") {
+        setInfoBanner({
+          type: "info",
+          message: `Do not pack this item. ${result.reason}`,
+        });
+      } else if (result.status === "swap") {
+        setInfoBanner({
+          type: "info",
+          message: "You must remove an item to pack this one!",
+        });
+      }
     } catch (error) {
       console.error("Error getting packing recommendation:", error);
     }
