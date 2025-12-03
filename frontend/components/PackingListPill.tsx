@@ -12,7 +12,9 @@ export function PackingListPill({ type, value }: PackingListPillProps) {
   const color = value > 100 ? "red" : "green";
 
   const text =
-    type === "weight" ? `Weight: ${value} kg` : `Volume: ${value} cm3`;
+    type === "weight"
+      ? `Weight: ${value.toFixed(2)} kg`
+      : `Volume: ${value.toFixed(2)} cm3`;
 
   return (
     <View

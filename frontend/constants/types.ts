@@ -61,9 +61,18 @@ export type Dimensions = {
   height: number | null;
 };
 
-export type PackingRecommendation = "pack" | "remove" | "swap";
+export type PackingRecommendationStatus = "pack" | "remove" | "swap";
+
+export type PackingRecommendation = {
+  status: PackingRecommendationStatus;
+  reason?: string;
+  swap_candidates?: Item[];
+};
+
+export type ItemWithPackingRecommendation = Item & {
+  item_name: string;
+  packing_recommendation: PackingRecommendationStatus | null;
+};
 
 // Union type for packing list items
-export type PackingListItem =
-  | RecommendedItem
-  | (Item & { packing_recommendation: PackingRecommendation });
+export type PackingListItem = RecommendedItem | ItemWithPackingRecommendation;

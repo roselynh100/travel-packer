@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { Button, View, ActivityIndicator, Platform } from "react-native";
 
 import { API_BASE_URL } from "@/constants/api";
-import { CVResult, Item } from "@/constants/types";
+import { CVResult, Item, PackingRecommendation } from "@/constants/types";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
@@ -13,8 +13,9 @@ import { cn } from "@/helpers/cn";
 
 const CAMERA_CAPTURE_DELAY = 1500;
 
+// TODO: Merge CVResult and currentItem???
 export default function ScanningScreen() {
-  const { tripId } = useAppContext();
+  const { tripId, currentItem, setCurrentItem } = useAppContext();
   const [permission, requestPermission] = useCameraPermissions();
 
   const cameraRef = useRef<CameraView>(null);
@@ -63,6 +64,15 @@ export default function ScanningScreen() {
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
 
       await uploadPhotoToAPI(photo.uri);
+
+      // TODO: Uncomment when scale is connected
+      // if (currentItem?.item_id) {
+      //   await readWeight(currentItem.item_id);
+      // }
+
+      if (currentItem?.item_id) {
+        await getPackingRecommendation(currentItem.item_id);
+      }
     } catch (error) {
       console.error("Error capturing photo:", error);
 
@@ -132,10 +142,76 @@ export default function ScanningScreen() {
       console.log("Upload success:", result);
 
       setCvResult(result.cv_result);
+      setCurrentItem({
+        ...result,
+        item_name: result.cv_result.item_name,
+        packing_recommendation: null,
+      });
 
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
     } finally {
       setIsUploading(false);
+    }
+  }
+
+  async function readWeight(itemId: string) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/items/weight?item_id=${itemId}`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const error: any = new Error(
+          `API error (${response.status}): ${errorText || response.statusText}`
+        );
+        error.status = response.status;
+        throw error;
+      }
+
+      const result: Item = await response.json();
+      console.log("Weight read successfully:", result);
+
+      if (currentItem) {
+        setCurrentItem({
+          ...currentItem,
+          weight_kg: result.weight_kg,
+        });
+      }
+    } catch (error) {
+      console.error("Error reading weight:", error);
+    }
+  }
+
+  async function getPackingRecommendation(itemId: string) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/trips/${tripId}/item/${itemId}/packing-decision`
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const error: any = new Error(
+          `API error (${response.status}): ${errorText || response.statusText}`
+        );
+        error.status = response.status;
+        throw error;
+      }
+
+      const result: PackingRecommendation = await response.json();
+      console.log("Packing recommendation received:", result);
+
+      if (currentItem) {
+        setCurrentItem({
+          ...currentItem,
+          packing_recommendation: result.status,
+        });
+      }
+    } catch (error) {
+      console.error("Error getting packing recommendation:", error);
     }
   }
 
