@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { API_BASE_URL } from "@/constants/api";
@@ -7,7 +9,6 @@ import { RecommendedItem, Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedButton } from "@/components/ThemedButton";
-import { useFocusEffect, useRouter } from "expo-router";
 
 export default function PackingList() {
   const { tripId } = useAppContext();
@@ -19,37 +20,14 @@ export default function PackingList() {
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const [tripInfo, setTripInfo] = useState<Trip | null>(null);
 
-  const fetchTripInfo = useCallback(async () => {
-    if (!tripId) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/trips/${tripId}`, {
-        method: "GET",
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
-        );
-      }
-
-      const result: Trip = await response.json();
-      setTripInfo(result);
-      console.log("Fetched trip info:", result);
-    } catch (error) {
-      console.error("Error fetching trip info:", error);
-    }
-  }, [tripId]);
-
+  // Only re-fetch recommendations when the tripId changes
   useEffect(() => {
-    async function fetchRecommendations() {
+    const fetchRecommendations = async () => {
       if (!tripId) return;
 
       try {
         const response = await fetch(
-          `${API_BASE_URL}/trips/${tripId}/recommendations`,
-          { method: "POST" }
+          `${API_BASE_URL}/trips/${tripId}/recommendations`
         );
 
         if (!response.ok) {
@@ -65,16 +43,37 @@ export default function PackingList() {
       } catch (error) {
         console.error("Error fetching recommendations:", error);
       }
-    }
+    };
 
     fetchRecommendations();
-    fetchTripInfo();
-  }, [tripId, fetchTripInfo]);
+  }, [tripId]);
 
+  // Re-fetch bag info when tripId changes and when re-visiting this screen
   useFocusEffect(
     useCallback(() => {
+      if (!tripId) return;
+
+      const fetchTripInfo = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/trips/${tripId}`);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(
+              `API error (${response.status}): ${errorText || response.statusText}`
+            );
+          }
+
+          const result: Trip = await response.json();
+          setTripInfo(result);
+          console.log("Fetched trip info:", result);
+        } catch (error) {
+          console.error("Error fetching trip info:", error);
+        }
+      };
+
       fetchTripInfo();
-    }, [fetchTripInfo])
+    }, [tripId])
   );
 
   const toggleItem = (id: string) => {
