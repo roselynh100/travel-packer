@@ -6,7 +6,14 @@ type AppContextType = {
   tripId: string;
   setTripId: (v: string) => void;
   currentItem: ItemWithPackingRecommendation | null;
-  setCurrentItem: (v: ItemWithPackingRecommendation | null) => void;
+  setCurrentItem: (
+    v:
+      | ItemWithPackingRecommendation
+      | null
+      | ((
+          prev: ItemWithPackingRecommendation | null
+        ) => ItemWithPackingRecommendation | null)
+  ) => void;
   setUserId: (v: string) => void;
 };
 

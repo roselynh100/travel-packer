@@ -4,7 +4,12 @@ import { useState, useRef } from "react";
 import { Button, View, ActivityIndicator, Platform } from "react-native";
 
 import { API_BASE_URL } from "@/constants/api";
-import { CVResult, Item, PackingRecommendation } from "@/constants/types";
+import {
+  CVResult,
+  Item,
+  ItemWithPackingRecommendation,
+  PackingRecommendation,
+} from "@/constants/types";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
@@ -15,7 +20,7 @@ const CAMERA_CAPTURE_DELAY = 1500;
 
 // TODO: Merge CVResult and currentItem???
 export default function ScanningScreen() {
-  const { tripId, currentItem, setCurrentItem } = useAppContext();
+  const { tripId, setCurrentItem } = useAppContext();
   const [permission, requestPermission] = useCameraPermissions();
 
   const cameraRef = useRef<CameraView>(null);
@@ -46,6 +51,7 @@ export default function ScanningScreen() {
     );
   }
 
+  // TODO: Clean up this function
   async function handleScan() {
     if (!cameraRef.current || isCapturing || isUploading) return;
 
@@ -63,15 +69,15 @@ export default function ScanningScreen() {
       // Let the "capturing" load for a bit, then send to API and reset camera
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
 
-      await uploadPhotoToAPI(photo.uri);
+      const uploadedItem = await uploadPhotoToAPI(photo.uri);
 
       // TODO: Uncomment when scale is connected
-      // if (currentItem?.item_id) {
-      //   await readWeight(currentItem.item_id);
+      // if (uploadedItem?.item_id) {
+      //   await readWeight(uploadedItem.item_id);
       // }
 
-      if (currentItem?.item_id) {
-        await getPackingRecommendation(currentItem.item_id);
+      if (uploadedItem?.item_id) {
+        await getPackingRecommendation(uploadedItem.item_id);
       }
     } catch (error) {
       console.error("Error capturing photo:", error);
@@ -99,7 +105,9 @@ export default function ScanningScreen() {
     }
   }
 
-  async function uploadPhotoToAPI(uri: string) {
+  async function uploadPhotoToAPI(
+    uri: string
+  ): Promise<ItemWithPackingRecommendation | null> {
     try {
       setIsUploading(true);
 
@@ -142,13 +150,16 @@ export default function ScanningScreen() {
       console.log("Upload success:", result);
 
       setCvResult(result.cv_result);
-      setCurrentItem({
+      const updatedItem: ItemWithPackingRecommendation = {
         ...result,
         item_name: result.cv_result.item_name,
         packing_recommendation: null,
-      });
+      };
+      setCurrentItem(updatedItem);
 
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
+
+      return updatedItem;
     } finally {
       setIsUploading(false);
     }
@@ -175,12 +186,17 @@ export default function ScanningScreen() {
       const result: Item = await response.json();
       console.log("Weight read successfully:", result);
 
-      if (currentItem) {
-        setCurrentItem({
-          ...currentItem,
-          weight_kg: result.weight_kg,
-        });
-      }
+      // Only update if currentItem still matches (user hasn't scanned a new item)
+      setCurrentItem((prevItem) => {
+        if (prevItem?.item_id === itemId) {
+          return {
+            ...prevItem,
+            weight_kg: result.weight_kg,
+          };
+        }
+        // If item changed, don't update (user scanned a new item)
+        return prevItem;
+      });
     } catch (error) {
       console.error("Error reading weight:", error);
     }
@@ -204,12 +220,17 @@ export default function ScanningScreen() {
       const result: PackingRecommendation = await response.json();
       console.log("Packing recommendation received:", result);
 
-      if (currentItem) {
-        setCurrentItem({
-          ...currentItem,
-          packing_recommendation: result.status,
-        });
-      }
+      // Only update if currentItem still matches (user hasn't scanned a new item)
+      setCurrentItem((prevItem) => {
+        if (prevItem?.item_id === itemId) {
+          return {
+            ...prevItem,
+            packing_recommendation: result.status,
+          };
+        }
+        // If item changed, don't update (user scanned a new item)
+        return prevItem;
+      });
     } catch (error) {
       console.error("Error getting packing recommendation:", error);
     }
