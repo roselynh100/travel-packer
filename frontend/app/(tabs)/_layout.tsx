@@ -17,7 +17,7 @@ export default function TabLayout() {
             <ThemedText type="subtitle" className="flex-shrink-0">
               Packulus 🧳
             </ThemedText>
-            {userId && (
+            {Boolean(userId) && (
               <ThemedText className="text-sm truncate">
                 User:
                 <br /> {userId}

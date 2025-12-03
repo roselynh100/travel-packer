@@ -54,7 +54,7 @@ export function BoundingBoxOverlay({
         cvResult &&
         imageSize &&
         layoutSize &&
-        cvResult.bounding_boxes.map((box, index) => {
+        cvResult.bounding_boxes.map((box) => {
           const imgW = imageSize.width;
           const imgH = imageSize.height;
           const containerW = layoutSize.width;
@@ -83,7 +83,6 @@ export function BoundingBoxOverlay({
                 {cvResult.class_name} ({cvResult.confidence_score})
               </ThemedText>
               <View
-                key={index}
                 className="absolute border-2 border-green-500"
                 style={{
                   left,

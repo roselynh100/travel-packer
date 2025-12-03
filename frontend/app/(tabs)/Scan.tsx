@@ -114,13 +114,10 @@ export default function ScanningScreen() {
         } as any);
       }
 
-      const response = await fetch(
-        `${API_BASE_URL}/items/detect?trip_id=${tripId}`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/items/detect`, {
+        method: "POST",
+        body: formData,
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -134,7 +131,7 @@ export default function ScanningScreen() {
       const result: Item = await response.json();
       console.log("Upload success:", result);
 
-      setCvResult(result.cv_results[0]);
+      setCvResult(result.cv_result);
 
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
     } finally {

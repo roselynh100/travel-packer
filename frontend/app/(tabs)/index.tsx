@@ -1,10 +1,8 @@
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -19,6 +17,7 @@ import { API_BASE_URL } from "@/constants/api";
 import { Gender, User } from "@/constants/types";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedDropdown } from "@/components/ThemedDropdown";
+import { ThemedLoading } from "@/components/ThemedLoading";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -103,12 +102,6 @@ export default function HomeScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Modal visible={isLoading} transparent={true} animationType="fade">
-            <View className="flex-1 justify-center items-center gap-8 bg-black/70">
-              <ActivityIndicator size="large" />
-              <ThemedText type="subtitle">Saving your trip...</ThemedText>
-            </View>
-          </Modal>
           <View className="flex-col gap-6">
             <ThemedText type="title">Input your information 🤸</ThemedText>
             <View className="gap-2">
@@ -158,6 +151,10 @@ export default function HomeScreen() {
           </View>
 
           <ThemedButton title="Save" onPress={handleSave} />
+          <ThemedLoading
+            isLoading={isLoading}
+            message="Saving user information..."
+          />
         </ScrollView>
       </Pressable>
     </KeyboardAvoidingView>
