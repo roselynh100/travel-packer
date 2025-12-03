@@ -6,9 +6,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import { ThemedText } from "@/components/ThemedText";
 import { API_BASE_URL } from "@/constants/api";
 import { RecommendedItem, Trip } from "@/constants/types";
-import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedButton } from "@/components/ThemedButton";
+import { PackingListItem } from "@/components/PackingListItem";
+import { PackingListPill } from "@/components/PackingListPill";
 
 export default function PackingList() {
   const { tripId } = useAppContext();
@@ -106,23 +107,27 @@ export default function PackingList() {
         </ThemedText>
         {tripId ? (
           <>
-            <View className="gap-4">
+            <View className="gap-2 mb-2">
               <ThemedText>Trip ID: {tripId}</ThemedText>
-              <ThemedText>
-                Current bag weight: {tripInfo?.total_items_weight || 0} kg
-              </ThemedText>
-              <ThemedText>
-                Current bag volume: {tripInfo?.total_items_volume || 0} cm3
-              </ThemedText>
-              {recommendedItems?.map((item, i) => (
-                <ThemedCheckbox
-                  key={i}
-                  label={item.item_name}
-                  value={checkedItems.has(item.item_name)}
-                  onValueChange={() => toggleItem(item.item_name)}
+              <View className="flex-row gap-4">
+                <PackingListPill
+                  type="weight"
+                  value={tripInfo?.total_items_weight || 0}
                 />
-              ))}
+                <PackingListPill
+                  type="volume"
+                  value={tripInfo?.total_items_volume || 0}
+                />
+              </View>
             </View>
+            {recommendedItems?.map((item, i) => (
+              <PackingListItem
+                key={i}
+                item={item}
+                checked={checkedItems.has(item.item_name)}
+                onToggle={() => toggleItem(item.item_name)}
+              />
+            ))}
           </>
         ) : (
           <ThemedText type="subtitle">There is no current trip!</ThemedText>

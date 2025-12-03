@@ -80,7 +80,9 @@ def packing_decision_algorithm(
         min_item_importance = min(i.item_importance for i in current_items)
 
     # Check Weight
-    if trip.total_items_weight + new_item.weight_kg > WEIGHT_LIMIT_KG:
+    if new_item.weight_kg is not None and (
+        trip.total_items_weight + new_item.weight_kg > WEIGHT_LIMIT_KG
+    ):
         if new_item.item_importance > min_item_importance:
 
             # Order by importance ASC and add items to list until overflow is fixed
@@ -110,7 +112,9 @@ def packing_decision_algorithm(
             )
 
     # Check Volume
-    if new_item.estimated_volume_cm3 is not None and (trip.total_items_volume + new_item.estimated_volume_cm3 > VOLUME_LIMIT_CM3):
+    if new_item.estimated_volume_cm3 is not None and (
+        trip.total_items_volume + new_item.estimated_volume_cm3 > VOLUME_LIMIT_CM3
+    ):
         if new_item.item_importance > min_item_importance:
 
             # Order by importance ASC and add items to list until overflow is fixed
