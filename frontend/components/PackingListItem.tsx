@@ -1,12 +1,12 @@
 import { Pressable, View } from "react-native";
 import { useState } from "react";
 import { ThemedText } from "@/components/ThemedText";
-import { RecommendedItem } from "@/constants/types";
+import { PackingListItem as PackingListItemType } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { PackingRecommendationStatus } from "@/components/PackingRecommendationStatus";
 
 type PackingListItemProps = {
-  item: RecommendedItem;
+  item: PackingListItemType;
   checked: boolean;
   onToggle: () => void;
 };
@@ -17,7 +17,10 @@ export function PackingListItem({
   onToggle,
 }: PackingListItemProps) {
   const [expanded, setExpanded] = useState(false);
+  const name = "item_name" in item ? item.item_name : item.item_id;
 
+  // ASSUMPTION: Priority is an internal value (should not be shown to user)
+  // Disabled checkbox if packing recommendation is not available ("item" is not an Item in backend)
   return (
     <Pressable
       onPress={() => setExpanded((prev) => !prev)}
@@ -29,21 +32,35 @@ export function PackingListItem({
       <View className="flex-col">
         <View className="flex-row items-center gap-4">
           <ThemedCheckbox
-            label={item.item_name}
+            label={name}
             value={checked}
             onValueChange={onToggle}
+            disabled={!("packing_recommendation" in item)}
           />
-          <PackingRecommendationStatus status="remove" />
+          <PackingRecommendationStatus
+            status={
+              "packing_recommendation" in item
+                ? item.packing_recommendation
+                : null
+            }
+          />
         </View>
 
         {expanded && (
           <View className="mt-2 pl-6 gap-1">
-            {item.reason && (
+            {"reason" in item && (
               <ThemedText className="text-gray-500">{item.reason}</ThemedText>
             )}
-            {item.priority && (
+
+            {"weight_kg" in item && (
               <ThemedText className="text-gray-500">
-                Priority: {item.priority}
+                Weight: {item.weight_kg} kg
+              </ThemedText>
+            )}
+
+            {"estimated_volume_cm3" in item && (
+              <ThemedText className="text-gray-500">
+                Volume: {item.estimated_volume_cm3} cm³
               </ThemedText>
             )}
           </View>

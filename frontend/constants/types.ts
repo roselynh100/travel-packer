@@ -60,3 +60,10 @@ export type Dimensions = {
   width: number;
   height: number | null;
 };
+
+export type PackingRecommendation = "pack" | "remove" | "swap";
+
+// Union type for packing list items
+export type PackingListItem =
+  | RecommendedItem
+  | (Item & { packing_recommendation: PackingRecommendation });

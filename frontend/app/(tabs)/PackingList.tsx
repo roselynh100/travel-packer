@@ -5,7 +5,11 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { API_BASE_URL } from "@/constants/api";
-import { RecommendedItem, Trip } from "@/constants/types";
+import {
+  RecommendedItem,
+  Trip,
+  PackingListItem as PackingListItemType,
+} from "@/constants/types";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedButton } from "@/components/ThemedButton";
 import { PackingListItem } from "@/components/PackingListItem";
@@ -15,9 +19,10 @@ export default function PackingList() {
   const { tripId } = useAppContext();
   const router = useRouter();
 
-  const [recommendedItems, setRecommendedItems] = useState<RecommendedItem[]>(
-    []
-  );
+  // Unified list that can contain both RecommendedItem and Item
+  const [packingListItems, setPackingListItems] = useState<
+    PackingListItemType[]
+  >([]);
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const [tripInfo, setTripInfo] = useState<Trip | null>(null);
 
@@ -39,7 +44,7 @@ export default function PackingList() {
         }
 
         const result: RecommendedItem[] = await response.json();
-        setRecommendedItems(result);
+        setPackingListItems(result);
         console.log("Fetched recommendations:", result);
       } catch (error) {
         console.error("Error fetching recommendations:", error);
@@ -77,16 +82,41 @@ export default function PackingList() {
     }, [tripId])
   );
 
-  const toggleItem = (id: string) => {
+  async function packItem(itemId: string) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/trips/${tripId}/item/${itemId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `API error (${response.status}): ${errorText || response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("Item packed:", result);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  const handleToggleItem = (id: string) => {
     setCheckedItems((prev) => {
       const next = new Set(prev);
-
       if (next.has(id)) {
         next.delete(id); // uncheck
       } else {
-        next.add(id); // check
+        next.add(id);
+        packItem(id);
       }
-
       return next;
     });
   };
@@ -120,14 +150,17 @@ export default function PackingList() {
                 />
               </View>
             </View>
-            {recommendedItems?.map((item, i) => (
-              <PackingListItem
-                key={i}
-                item={item}
-                checked={checkedItems.has(item.item_name)}
-                onToggle={() => toggleItem(item.item_name)}
-              />
-            ))}
+            {packingListItems?.map((item, i) => {
+              const id = "item_id" in item ? item.item_id : String(i);
+              return (
+                <PackingListItem
+                  key={i}
+                  item={item}
+                  checked={checkedItems.has(id)}
+                  onToggle={() => handleToggleItem(id)}
+                />
+              );
+            })}
           </>
         ) : (
           <ThemedText type="subtitle">There is no current trip!</ThemedText>

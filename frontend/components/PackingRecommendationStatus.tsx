@@ -1,7 +1,8 @@
 import { ThemedText } from "@/components/ThemedText";
+import { PackingRecommendation } from "@/constants/types";
 
 type PackingRecommendationStatusProps = {
-  status: "pack" | "remove" | "swap";
+  status: PackingRecommendation | null;
 };
 
 export function PackingRecommendationStatus({
