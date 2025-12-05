@@ -233,6 +233,34 @@ class TestUpdatingTrip(unittest.TestCase):
         self.assertEqual(updated["destination"], "Osaka")
         self.assertEqual(updated["duration_days"], 3)
 
+class TestRemoveItemFromTrip(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        trips_store.clear()
+        items_store.clear()
+
+    def tearDown(self):
+        trips_store.clear()
+        items_store.clear()
+
+    def test_remove_item_from_trip_success(self):
+        trip = Trip(
+            trip_id="t1",
+            destination="Rome",
+            duration_days=3,
+            doing_laundry=False,
+            items=["i1"]
+        )
+        item = Item(item_id="i1", trips=["t1"])
+
+        trips_store["t1"] = trip
+        items_store["i1"] = item
+
+        response = self.client.delete("/trips/t1/item/i1")
+        self.assertEqual(response.status_code, 200)
+
+        self.assertNotIn("i1", trips_store["t1"].items)
+        self.assertNotIn("t1", items_store["i1"].trips)
 
 
 class TestAddItemToTrip(unittest.TestCase):
