@@ -99,13 +99,55 @@ export default function PackingList() {
         const result = await response.json();
         console.log("Item packed:", result);
 
-        // Update checked state
+        // Check item
         setCheckedItems((prev) => new Set(prev).add(itemId));
 
         // Update bag info
         await fetchTripInfo();
       } catch (error) {
         console.error("Error packing item:", error);
+        throw error;
+      }
+    },
+    [tripId, fetchTripInfo]
+  );
+
+  const unpackItem = useCallback(
+    async (itemId: string) => {
+      if (!tripId) return;
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/trips/${tripId}/item/${itemId}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `API error (${response.status}): ${errorText || response.statusText}`
+          );
+        }
+
+        const result = await response.json();
+        console.log("Item unpacked:", result);
+
+        // Uncheck item
+        setCheckedItems((prev) => {
+          const next = new Set(prev);
+          next.delete(itemId);
+          return next;
+        });
+
+        // Update bag info
+        await fetchTripInfo();
+      } catch (error) {
+        console.error("Error unpacking item:", error);
         throw error;
       }
     },
@@ -142,7 +184,9 @@ export default function PackingList() {
         return [...prev, currentItem];
       });
 
-      packItem(currentItem.item_id);
+      if (currentItem.packing_recommendation === "pack") {
+        packItem(currentItem.item_id);
+      }
     }
   }, [currentItem, packItem]);
 
@@ -150,12 +194,7 @@ export default function PackingList() {
     const isChecked = checkedItems.has(id);
 
     if (isChecked) {
-      // Uncheck
-      setCheckedItems((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
+      await unpackItem(id);
     } else {
       await packItem(id);
     }
