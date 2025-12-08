@@ -79,7 +79,7 @@ def delete_trip(trip_id: str):
 
 @router.post("/{trip_id}/item/{item_id}")
 def add_item_to_trip(trip_id: str, item_id: str):
-    """Add existing item to a trip."""
+    """Add existing item to a trip. This endpoint does not create the item itself."""
     if trip_id not in trips_store:
         raise HTTPException(status_code=404, detail="Trip not found")
 
@@ -93,6 +93,26 @@ def add_item_to_trip(trip_id: str, item_id: str):
 
     if trip_id not in item.trips:
         item.trips.append(trip_id)
+    
+    if item.estimated_volume_cm3 is not None or item.weight_kg is not None:
+        recalculate_trip_totals(trip_id)
+
+@router.delete("/{trip_id}/item/{item_id}")
+def remove_item_from_trip(trip_id: str, item_id: str):
+    """Remove existing item from a trip. This endpoint does not delete the item itself."""
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    if item_id not in items_store:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    trip = trips_store[trip_id]
+    item = items_store[item_id]
+    if item.item_id in trip.items:
+        trip.items.remove(item.item_id)
+
+    if trip_id in item.trips:
+        item.trips.remove(trip_id)
     
     if item.estimated_volume_cm3 is not None or item.weight_kg is not None:
         recalculate_trip_totals(trip_id)
