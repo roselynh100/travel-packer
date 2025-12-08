@@ -74,9 +74,47 @@ export default function PackingList() {
     }
   }, [tripId]);
 
+  const packItem = useCallback(
+    async (itemId: string) => {
+      if (!tripId) return;
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/trips/${tripId}/item/${itemId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `API error (${response.status}): ${errorText || response.statusText}`
+          );
+        }
+
+        const result = await response.json();
+        console.log("Item packed:", result);
+
+        // Update checked state
+        setCheckedItems((prev) => new Set(prev).add(itemId));
+
+        // Update bag info
+        await fetchTripInfo();
+      } catch (error) {
+        console.error("Error packing item:", error);
+        throw error;
+      }
+    },
+    [tripId, fetchTripInfo]
+  );
+
   // Add currentItem to the list, merging with existing items by name
   useEffect(() => {
-    if (currentItem) {
+    if (currentItem && "item_id" in currentItem) {
       setPackingListItems((prev) => {
         // Overwrite existing items with new info
         const existingIndexById = prev.findIndex(
@@ -103,49 +141,24 @@ export default function PackingList() {
         // Add new item if not already in list
         return [...prev, currentItem];
       });
+
+      packItem(currentItem.item_id);
     }
-  }, [currentItem]);
+  }, [currentItem, packItem]);
 
-  async function packItem(itemId: string) {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/trips/${tripId}/item/${itemId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  const handleToggleItem = async (id: string) => {
+    const isChecked = checkedItems.has(id);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
-        );
-      }
-
-      const result = await response.json();
-      console.log("Item packed:", result);
-
-      // Update bag info
-      await fetchTripInfo();
-    } catch (error) {
-      throw error;
+    if (isChecked) {
+      // Uncheck
+      setCheckedItems((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } else {
+      await packItem(id);
     }
-  }
-
-  const handleToggleItem = (id: string) => {
-    setCheckedItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id); // uncheck
-      } else {
-        next.add(id);
-        packItem(id);
-      }
-      return next;
-    });
   };
 
   return (

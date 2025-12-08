@@ -9,7 +9,8 @@ type PackingListPillProps = {
 
 // TODO: Convert to percentage of limit
 export function PackingListPill({ type, value }: PackingListPillProps) {
-  const color = value > 100 ? "red" : "green";
+  // TODO: Fix this logic
+  const borderColor = value > 0 ? "border-yellow-500" : "border-green-500";
 
   const text =
     type === "weight"
@@ -18,7 +19,7 @@ export function PackingListPill({ type, value }: PackingListPillProps) {
 
   return (
     <View
-      className={`border-2 border-${color}-500 rounded-full px-4 py-2 flex-row gap-1 items-center`}
+      className={`border-2 ${borderColor} rounded-full px-4 py-2 flex-row gap-1 items-center`}
     >
       <IconSymbol
         name={type === "weight" ? "gauge" : "cube.box.fill"}
