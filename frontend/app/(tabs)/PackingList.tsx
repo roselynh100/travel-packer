@@ -74,6 +74,11 @@ export default function PackingList() {
     }
   }, [tripId]);
 
+  // Re-fetch trip info when tripId changes
+  useEffect(() => {
+    fetchTripInfo();
+  }, [tripId, fetchTripInfo]);
+
   const packItem = useCallback(
     async (itemId: string) => {
       if (!tripId) return;
@@ -218,7 +223,13 @@ export default function PackingList() {
           <>
             <View className="gap-2 mb-2">
               <ThemedText>Trip ID: {tripId}</ThemedText>
-              <View className="flex-row gap-4">
+              <View
+                className={
+                  Platform.OS === "web"
+                    ? "flex-row gap-4"
+                    : "flex-col gap-2 items-start"
+                }
+              >
                 <PackingListPill
                   type="weight"
                   value={tripInfo?.total_items_weight || 0}
@@ -229,17 +240,19 @@ export default function PackingList() {
                 />
               </View>
             </View>
-            {packingListItems?.map((item, i) => {
-              const id = "item_id" in item ? item.item_id : String(i);
-              return (
-                <PackingListItem
-                  key={i}
-                  item={item}
-                  checked={checkedItems.has(id)}
-                  onToggle={() => handleToggleItem(id)}
-                />
-              );
-            })}
+            <View className="gap-4">
+              {packingListItems?.map((item, i) => {
+                const id = "item_id" in item ? item.item_id : String(i);
+                return (
+                  <PackingListItem
+                    key={i}
+                    item={item}
+                    checked={checkedItems.has(id)}
+                    onToggle={() => handleToggleItem(id)}
+                  />
+                );
+              })}
+            </View>
           </>
         ) : (
           <ThemedText type="subtitle">There is no current trip!</ThemedText>

@@ -22,6 +22,7 @@ export function ThemedCheckbox({
 
   const text = size === "small" ? "default" : "subtitle";
 
+  // TODO: fix hardcoded colour (for mobile)
   return (
     <View className={cn("flex-row items-center", gap)}>
       <Pressable
@@ -32,7 +33,7 @@ export function ThemedCheckbox({
         <Checkbox
           value={value}
           onValueChange={onValueChange}
-          color="var(--color-tab-selected)"
+          color="#2eb2bb"
           className={cn(boxSize, className)}
           {...rest}
         />

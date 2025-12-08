@@ -19,8 +19,8 @@ export default function TabLayout() {
             </ThemedText>
             {Boolean(userId) && (
               <ThemedText className="text-sm truncate">
-                User:
-                <br /> {userId}
+                User:{"\n"}
+                {userId}
               </ThemedText>
             )}
           </View>
