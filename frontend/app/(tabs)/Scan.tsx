@@ -250,6 +250,7 @@ export default function ScanningScreen() {
       }
     } catch (error) {
       console.error("Error getting packing recommendation:", error);
+      throw error;
     }
   }
 
@@ -278,7 +279,7 @@ export default function ScanningScreen() {
             infoBanner.type === "error" ? "bg-red-600" : "bg-blue-600"
           )}
         >
-          <ThemedText type="subtitle" className="text-white">
+          <ThemedText type="subtitle" className="text-white text-center">
             {infoBanner.message}
           </ThemedText>
         </View>
