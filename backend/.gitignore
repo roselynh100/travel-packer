@@ -14,4 +14,8 @@ __pycache__/
 # Logs
 *.log
 
+# CV
 *.pt
+debug_images/
+
+/backend/constants.py

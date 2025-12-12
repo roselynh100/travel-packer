@@ -1,6 +1,6 @@
-from datetime import datetime
-from typing import Dict, Optional, List
+from typing import Optional, List
 from uuid import uuid4
+from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -35,11 +35,14 @@ class CVResult(BaseModel):
 
 class Item(BaseModel):
     item_id: str = Field(default_factory=lambda: str(uuid4()))
+    item_importance: Optional[int] = 0
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
-    cv_results: Optional[List[CVResult]] = None
+    cv_result: Optional[CVResult] = None
+    trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 class ItemUpdate(BaseModel):
+    item_importance: Optional[int] = 0
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_result: Optional[CVResult] = None
@@ -49,13 +52,34 @@ class RecommendedItem(BaseModel):
     reason: Optional[str] = None
     priority: Optional[int] = None
 
+class RemovalRecommendationStatus(str, Enum):
+    pack='pack'
+    remove='remove'
+    swap='swap'
+
+class RemovalRecommendationReason(str, Enum):
+    overweight='Luggage is too heavy!'
+    over_volume='Luggage is over volume!'
+
+class RemovalRecommendation(BaseModel):
+    status: RemovalRecommendationStatus
+    reason: Optional[RemovalRecommendationReason] = None
+    swap_candidates: Optional[List[Item]] = None
+    
+    class Config:  
+        use_enum_values = True
+
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
     destination: str
     duration_days: int
+    highest_temp: Optional[float] = None
+    lowest_temp: Optional[float] = None
     doing_laundry: bool
     activities: Optional[str] = None
     items: List[str] = Field(default_factory=list, description="Item IDs")
+    total_items_weight: float = 0.0
+    total_items_volume: float = 0.0
 
 class TripUpdate(BaseModel):
     destination: Optional[str] = None
@@ -64,9 +88,18 @@ class TripUpdate(BaseModel):
     items: Optional[List[str]] = None
     activities: Optional[str] = None
 
+class Gender(str, Enum):
+    male="male"
+    female="female"
+    non_binary="non-binary"
+    other="other",
+    prefer_not_to_disclose="prefer not to disclose"
+
 class User(BaseModel):
     user_id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     email: str
     password: str
+    age: Optional[int] = None
+    gender: Optional[Gender] = None
     trips: List[str] = Field(default_factory=list, description="Trip IDs")

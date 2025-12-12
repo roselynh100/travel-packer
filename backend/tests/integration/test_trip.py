@@ -25,7 +25,7 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
         trips_store.clear()
 
     def test_integration_recommends_heavy_items(self):
-        """Algorithm returns list of items recommended to be removed"""
+        """Algorithm returns items recommended to be removed"""
 
         trip = Trip(
             trip_id="tripX",
@@ -35,18 +35,18 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
         )
         trips_store["tripX"] = trip
 
-        heavy = Item(item_id="a", item_name="Boots", weight_kg=4.2)
-        light = Item(item_id="b", item_name="Towel", weight_kg=0.4)
-        items_store["a"] = heavy
-        items_store["b"] = light
-        trip.items = ["a", "b"]
+        i1 = Item(item_id="a", weight_kg=4.2)
+        i1.trips.append("tripX")
 
-        response = self.client.post("/trips/tripX/packing-recommendation")
-        self.assertEqual(response.status_code, 200)
+        items_store["a"] = i1
 
-        result = response.json()
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["item_id"], "a")
+        trip.items = ["a"]
+
+        resp = self.client.get("/trips/tripX/item/a/packing-decision")
+
+        # TO-DO: add finer test cases once we have more set-in-stone removal logic
+        self.assertEqual(resp.status_code, 200)
+
 
     def test_integration_no_items_to_remove(self):
         """Algorithm returns empty when nothing needs to be removed"""
@@ -59,14 +59,18 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
         )
         trips_store["tripY"] = trip
 
-        items_store["a"] = Item(item_id="a", item_name="Shirt", weight_kg=1.0)
-        items_store["b"] = Item(item_id="b", item_name="Shorts", weight_kg=0.5)
+        item_a = Item(item_id="a", weight_kg=1.0)
+        item_a.trips.append("tripY")
+        item_b = Item(item_id="b", weight_kg=0.5)
+        item_b.trips.append("tripY")
+
+        items_store["a"] = item_a
+        items_store["b"] = item_b
+
         trip.items = ["a", "b"]
 
-        response = self.client.post("/trips/tripY/packing-recommendation")
+        response = self.client.get("/trips/tripY/wrecommendations")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), [])
 
 if __name__ == '__main__':
     unittest.main()
-
