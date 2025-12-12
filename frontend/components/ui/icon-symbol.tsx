@@ -23,6 +23,8 @@ const MAPPING = {
   "sun.max": "sunny",
   "list.bullet": "format-list-bulleted",
   "camera.fill": "camera-alt",
+  gauge: "monitor-weight",
+  "cube.box.fill": "archive",
 } as IconMapping;
 
 /**

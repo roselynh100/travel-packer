@@ -4,12 +4,10 @@ from typing import List, Optional
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 from app.models import CVResult, Item, ItemUpdate
+from app.routes.trip import recalculate_trip_totals
 from app.state.db import items_store, trips_store
 from computer_vision.cv import detect_objects_yolo
-from app.models import Item, ItemUpdate
-from app.state.db import items_store, trips_store
 from hardware.readscale import get_weight
-from app.routes.trip import recalculate_trip_totals
 
 router = APIRouter()
 
@@ -35,6 +33,7 @@ def create_item(item: Item, trip_id: Optional[str] = Query(None)):
             recalculate_trip_totals(trip_id)
 
     return item
+
 
 @router.get("/", response_model=List[Item])
 def get_items():
@@ -99,9 +98,7 @@ def delete_item(item_id: str):
 
 
 @router.post("/weight", response_model=Item)
-def read_weight(
-    item_id: Optional[str] = Query(None)
-):
+def read_weight(item_id: Optional[str] = Query(None)):
     """Read weight from the scale and optionally associate with item."""
 
     result = get_weight(wait_time=6.0)
@@ -128,11 +125,9 @@ def read_weight(
     return item
 
 
-
 @router.post("/detect", response_model=Item)
 async def detect_item_from_image(
-    image: UploadFile = File(...),
-    item_id: Optional[str] = Query(None)
+    image: UploadFile = File(...), item_id: Optional[str] = Query(None)
 ):
     """Run YOLO detection, and create an item."""
 
@@ -140,12 +135,12 @@ async def detect_item_from_image(
     cv_results = detect_objects_yolo(image_bytes)
     if not cv_results:
         raise HTTPException(status_code=500, detail="Invalid YOLO output")
-    
+
     # assuming cv_results only ever returns result of one item
     cv_result = cv_results[0]
-    
+
     volume = 0
-    
+
     # calculate volume for item
     if cv_result.dimensions:
         h = cv_result.dimensions.height or 1

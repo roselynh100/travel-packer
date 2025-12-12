@@ -1,10 +1,8 @@
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -19,6 +17,7 @@ import { API_BASE_URL } from "@/constants/api";
 import { Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
+import { ThemedLoading } from "@/components/ThemedLoading";
 
 export default function TripInfo() {
   const router = useRouter();
@@ -61,7 +60,7 @@ export default function TripInfo() {
     try {
       const url = userId
         ? `${API_BASE_URL}/trips/?user_id=${userId}`
-        : `${API_BASE_URL}/trips`;
+        : `${API_BASE_URL}/trips/`;
 
       const response = await fetch(url, {
         method: "POST",
@@ -104,12 +103,6 @@ export default function TripInfo() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Modal visible={isLoading} transparent={true} animationType="fade">
-            <View className="flex-1 justify-center items-center gap-8 bg-black/70">
-              <ActivityIndicator size="large" />
-              <ThemedText type="subtitle">Saving your trip...</ThemedText>
-            </View>
-          </Modal>
           <View className="flex-col gap-6">
             <ThemedText type="title">Input your trip details 🌴</ThemedText>
             <View className="gap-2">
@@ -150,6 +143,7 @@ export default function TripInfo() {
           </View>
 
           <ThemedButton title="Save" onPress={handleSave} />
+          <ThemedLoading isLoading={isLoading} message="Saving your trip..." />
         </ScrollView>
       </Pressable>
     </KeyboardAvoidingView>
