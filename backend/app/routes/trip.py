@@ -7,11 +7,6 @@ from fastapi import APIRouter, HTTPException
 from app.models import Item, RecommendedItem, RemovalRecommendation, Trip, TripUpdate
 from app.state.db import items_store, trips_store, users_store
 from constants import TOMORROW_WEATHER_URL
-
-# from machine_learning.poc_decision_model import (
-#     baseline_list_algorithm,
-#     packing_decision_algorithm,
-# )
 from machine_learning.generator import baseline_list_algorithm
 from machine_learning.optimizer import packing_decision_algorithm
 
