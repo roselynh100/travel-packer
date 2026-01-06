@@ -7,10 +7,13 @@ from fastapi import APIRouter, HTTPException
 from app.models import Item, RecommendedItem, RemovalRecommendation, Trip, TripUpdate
 from app.state.db import items_store, trips_store, users_store
 from constants import TOMORROW_WEATHER_URL
-from machine_learning.poc_decision_model import (
-    baseline_list_algorithm,
-    packing_decision_algorithm,
-)
+
+# from machine_learning.poc_decision_model import (
+#     baseline_list_algorithm,
+#     packing_decision_algorithm,
+# )
+from machine_learning.generator import baseline_list_algorithm
+from machine_learning.optimizer import packing_decision_algorithm
 
 router = APIRouter()
 
@@ -77,6 +80,7 @@ def delete_trip(trip_id: str):
     del trips_store[trip_id]
     return {"message": "Trip deleted successfully"}
 
+
 @router.post("/{trip_id}/item/{item_id}")
 def add_item_to_trip(trip_id: str, item_id: str):
     """Add existing item to a trip. This endpoint does not create the item itself."""
@@ -93,9 +97,10 @@ def add_item_to_trip(trip_id: str, item_id: str):
 
     if trip_id not in item.trips:
         item.trips.append(trip_id)
-    
+
     if item.estimated_volume_cm3 is not None or item.weight_kg is not None:
         recalculate_trip_totals(trip_id)
+
 
 @router.delete("/{trip_id}/item/{item_id}")
 def remove_item_from_trip(trip_id: str, item_id: str):
@@ -113,9 +118,10 @@ def remove_item_from_trip(trip_id: str, item_id: str):
 
     if trip_id in item.trips:
         item.trips.remove(trip_id)
-    
+
     if item.estimated_volume_cm3 is not None or item.weight_kg is not None:
         recalculate_trip_totals(trip_id)
+
 
 @router.get("/{trip_id}/items", response_model=List[Item])
 def get_trip_items(trip_id: str):
@@ -129,6 +135,7 @@ def get_trip_items(trip_id: str):
     trip_items = [items_store[id] for id in trip.items if id in items_store]
 
     return trip_items
+
 
 @router.post("/{trip_id}/recalculate-totals")
 def recalculate_trip_totals(trip_id: str):
@@ -183,10 +190,11 @@ def get_packing_decision(trip_id: str, item_id: str):
 
     trip = trips_store[trip_id]
     item = items_store[item_id]
-    
+
     items = get_trip_items(trip_id)
 
     return packing_decision_algorithm(item, trip, items)
+
 
 @router.post("/{trip_id}/weather")
 def get_weather(trip_id: str):
