@@ -2,7 +2,6 @@ import sys
 import unittest
 from pathlib import Path
 
-# Ensure the app module is visible
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.models import (
@@ -15,12 +14,8 @@ from app.models import (
     RemovalRecommendationStatus,
     Trip,
 )
-
-# Make sure this import path matches your actual file structure
-from machine_learning.poc_decision_model import (
-    get_item_importance,
-    packing_decision_algorithm,
-)
+from machine_learning.importance import get_item_importance
+from machine_learning.optimizer import packing_decision_algorithm
 
 
 class TestPackingAlgorithm(unittest.TestCase):

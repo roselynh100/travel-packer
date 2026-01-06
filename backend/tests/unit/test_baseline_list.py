@@ -6,15 +6,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.models import RecommendedItem, Trip
-from machine_learning.item_groups import ACCESSORIES, CLOTHING, ESSENTIALS, TOILETRIES
 
 # UPDATE: Import the functions to be tested
-from machine_learning.poc_decision_model import (
+from machine_learning.generator import (
     baseline_list_algorithm,
     get_base_items,
     get_weather_items,
     get_work_items,
 )
+from machine_learning.item_groups import ACCESSORIES, CLOTHING, ESSENTIALS, TOILETRIES
 
 
 class TestBaselineAlgorithm(unittest.TestCase):
