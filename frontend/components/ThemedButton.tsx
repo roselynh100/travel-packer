@@ -1,5 +1,6 @@
+import { ThemedText } from "@/components/ThemedText";
 import { cn } from "@/helpers/cn";
-import { Pressable, Text, type PressableProps } from "react-native";
+import { Pressable, type PressableProps } from "react-native";
 
 export type ThemedButtonProps = PressableProps & {
   variant?: "solid" | "outline";
@@ -26,14 +27,14 @@ export function ThemedButton({
   return (
     <Pressable
       className={cn(
-        "rounded-full items-center justify-center py-3 active:opacity-80 border-2",
+        "rounded-full items-center justify-center py-3 px-5 active:opacity-80 border-2",
         backgroundColor,
         border,
         className
       )}
       {...rest}
     >
-      <Text className={cn("font-medium text-lg", textColor)}>{title}</Text>
+      <ThemedText className={textColor}>{title}</ThemedText>
     </Pressable>
   );
 }
