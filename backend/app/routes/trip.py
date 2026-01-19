@@ -12,6 +12,19 @@ from machine_learning.optimizer import packing_decision_algorithm
 
 router = APIRouter()
 
+TRIP_ACTIVITIES = [
+    "Beach",
+    "Camping",
+    "Formal",
+    "Hiking",
+    "Skating",
+    "Skiing",
+    "Snowboarding",
+    "Surfing",
+    "Swimming",
+    "Work",
+]
+
 
 @router.post("/", response_model=Trip)
 def create_trip(trip: Trip, user_id: Optional[str] = None):
@@ -33,6 +46,12 @@ def create_trip(trip: Trip, user_id: Optional[str] = None):
 def get_trips():
     """Get all trips."""
     return list(trips_store.values())
+
+
+@router.get("/activities", response_model=List[str])
+def get_activities():
+    """Get all activities."""
+    return TRIP_ACTIVITIES
 
 
 @router.get("/{trip_id}", response_model=Trip)
