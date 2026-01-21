@@ -4,26 +4,20 @@ from typing import List, Optional
 import requests
 from fastapi import APIRouter, HTTPException
 
-from app.models import Item, RecommendedItem, RemovalRecommendation, Trip, TripUpdate
+from app.models import (
+    Activity,
+    Item,
+    RecommendedItem,
+    RemovalRecommendation,
+    Trip,
+    TripUpdate,
+)
 from app.state.db import items_store, trips_store, users_store
 from constants import TOMORROW_WEATHER_URL
 from machine_learning.generator import baseline_list_algorithm
 from machine_learning.optimizer import packing_decision_algorithm
 
 router = APIRouter()
-
-TRIP_ACTIVITIES = [
-    "Beach",
-    "Camping",
-    "Formal",
-    "Hiking",
-    "Skating",
-    "Skiing",
-    "Snowboarding",
-    "Surfing",
-    "Swimming",
-    "Work",
-]
 
 
 @router.post("/", response_model=Trip)
@@ -51,7 +45,7 @@ def get_trips():
 @router.get("/activities", response_model=List[str])
 def get_activities():
     """Get all activities."""
-    return TRIP_ACTIVITIES
+    return [activity.value for activity in Activity]
 
 
 @router.get("/{trip_id}", response_model=Trip)

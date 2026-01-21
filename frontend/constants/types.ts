@@ -19,7 +19,7 @@ export type Trip = {
   destination: string;
   duration_days: number;
   doing_laundry: boolean;
-  activities?: string;
+  activities?: string[];
   trip_id?: string;
   total_items_weight?: number;
   total_items_volume?: number;

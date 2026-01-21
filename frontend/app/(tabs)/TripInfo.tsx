@@ -68,7 +68,7 @@ export default function TripInfo() {
         destination,
         duration_days: 5, // TODO: fix, currently hardcoded, figure out date input
         doing_laundry: laundry,
-        activities,
+        activities: activities.length > 0 ? activities : undefined,
       };
 
       await saveToAPI(trip);
