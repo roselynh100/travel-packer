@@ -8,8 +8,13 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 class Activity(str, Enum):
     beach = "Beach"
     camping = "Camping"
+    concert = "Concert"
+    dancing = "Dancing"
+    festival = "Festival"
     formal = "Formal"
     hiking = "Hiking"
+    sightseeing = "Sightseeing"
+    shopping = "Shopping"
     skating = "Skating"
     skiing = "Skiing"
     snowboarding = "Snowboarding"

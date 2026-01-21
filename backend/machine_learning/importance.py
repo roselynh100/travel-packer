@@ -2,6 +2,7 @@
 # Returns: int 'score' with value 0 to 100
 
 from app.models import (
+    Activity,
     Item,
     Trip,
 )
@@ -41,10 +42,7 @@ def get_item_importance(item: Item, trip: Trip) -> int:
 
     # Rules
 
-    if (
-        name in ["laptop", "laptop charger"]
-        and "work" not in (trip.activities or "").lower()
-    ):
+    if name in ["laptop", "laptop charger"] and Activity.work not in trip.activities:
         score = 0
 
     # Not sure how weather is going to work yet
