@@ -18,6 +18,7 @@ import { Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedLoading } from "@/components/ThemedLoading";
+import { ThemedMultiSelect } from "@/components/ThemedMultiSelect";
 
 export default function TripInfo() {
   const router = useRouter();
@@ -127,10 +128,12 @@ export default function TripInfo() {
               <ThemedText type="subtitle">
                 Activities Planned (Optional)
               </ThemedText>
-              <ThemedTextInput
+              <ThemedMultiSelect
+                data={activityOptions}
                 value={activities}
-                onChangeText={onChangeActivities}
-                placeholder="Hiking, Fancy Dinner, Clubbing..."
+                onChange={onChangeActivities}
+                placeholder="Search and select activities"
+                searchPlaceholder="Search activities..."
               />
             </View>
 
