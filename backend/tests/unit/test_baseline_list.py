@@ -5,7 +5,7 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.models import RecommendedItem, Trip
+from app.models import Activity, Trip
 
 # UPDATE: Import the functions to be tested
 from machine_learning.generator import (
@@ -47,8 +47,8 @@ class TestBaselineAlgorithm(unittest.TestCase):
         self.assertIn("cell phone", item_names)  # From ESSENTIALS
 
     def test_get_work_items_positive(self):
-        """Test that 'work' in activities triggers laptop recommendations."""
-        items = get_work_items("Business Work")
+        """Test that work activity triggers laptop recommendations."""
+        items = get_work_items([Activity.work])
 
         item_names = [i.item_name for i in items]
         self.assertIn("laptop", item_names)
@@ -56,7 +56,7 @@ class TestBaselineAlgorithm(unittest.TestCase):
 
     def test_get_work_items_negative(self):
         """Test that non-work activities return an empty list."""
-        items = get_work_items("Relaxing at the beach")
+        items = get_work_items([Activity.beach])
         self.assertEqual(items, [])
 
     def test_get_weather_items_cold(self):
@@ -77,7 +77,7 @@ class TestBaselineAlgorithm(unittest.TestCase):
             destination="New York",
             duration_days=4,
             doing_laundry=False,
-            activities="Work Conference",  # Triggers work items
+            activities=[Activity.work],  # Triggers work items
             lowest_temp=0.0,  # Triggers cold weather items
         )
 

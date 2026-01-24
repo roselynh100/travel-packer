@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -18,6 +18,7 @@ import { Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedLoading } from "@/components/ThemedLoading";
+import { ThemedMultiSelect } from "@/components/ThemedMultiSelect";
 
 export default function TripInfo() {
   const router = useRouter();
@@ -25,10 +26,39 @@ export default function TripInfo() {
   const [destination, onChangeDestination] = useState("");
   const [dates, onChangeDates] = useState("");
   const [laundry, onChangeLaundry] = useState(false);
-  const [activities, onChangeActivities] = useState("");
+  const [activities, onChangeActivities] = useState<string[]>([]);
+  const [activityOptions, setActivityOptions] = useState<{ label: string; value: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const { userId, setTripId } = useAppContext();
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/trips/activities`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `API error (${response.status}): ${errorText || response.statusText}`
+          );
+        }
+
+        const activitiesList: string[] = await response.json();
+        const formattedActivities = activitiesList.map((activity) => ({
+          label: activity,
+          value: activity,
+        }));
+
+        setActivityOptions(formattedActivities);
+        console.log("Fetched activities:", formattedActivities);
+      } catch (error) {
+        console.error("Error fetching activities:", error);
+      }
+    };
+
+    fetchActivities();
+  }, []);
 
   async function handleSave() {
     try {
@@ -38,7 +68,7 @@ export default function TripInfo() {
         destination,
         duration_days: 5, // TODO: fix, currently hardcoded, figure out date input
         doing_laundry: laundry,
-        activities,
+        activities: activities.length > 0 ? activities : undefined,
       };
 
       await saveToAPI(trip);
@@ -127,10 +157,12 @@ export default function TripInfo() {
               <ThemedText type="subtitle">
                 Activities Planned (Optional)
               </ThemedText>
-              <ThemedTextInput
+              <ThemedMultiSelect
+                data={activityOptions}
                 value={activities}
-                onChangeText={onChangeActivities}
-                placeholder="Hiking, Fancy Dinner, Clubbing..."
+                onChange={onChangeActivities}
+                placeholder="Search and select activities"
+                searchPlaceholder="Search activities..."
               />
             </View>
 

@@ -1,8 +1,27 @@
-from typing import Optional, List
-from uuid import uuid4
 from enum import Enum
+from typing import List, Optional
+from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+class Activity(str, Enum):
+    beach = "Beach"
+    camping = "Camping"
+    concert = "Concert"
+    dancing = "Dancing"
+    festival = "Festival"
+    formal = "Formal"
+    hiking = "Hiking"
+    sightseeing = "Sightseeing"
+    shopping = "Shopping"
+    skating = "Skating"
+    skiing = "Skiing"
+    snowboarding = "Snowboarding"
+    surfing = "Surfing"
+    swimming = "Swimming"
+    work = "Work"
+
 
 class BoundingBox(BaseModel):
     x_min: Optional[float] = None
@@ -13,18 +32,27 @@ class BoundingBox(BaseModel):
     @model_validator(mode="after")
     def validate_coordinates(self):
         """Validate that all coordinates are present and valid."""
-        if self.x_min is None or self.y_min is None or self.x_max is None or self.y_max is None:
-            raise ValueError("All bounding box coordinates (x_min, y_min, x_max, y_max) must be provided")
+        if (
+            self.x_min is None
+            or self.y_min is None
+            or self.x_max is None
+            or self.y_max is None
+        ):
+            raise ValueError(
+                "All bounding box coordinates (x_min, y_min, x_max, y_max) must be provided"
+            )
         if self.x_min >= self.x_max:
             raise ValueError("x_min must be less than x_max")
         if self.y_min >= self.y_max:
             raise ValueError("y_min must be less than y_max")
         return self
 
+
 class Dimensions(BaseModel):
     length: float
     width: float
     height: Optional[float] = None
+
 
 class CVResult(BaseModel):
     item_name: str
@@ -32,6 +60,7 @@ class CVResult(BaseModel):
     confidence_score: float = Field(..., ge=0.0, le=1.0)
     bounding_boxes: List[BoundingBox]
     dimensions: Dimensions
+
 
 class Item(BaseModel):
     item_id: str = Field(default_factory=lambda: str(uuid4()))
@@ -41,33 +70,39 @@ class Item(BaseModel):
     cv_result: Optional[CVResult] = None
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
+
 class ItemUpdate(BaseModel):
     item_importance: Optional[int] = 0
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_result: Optional[CVResult] = None
 
+
 class RecommendedItem(BaseModel):
     item_name: str
     reason: Optional[str] = None
     priority: Optional[int] = None
 
+
 class RemovalRecommendationStatus(str, Enum):
-    pack='pack'
-    remove='remove'
-    swap='swap'
+    pack = "pack"
+    remove = "remove"
+    swap = "swap"
+
 
 class RemovalRecommendationReason(str, Enum):
-    overweight='Luggage is too heavy!'
-    over_volume='Luggage is over volume!'
+    overweight = "Luggage is too heavy!"
+    over_volume = "Luggage is over volume!"
+
 
 class RemovalRecommendation(BaseModel):
     status: RemovalRecommendationStatus
     reason: Optional[RemovalRecommendationReason] = None
     swap_candidates: Optional[List[Item]] = None
-    
-    class Config:  
+
+    class Config:
         use_enum_values = True
+
 
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
@@ -76,24 +111,30 @@ class Trip(BaseModel):
     highest_temp: Optional[float] = None
     lowest_temp: Optional[float] = None
     doing_laundry: bool
-    activities: Optional[str] = None
+    activities: List[Activity] = Field(default_factory=list)
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
+
+    class Config:
+        use_enum_values = True
+
 
 class TripUpdate(BaseModel):
     destination: Optional[str] = None
     duration_days: Optional[int] = None
     doing_laundry: Optional[bool] = None
     items: Optional[List[str]] = None
-    activities: Optional[str] = None
+    activities: Optional[List[Activity]] = None
+
 
 class Gender(str, Enum):
-    male="male"
-    female="female"
-    non_binary="non-binary"
-    other="other",
-    prefer_not_to_disclose="prefer not to disclose"
+    male = "male"
+    female = "female"
+    non_binary = "non-binary"
+    other = ("other",)
+    prefer_not_to_disclose = "prefer not to disclose"
+
 
 class User(BaseModel):
     user_id: str = Field(default_factory=lambda: str(uuid4()))

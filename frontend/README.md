@@ -22,6 +22,10 @@ You can now view the app on your laptop at [localhost:8081](http://localhost:808
 
 ## 💅 Development
 
+### Dependencies
+
+To add a new dependency, use `npx expo install <library-name>`.
+
 ### Styling
 
 This project uses [Nativewind](https://www.nativewind.dev/) (mobile Tailwind CSS) for styling :)
