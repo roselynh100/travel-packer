@@ -4,7 +4,14 @@ from typing import List, Optional
 import requests
 from fastapi import APIRouter, HTTPException
 
-from app.models import Item, RecommendedItem, RemovalRecommendation, Trip, TripUpdate
+from app.models import (
+    Activity,
+    Item,
+    RecommendedItem,
+    RemovalRecommendation,
+    Trip,
+    TripUpdate,
+)
 from app.state.db import items_store, trips_store, users_store
 from constants import TOMORROW_WEATHER_URL
 from machine_learning.generator import baseline_list_algorithm
@@ -33,6 +40,12 @@ def create_trip(trip: Trip, user_id: Optional[str] = None):
 def get_trips():
     """Get all trips."""
     return list(trips_store.values())
+
+
+@router.get("/activities", response_model=List[str])
+def get_activities():
+    """Get all activities."""
+    return [activity.value for activity in Activity]
 
 
 @router.get("/{trip_id}", response_model=Trip)

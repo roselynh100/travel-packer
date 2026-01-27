@@ -4,6 +4,7 @@
 from typing import List, Optional
 
 from app.models import (
+    Activity,
     RecommendedItem,
     Trip,
 )
@@ -16,10 +17,10 @@ def get_base_items() -> List[RecommendedItem]:
     return CLOTHING + ACCESSORIES + TOILETRIES + ESSENTIALS
 
 
-def get_work_items(activities: Optional[str]) -> List[RecommendedItem]:
+def get_work_items(activities: List[Activity]) -> List[RecommendedItem]:
     """Returns items specific to work trips."""
     items = []
-    if "work" in (activities or "").lower():
+    if Activity.work in activities:
         items.append(
             RecommendedItem(item_name="laptop", reason="Needed for work", priority=1)
         )

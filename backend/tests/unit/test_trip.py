@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.models import Item, RecommendedItem, Trip
+from app.models import Activity, Item, RecommendedItem, Trip
 from app.state.db import items_store, trips_store
 
 
@@ -72,7 +72,6 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-
 class TestTripRecommendationsEndpoint(unittest.TestCase):
     """Unit tests for /trips/{trip_id}/recommendations endpoint"""
 
@@ -97,7 +96,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
             destination="Tokyo",
             duration_days=7,
             doing_laundry=True,
-            activities="lots of walking",
+            activities=[Activity.shopping],
         )
 
         mock_gen.return_value = [
@@ -125,7 +124,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
             destination="Paris",
             duration_days=3,
             doing_laundry=False,
-            activities="sightseeing",
+            activities=[Activity.sightseeing],
         )
 
         mock_gen.return_value = []
@@ -142,7 +141,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
             destination="London",
             duration_days=5,
             doing_laundry=True,
-            activities="museums",
+            activities=[Activity.festival],
         )
 
         mock_gen.return_value = None
@@ -159,7 +158,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
             destination="Banff",
             duration_days=4,
             doing_laundry=False,
-            activities="hiking trails",
+            activities=[Activity.hiking],
         )
 
         mock_gen.return_value = [RecommendedItem(item_name="Jacket")]
@@ -172,7 +171,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
         self.assertEqual(t.destination, "Banff")
         self.assertEqual(t.duration_days, 4)
         self.assertEqual(t.doing_laundry, False)
-        self.assertEqual(t.activities, "hiking trails")
+        self.assertEqual(t.activities, [Activity.hiking])
 
 
 class TestUpdatingTrip(unittest.TestCase):
@@ -233,6 +232,7 @@ class TestUpdatingTrip(unittest.TestCase):
         self.assertEqual(updated["destination"], "Osaka")
         self.assertEqual(updated["duration_days"], 3)
 
+
 class TestRemoveItemFromTrip(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
@@ -249,7 +249,7 @@ class TestRemoveItemFromTrip(unittest.TestCase):
             destination="Rome",
             duration_days=3,
             doing_laundry=False,
-            items=["i1"]
+            items=["i1"],
         )
         item = Item(item_id="i1", trips=["t1"])
 
@@ -279,7 +279,7 @@ class TestAddItemToTrip(unittest.TestCase):
             destination="Paris",
             duration_days=4,
             doing_laundry=False,
-            items=[]
+            items=[],
         )
         item = Item(item_id="i1", weight_kg=1.0)
 
@@ -300,10 +300,7 @@ class TestAddItemToTrip(unittest.TestCase):
 
     def test_add_item_item_not_found(self):
         trips_store["t1"] = Trip(
-            trip_id="t1",
-            destination="Rome",
-            duration_days=3,
-            doing_laundry=False
+            trip_id="t1", destination="Rome", duration_days=3, doing_laundry=False
         )
 
         response = self.client.post("/trips/t1/item/nope")
@@ -326,7 +323,7 @@ class TestRecalculateTripTotals(unittest.TestCase):
             destination="Test",
             duration_days=2,
             doing_laundry=False,
-            items=["i1", "i2"]
+            items=["i1", "i2"],
         )
 
         items_store["i1"] = Item(item_id="i1", weight_kg=2.0, estimated_volume_cm3=10)

@@ -5,11 +5,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.models import (
+    Activity,
     BoundingBox,
     CVResult,
     Dimensions,
     Item,
-    RemovalRecommendation,
     RemovalRecommendationReason,
     RemovalRecommendationStatus,
     Trip,
@@ -65,7 +65,7 @@ class TestPackingAlgorithm(unittest.TestCase):
             destination="Beach",
             duration_days=3,
             doing_laundry=False,
-            activities="Relaxing",
+            activities=[Activity.beach],
         )
         self.assertEqual(get_item_importance(item, trip_leisure), 0)
 
@@ -74,7 +74,7 @@ class TestPackingAlgorithm(unittest.TestCase):
             destination="Conf",
             duration_days=3,
             doing_laundry=False,
-            activities="Business Work",
+            activities=[Activity.work],
         )
         self.assertEqual(get_item_importance(item, trip_work), 80)
 
@@ -129,7 +129,7 @@ class TestPackingAlgorithm(unittest.TestCase):
             destination="Office",
             duration_days=1,
             doing_laundry=False,
-            activities="Work",
+            activities=[Activity.work],
             total_items_weight=19.5,
         )
 
