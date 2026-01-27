@@ -109,9 +109,47 @@ def _extract_kelvin_temps(entry: dict) -> List[float]:
     return temps
 
 
-def _get_forecast_extrema(
-    lat: float, lon: float, start: datetime.date, end: datetime.date
-) -> tuple[Optional[float], Optional[float]]:
+def _rain_amount(entry: dict) -> float:
+    """Best-effort extraction of rain amount (mm) from an OpenWeather entry."""
+    rain_value = entry.get("rain")
+    if isinstance(rain_value, (int, float)):
+        return float(rain_value)
+    if isinstance(rain_value, dict):
+        total = 0.0
+        for value in rain_value.values():
+            if isinstance(value, (int, float)):
+                total += float(value)
+        return total
+    return 0.0
+
+
+def _is_rainy_entry(entry: dict) -> bool:
+    """Determine whether an OpenWeather entry indicates rain."""
+    if _rain_amount(entry) > 0:
+        return True
+
+    pop = entry.get("pop")
+    if isinstance(pop, (int, float)) and float(pop) > 0:
+        return True
+
+    weather_list = entry.get("weather") or []
+    for weather in weather_list:
+        main = (weather or {}).get("main")
+        if isinstance(main, str) and main.lower() == "rain":
+            return True
+
+    return False
+
+
+def _precipitation_percentage(rainy_days: int, total_days: int) -> float:
+    if total_days <= 0:
+        return 0.0
+    return (rainy_days / total_days) * 100.0
+
+
+def _get_forecast_stats(
+    lat: float, lon: float, start: datetime.date, end: datetime.date, trip_days: int
+) -> tuple[Optional[float], Optional[float], Optional[float]]:
     forecast_url = OPENWEATHERMAP_FORECAST_URL.format(
         lat=lat,
         lon=lon,
@@ -130,6 +168,7 @@ def _get_forecast_extrema(
 
     lows: List[float] = []
     highs: List[float] = []
+    rainy_dates: set[datetime.date] = set()
 
     for entry in forecast_list:
         dt_value = entry.get("dt")
@@ -147,15 +186,19 @@ def _get_forecast_extrema(
         if isinstance(max_k, (int, float)):
             highs.append(_kelvin_to_celsius(float(max_k)))
 
+        if _is_rainy_entry(entry):
+            rainy_dates.add(entry_date)
+
     if not lows or not highs:
-        return None, None
+        return None, None, None
 
-    return min(lows), max(highs)
+    precip_pct = _precipitation_percentage(len(rainy_dates), trip_days)
+    return min(lows), max(highs), precip_pct
 
 
-def _get_historical_extrema(
-    lat: float, lon: float, start: datetime.date, end: datetime.date
-) -> tuple[Optional[float], Optional[float]]:
+def _get_historical_stats(
+    lat: float, lon: float, start: datetime.date, end: datetime.date, trip_days: int
+) -> tuple[Optional[float], Optional[float], Optional[float]]:
     prev_year_start = _safe_prev_year_date(start)
     prev_year_end = _safe_prev_year_date(end)
 
@@ -184,14 +227,25 @@ def _get_historical_extrema(
     history_list = data.get("list") or data.get("hourly") or []
 
     temps_c: List[float] = []
+    rainy_dates: set[datetime.date] = set()
     for entry in history_list:
         for temp_k in _extract_kelvin_temps(entry):
             temps_c.append(_kelvin_to_celsius(temp_k))
 
-    if not temps_c:
-        return None, None
+        dt_value = entry.get("dt")
+        if not isinstance(dt_value, (int, float)):
+            continue
+        entry_date = datetime.datetime.utcfromtimestamp(dt_value).date()
+        if not (prev_year_start <= entry_date <= prev_year_end):
+            continue
+        if _is_rainy_entry(entry):
+            rainy_dates.add(entry_date)
 
-    return min(temps_c), max(temps_c)
+    if not temps_c:
+        return None, None, None
+
+    precip_pct = _precipitation_percentage(len(rainy_dates), trip_days)
+    return min(temps_c), max(temps_c), precip_pct
 
 
 def _trip_within_forecast_window(start: datetime.date, end: datetime.date) -> bool:
@@ -430,15 +484,20 @@ def get_weather(trip_id: str):
         raise HTTPException(
             status_code=400, detail="Trip end_date is before start_date"
         )
+    trip_days = (end_date - start_date).days + 1
 
     lat, lon = _get_lat_lon_for_trip(trip)
 
     if _trip_within_forecast_window(start_date, end_date):
-        lowest, highest = _get_forecast_extrema(lat, lon, start_date, end_date)
+        lowest, highest, precip_pct = _get_forecast_stats(
+            lat, lon, start_date, end_date, trip_days
+        )
     else:
-        lowest, highest = _get_historical_extrema(lat, lon, start_date, end_date)
+        lowest, highest, precip_pct = _get_historical_stats(
+            lat, lon, start_date, end_date, trip_days
+        )
 
-    if lowest is None or highest is None:
+    if lowest is None or highest is None or precip_pct is None:
         raise HTTPException(
             status_code=502,
             detail="Weather data unavailable for the requested trip dates",
@@ -446,6 +505,7 @@ def get_weather(trip_id: str):
 
     trip.lowest_temp = lowest
     trip.highest_temp = highest
+    trip.precipitation_percentage = precip_pct
 
     trips_store[trip_id] = trip
     return trip

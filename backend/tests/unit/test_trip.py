@@ -357,6 +357,9 @@ class TestTripWeatherEndpoint(unittest.TestCase):
                                 "min": 270.0 + i,  # Kelvin
                                 "max": 300.0 + i,  # Kelvin
                             },
+                            # Mark 2 of 3 days as rainy.
+                            "rain": 5.0 if i == 0 else 0.0,
+                            "pop": 0.4 if i == 2 else 0.0,
                         }
                     )
                 return _MockResponse({"list": entries})
@@ -371,6 +374,9 @@ class TestTripWeatherEndpoint(unittest.TestCase):
         # Kelvin -> Celsius conversion: 270K ~= -3.15C, 302K ~= 28.85C
         self.assertAlmostEqual(data["lowest_temp"], 270.0 - 273.15, places=2)
         self.assertAlmostEqual(data["highest_temp"], 302.0 - 273.15, places=2)
+        self.assertAlmostEqual(
+            data["precipitation_percentage"], (2 / 3) * 100.0, places=2
+        )
 
     @patch("app.routes.trip.requests.get")
     def test_weather_outside_forecast_window_uses_history(self, mock_get):
@@ -384,11 +390,44 @@ class TestTripWeatherEndpoint(unittest.TestCase):
             if "geo/1.0/direct" in url:
                 return _MockResponse([{"lat": 34.0, "lon": -118.0}])
             if "history.openweathermap.org" in url:
+                prev_start = start.replace(year=start.year - 1)
+                prev_mid = (start + datetime.timedelta(days=1)).replace(
+                    year=start.year - 1
+                )
+                prev_end = end.replace(year=end.year - 1)
+                dt_start = int(
+                    datetime.datetime.combine(
+                        prev_start, datetime.time(hour=12), tzinfo=datetime.timezone.utc
+                    ).timestamp()
+                )
+                dt_mid = int(
+                    datetime.datetime.combine(
+                        prev_mid, datetime.time(hour=12), tzinfo=datetime.timezone.utc
+                    ).timestamp()
+                )
+                dt_end = int(
+                    datetime.datetime.combine(
+                        prev_end, datetime.time(hour=12), tzinfo=datetime.timezone.utc
+                    ).timestamp()
+                )
                 return _MockResponse(
                     {
                         "list": [
-                            {"main": {"temp_min": 265.0, "temp_max": 295.0}},
-                            {"main": {"temp_min": 268.0, "temp_max": 298.0}},
+                            {
+                                "dt": dt_start,
+                                "main": {"temp_min": 265.0, "temp_max": 295.0},
+                                "rain": {"1h": 1.2},
+                            },
+                            {
+                                "dt": dt_mid,
+                                "main": {"temp_min": 268.0, "temp_max": 298.0},
+                                "rain": 0.0,
+                            },
+                            {
+                                "dt": dt_end,
+                                "main": {"temp_min": 269.0, "temp_max": 297.0},
+                                "weather": [{"main": "Rain"}],
+                            },
                         ]
                     }
                 )
@@ -402,6 +441,9 @@ class TestTripWeatherEndpoint(unittest.TestCase):
         data = response.json()
         self.assertAlmostEqual(data["lowest_temp"], 265.0 - 273.15, places=2)
         self.assertAlmostEqual(data["highest_temp"], 298.0 - 273.15, places=2)
+        self.assertAlmostEqual(
+            data["precipitation_percentage"], (2 / 3) * 100.0, places=2
+        )
 
 
 class TestAddItemToTrip(unittest.TestCase):

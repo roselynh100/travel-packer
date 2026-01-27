@@ -120,7 +120,7 @@ class Trip(BaseModel):
     end_date: datetime.datetime
     highest_temp: Optional[float] = None
     lowest_temp: Optional[float] = None
-    precipitation_probability: Optional[float] = None
+    precipitation_percentage: Optional[float] = None
     doing_laundry: bool
     activities: List[Activity] = Field(default_factory=list)
     items: List[str] = Field(default_factory=list, description="Item IDs")
