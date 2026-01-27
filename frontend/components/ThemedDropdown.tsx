@@ -1,93 +1,67 @@
+import { cn } from "@/helpers/cn";
 import { useState } from "react";
-import { Platform, ActionSheetIOS, Pressable, Text } from "react-native";
-import DropDownPicker from "react-native-dropdown-picker";
+import { Text, View } from "react-native";
+import { Dropdown } from "react-native-element-dropdown";
 
-export type ThemedDropdownProps<T extends string> = {
-  value: T | null;
-  onChange: (v: T) => void;
-  options: T[];
+type ThemedDropdownProps = {
+  data: { label: string; value: string }[];
+  value: string | null;
+  onChange: (value: string) => void;
+  placeholder?: string;
 };
 
-export function ThemedDropdown<T extends string>({
+export function ThemedDropdown({
+  data,
   value,
   onChange,
-  options,
-}: ThemedDropdownProps<T>) {
-  const [open, setOpen] = useState(false);
+  placeholder = "Select item",
+}: ThemedDropdownProps) {
+  const [focused, setFocused] = useState(false);
 
-  const items = options.map((opt) => ({ label: opt, value: opt }));
+  const ringColor = focused
+    ? "border-[var(--color-primary)]"
+    : "border-transparent";
 
-  // Use native iOS ActionSheet
-  if (Platform.OS === "ios") {
-    const handlePress = () => {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ["Cancel", ...options],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex > 0) {
-            onChange(options[buttonIndex - 1]);
-          }
-        }
-      );
-    };
-
+  const renderItem = (item: { label: string; value: string }) => {
+    const isSelected = value === item.value;
     return (
-      <Pressable
-        onPress={handlePress}
+      <View
+        className={cn(
+          "p-3",
+          isSelected ? "bg-teal-400/40" : "bg-[var(--color-bg-nav)]",
+        )}
+      >
+        <Text className="text-[var(--color-text)]">{item.label}</Text>
+      </View>
+    );
+  };
+
+  return (
+    <View className={cn("rounded-2xl border-2", ringColor)}>
+      <Dropdown
         style={{
           borderRadius: 12,
           padding: 12,
           backgroundColor: "var(--color-bg-nav)",
           borderColor: "var(--color-text-placeholder)",
           borderWidth: 2,
-          justifyContent: "center",
-          minHeight: 48,
         }}
-      >
-        <Text
-          style={{
-            color: value
-              ? "var(--color-text)"
-              : "var(--color-text-placeholder)",
-          }}
-        >
-          {value || "Select..."}
-        </Text>
-      </Pressable>
-    );
-  }
-
-  // Use DropDownPicker for Android and Web
-  return (
-    <DropDownPicker
-      open={open}
-      value={value}
-      items={items}
-      setOpen={setOpen}
-      setValue={(val) => onChange(val as unknown as T)}
-      style={{
-        borderRadius: 12,
-        padding: 12,
-        backgroundColor: "var(--color-bg-nav)",
-        borderColor: "var(--color-text-placeholder)",
-        borderWidth: 2,
-      }}
-      dropDownContainerStyle={{
-        backgroundColor: "var(--color-bg-nav)",
-        borderColor: "var(--color-text-placeholder)",
-        borderLeftWidth: 2,
-        borderRightWidth: 2,
-        borderBottomWidth: 2,
-      }}
-      listItemContainerStyle={{
-        backgroundColor: "var(--color-bg-nav)",
-      }}
-      textStyle={{
-        color: "var(--color-text)",
-      }}
-      placeholder="Select..."
-    />
+        placeholderStyle={{
+          color: "var(--color-text-placeholder)",
+        }}
+        data={data}
+        renderItem={renderItem}
+        maxHeight={300}
+        labelField="label"
+        valueField="value"
+        placeholder={!focused ? placeholder : ""}
+        value={value}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onChange={(item) => {
+          onChange(item.value);
+        }}
+      />
+    </View>
   );
 }
