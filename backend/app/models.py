@@ -23,6 +23,17 @@ class Activity(str, Enum):
     work = "Work"
 
 
+class Airline(str, Enum):
+    air_canada = "Air Canada"
+    porter = "Porter"
+    westjet = "Westjet"
+
+
+class BagType(str, Enum):
+    carry_on = "carry_on"
+    checked_bag = "checked_bag"
+
+
 class BoundingBox(BaseModel):
     x_min: Optional[float] = None
     y_min: Optional[float] = None
@@ -112,6 +123,8 @@ class Trip(BaseModel):
     lowest_temp: Optional[float] = None
     doing_laundry: bool
     activities: List[Activity] = Field(default_factory=list)
+    bag_type: BagType = BagType.carry_on
+    airline: Airline = Airline.air_canada
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
@@ -124,15 +137,17 @@ class TripUpdate(BaseModel):
     destination: Optional[str] = None
     duration_days: Optional[int] = None
     doing_laundry: Optional[bool] = None
-    items: Optional[List[str]] = None
     activities: Optional[List[Activity]] = None
+    bag_type: Optional[BagType] = None
+    airline: Optional[Airline] = None
+    items: Optional[List[str]] = None
 
 
 class Gender(str, Enum):
     male = "male"
     female = "female"
     non_binary = "non-binary"
-    other = ("other",)
+    other = "other"
     prefer_not_to_disclose = "prefer not to disclose"
 
 
