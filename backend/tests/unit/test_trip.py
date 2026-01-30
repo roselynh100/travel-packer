@@ -1,3 +1,4 @@
+import datetime
 import sys
 import unittest
 from pathlib import Path
@@ -8,8 +9,32 @@ from fastapi.testclient import TestClient
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.models import Activity, Item, RecommendedItem, Trip
+from app.models import Activity, Destination, Item, RecommendedItem, Trip
 from app.state.db import items_store, trips_store
+
+
+def _minimal_trip(
+    trip_id: str,
+    destination: str,
+    duration_days: int,
+    doing_laundry: bool,
+    items=None,
+    activities=None,
+) -> Trip:
+    today = datetime.date.today()
+    start_dt = datetime.datetime.combine(today, datetime.time(hour=9))
+    end_dt = start_dt + datetime.timedelta(days=duration_days - 1)
+    return Trip(
+        trip_id=trip_id,
+        destination=destination,
+        destination_details=Destination(city=destination, country="US"),
+        duration_days=duration_days,
+        start_date=start_dt,
+        end_date=end_dt,
+        doing_laundry=doing_laundry,
+        items=list(items or []),
+        activities=list(activities or []),
+    )
 
 
 class TestRemovalRecommendationEndpoint(unittest.TestCase):
@@ -27,7 +52,7 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
     def test_removal_recommendation_success(self):
         """Endpoint should return a valid RemovalRecommendation."""
 
-        trip = Trip(
+        trip = _minimal_trip(
             trip_id="t1",
             destination="Rome",
             duration_days=3,
@@ -59,7 +84,7 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
     def test_removal_recommendation_item_not_found(self):
         """Should return 404 when item doesn't exist."""
 
-        trip = Trip(
+        trip = _minimal_trip(
             trip_id="t1",
             destination="Rome",
             duration_days=3,
@@ -91,7 +116,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
     @patch("app.routes.trip.baseline_list_algorithm")
     def test_recommendations_success(self, mock_gen):
         """Valid trip should return recommendations."""
-        trips_store["t1"] = Trip(
+        trips_store["t1"] = _minimal_trip(
             trip_id="t1",
             destination="Tokyo",
             duration_days=7,
@@ -119,7 +144,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
     @patch("app.routes.trip.baseline_list_algorithm")
     def test_recommendations_empty_list(self, mock_gen):
         """If algorithm returns empty list, endpoint returns empty list."""
-        trips_store["t1"] = Trip(
+        trips_store["t1"] = _minimal_trip(
             trip_id="t1",
             destination="Paris",
             duration_days=3,
@@ -136,7 +161,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
     @patch("app.routes.trip.baseline_list_algorithm")
     def test_recommendations_invalid_output(self, mock_gen):
         """If algorithm returns invalid output, endpoint should error."""
-        trips_store["t1"] = Trip(
+        trips_store["t1"] = _minimal_trip(
             trip_id="t1",
             destination="London",
             duration_days=5,
@@ -153,7 +178,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
     @patch("app.routes.trip.baseline_list_algorithm")
     def test_recommendations_forwards_correct_trip_data(self, mock_gen):
         """Ensure the trip object passed to algorithm contains correct fields."""
-        trips_store["t1"] = Trip(
+        trips_store["t1"] = _minimal_trip(
             trip_id="t1",
             destination="Banff",
             duration_days=4,
@@ -180,7 +205,7 @@ class TestUpdatingTrip(unittest.TestCase):
         trips_store.clear()
 
         self.trip_id = "t1"
-        self.initial_trip = Trip(
+        self.initial_trip = _minimal_trip(
             trip_id=self.trip_id,
             destination="Tokyo",
             duration_days=5,
@@ -244,7 +269,7 @@ class TestRemoveItemFromTrip(unittest.TestCase):
         items_store.clear()
 
     def test_remove_item_from_trip_success(self):
-        trip = Trip(
+        trip = _minimal_trip(
             trip_id="t1",
             destination="Rome",
             duration_days=3,
@@ -263,6 +288,164 @@ class TestRemoveItemFromTrip(unittest.TestCase):
         self.assertNotIn("t1", items_store["i1"].trips)
 
 
+class _MockResponse:
+    def __init__(self, payload, status_code=200):
+        self._payload = payload
+        self.status_code = status_code
+        self.ok = 200 <= status_code < 300
+
+    def json(self):
+        return self._payload
+
+
+def _make_trip(trip_id: str, start: datetime.date, end: datetime.date) -> Trip:
+    start_dt = datetime.datetime.combine(start, datetime.time(hour=9))
+    end_dt = datetime.datetime.combine(end, datetime.time(hour=17))
+    duration_days = (end - start).days + 1
+    return Trip(
+        trip_id=trip_id,
+        destination="Test City",
+        destination_details=Destination(city="Test City", country="US"),
+        duration_days=duration_days,
+        start_date=start_dt,
+        end_date=end_dt,
+        doing_laundry=False,
+        items=[],
+        activities=[],
+    )
+
+
+class TestTripWeatherEndpoint(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        trips_store.clear()
+
+    def tearDown(self):
+        trips_store.clear()
+
+    def test_weather_trip_not_found(self):
+        response = self.client.get("/trips/does-not-exist/weather")
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("Trip not found", response.text)
+
+    @patch("app.routes.trip.requests.get")
+    def test_weather_within_forecast_window(self, mock_get):
+        today = datetime.date.today()
+        start = today + datetime.timedelta(days=1)
+        end = today + datetime.timedelta(days=3)
+        trip = _make_trip("tw-forecast", start, end)
+        trips_store[trip.trip_id] = trip
+
+        def side_effect(url, timeout=15):
+            if "geo/1.0/direct" in url:
+                return _MockResponse([{"lat": 40.0, "lon": -74.0}])
+            if "forecast/daily" in url:
+                # Provide daily entries spanning the trip window.
+                entries = []
+                for i, d in enumerate(
+                    [start, start + datetime.timedelta(days=1), end], start=0
+                ):
+                    dt = int(
+                        datetime.datetime.combine(
+                            d, datetime.time(hour=12), tzinfo=datetime.timezone.utc
+                        ).timestamp()
+                    )
+                    entries.append(
+                        {
+                            "dt": dt,
+                            "temp": {
+                                "min": 270.0 + i,  # Kelvin
+                                "max": 300.0 + i,  # Kelvin
+                            },
+                            # Mark 2 of 3 days as rainy.
+                            "rain": 5.0 if i == 0 else 0.0,
+                            "pop": 0.4 if i == 2 else 0.0,
+                        }
+                    )
+                return _MockResponse({"list": entries})
+            raise AssertionError(f"Unexpected URL called: {url}")
+
+        mock_get.side_effect = side_effect
+
+        response = self.client.get(f"/trips/{trip.trip_id}/weather")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        # Kelvin -> Celsius conversion: 270K ~= -3.15C, 302K ~= 28.85C
+        self.assertAlmostEqual(data["lowest_temp"], 270.0 - 273.15, places=2)
+        self.assertAlmostEqual(data["highest_temp"], 302.0 - 273.15, places=2)
+        self.assertAlmostEqual(
+            data["precipitation_percentage"], (2 / 3) * 100.0, places=2
+        )
+
+    @patch("app.routes.trip.requests.get")
+    def test_weather_outside_forecast_window_uses_history(self, mock_get):
+        today = datetime.date.today()
+        start = today + datetime.timedelta(days=25)
+        end = today + datetime.timedelta(days=27)
+        trip = _make_trip("tw-history", start, end)
+        trips_store[trip.trip_id] = trip
+
+        def side_effect(url, timeout=15):
+            if "geo/1.0/direct" in url:
+                return _MockResponse([{"lat": 34.0, "lon": -118.0}])
+            if "history.openweathermap.org" in url:
+                prev_start = start.replace(year=start.year - 1)
+                prev_mid = (start + datetime.timedelta(days=1)).replace(
+                    year=start.year - 1
+                )
+                prev_end = end.replace(year=end.year - 1)
+                dt_start = int(
+                    datetime.datetime.combine(
+                        prev_start, datetime.time(hour=12), tzinfo=datetime.timezone.utc
+                    ).timestamp()
+                )
+                dt_mid = int(
+                    datetime.datetime.combine(
+                        prev_mid, datetime.time(hour=12), tzinfo=datetime.timezone.utc
+                    ).timestamp()
+                )
+                dt_end = int(
+                    datetime.datetime.combine(
+                        prev_end, datetime.time(hour=12), tzinfo=datetime.timezone.utc
+                    ).timestamp()
+                )
+                return _MockResponse(
+                    {
+                        "list": [
+                            {
+                                "dt": dt_start,
+                                "main": {"temp_min": 265.0, "temp_max": 295.0},
+                                "rain": {"1h": 1.2},
+                            },
+                            {
+                                "dt": dt_mid,
+                                "main": {"temp_min": 268.0, "temp_max": 298.0},
+                                "rain": 0.0,
+                            },
+                            {
+                                "dt": dt_end,
+                                "main": {"temp_min": 269.0, "temp_max": 297.0},
+                                "weather": [{"main": "Rain"}],
+                            },
+                        ]
+                    }
+                )
+            raise AssertionError(f"Unexpected URL called: {url}")
+
+        mock_get.side_effect = side_effect
+
+        response = self.client.get(f"/trips/{trip.trip_id}/weather")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertAlmostEqual(data["lowest_temp"], 265.0 - 273.15, places=2)
+        self.assertAlmostEqual(data["highest_temp"], 298.0 - 273.15, places=2)
+        self.assertAlmostEqual(
+            data["precipitation_percentage"], (2 / 3) * 100.0, places=2
+        )
+
+
 class TestAddItemToTrip(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
@@ -274,7 +457,7 @@ class TestAddItemToTrip(unittest.TestCase):
         items_store.clear()
 
     def test_add_item_to_trip_success(self):
-        trip = Trip(
+        trip = _minimal_trip(
             trip_id="t1",
             destination="Paris",
             duration_days=4,
@@ -299,8 +482,11 @@ class TestAddItemToTrip(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_add_item_item_not_found(self):
-        trips_store["t1"] = Trip(
-            trip_id="t1", destination="Rome", duration_days=3, doing_laundry=False
+        trips_store["t1"] = _minimal_trip(
+            trip_id="t1",
+            destination="Rome",
+            duration_days=3,
+            doing_laundry=False,
         )
 
         response = self.client.post("/trips/t1/item/nope")
@@ -318,7 +504,7 @@ class TestRecalculateTripTotals(unittest.TestCase):
         items_store.clear()
 
     def test_recalculate_totals(self):
-        trips_store["t1"] = Trip(
+        trips_store["t1"] = _minimal_trip(
             trip_id="t1",
             destination="Test",
             duration_days=2,
