@@ -79,6 +79,12 @@ class ItemUpdate(BaseModel):
     cv_result: Optional[CVResult] = None
 
 
+class ItemPriceResult(BaseModel):
+    item_name: str
+    price: float
+    currency: Optional[str] = None
+
+
 class RecommendedItem(BaseModel):
     item_name: str
     reason: Optional[str] = None

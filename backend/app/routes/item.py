@@ -1,12 +1,16 @@
 import json
-from typing import List, Optional
+import re
+from typing import List, Optional, Tuple
 
+import requests
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
-from app.models import CVResult, Item, ItemUpdate
+from app.google_countries import country_info
+from app.models import CVResult, Item, ItemPriceResult, ItemUpdate
 from app.routes.trip import recalculate_trip_totals
 from app.state.db import items_store, trips_store
 from computer_vision.cv import detect_objects_yolo
+from constants import SERPAPI_API_KEY, SERPAPI_SEARCH_URL
 from hardware.readscale import get_weight
 
 router = APIRouter()
@@ -158,3 +162,82 @@ async def detect_item_from_image(
         items_store[item.item_id] = item
 
     return item
+
+
+@router.get("/{item_id}/price", response_model=List[ItemPriceResult])
+def get_item_price(
+    item_id: str,
+    country: str,
+    limit: int = Query(5, ge=1, le=20),
+):
+    if SERPAPI_API_KEY == "KEY":
+        raise HTTPException(status_code=500, detail="SerpAPI key not configured")
+
+    item = get_item(item_id)
+    if not item.cv_result:
+        raise HTTPException(
+            status_code=404,
+            detail="Item has no CV result and name cannot be retrieved",
+        )
+    item_name = item.cv_result.item_name
+
+    try:
+        country_entry = country_info[country.title()]
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Country not found") from exc
+
+    country_code = country_entry.get("country_code")
+    currency_code = country_entry.get("currency_code")
+    if not country_code or not currency_code:
+        raise HTTPException(
+            status_code=404,
+            detail="Could not retrieve country code or currency code",
+        )
+
+    params = {
+        "engine": "google_shopping",
+        "q": item_name,
+        "gl": country_code,
+        "hl": "en",
+        "api_key": SERPAPI_API_KEY,
+    }
+
+    try:
+        response = requests.get(SERPAPI_SEARCH_URL, params=params, timeout=15)
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail="SerpAPI request failed") from exc
+
+    if not response.ok:
+        raise HTTPException(status_code=502, detail="SerpAPI returned an error")
+
+    try:
+        search_results = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=502, detail="SerpAPI returned invalid JSON"
+        ) from exc
+
+    shopping_results = search_results.get("shopping_results") or []
+    results = []
+
+    for entry in shopping_results:
+        title = entry.get("title") or entry.get("product_title") or entry.get("name")
+        if not title:
+            continue
+
+        price = entry.get("extracted_price")
+
+        if price is None:
+            continue
+
+        results.append(
+            ItemPriceResult(item_name=title, price=price, currency=currency_code)
+        )
+
+        if len(results) >= limit:
+            break
+
+    if not results:
+        raise HTTPException(status_code=404, detail="No price results found")
+
+    return results
