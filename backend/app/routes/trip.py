@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.models import (
     Activity,
+    Airline,
     Item,
     RecommendedItem,
     RemovalRecommendation,
@@ -22,6 +23,7 @@ router = APIRouter()
 
 @router.post("/", response_model=Trip)
 def create_trip(trip: Trip, user_id: Optional[str] = None):
+    # TODO: do the airline name to airline type mapping
     trips_store[trip.trip_id] = trip
 
     # associate user if provided
@@ -46,6 +48,12 @@ def get_trips():
 def get_activities():
     """Get all activities."""
     return [activity.value for activity in Activity]
+
+
+@router.get("/airlines", response_model=List[str])
+def get_airlines():
+    """Get all airlines."""
+    return [airline.value for airline in Airline]
 
 
 @router.get("/{trip_id}", response_model=Trip)

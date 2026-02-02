@@ -125,6 +125,8 @@ class Trip(BaseModel):
     activities: List[Activity] = Field(default_factory=list)
     bag_type: BagType = BagType.carry_on
     airline: Airline = Airline.air_canada
+    # probably going to create a map for this internal field?
+    # airline_type: Optional[AirlineType] = AirlineType.budget
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0

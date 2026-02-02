@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedButton } from "@/components/ThemedButton";
+import { ThemedDropdown } from "@/components/ThemedDropdown";
 import { API_BASE_URL } from "@/constants/api";
 import { Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
@@ -26,13 +27,43 @@ export default function TripInfo() {
   const [destination, onChangeDestination] = useState("");
   const [dates, onChangeDates] = useState("");
   const [laundry, onChangeLaundry] = useState(false);
+  const [airline, onChangeAirline] = useState<string>("");
+  const [airlineOptions, setAirlineOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
   const [activities, onChangeActivities] = useState<string[]>([]);
-  const [activityOptions, setActivityOptions] = useState<{ label: string; value: string }[]>([]);
+  const [activityOptions, setActivityOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const { userId, setTripId } = useAppContext();
 
   useEffect(() => {
+    const fetchAirlines = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/trips/airlines`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `API error (${response.status}): ${errorText || response.statusText}`,
+          );
+        }
+
+        const airlinesList: string[] = await response.json();
+        const formattedAirlines = airlinesList.map((airline) => ({
+          label: airline,
+          value: airline,
+        }));
+
+        setAirlineOptions(formattedAirlines);
+        console.log("Fetched airlines:", formattedAirlines);
+      } catch (error) {
+        console.error("Error fetching airlines:", error);
+      }
+    };
+
     const fetchActivities = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/trips/activities`);
@@ -40,7 +71,7 @@ export default function TripInfo() {
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(
-            `API error (${response.status}): ${errorText || response.statusText}`
+            `API error (${response.status}): ${errorText || response.statusText}`,
           );
         }
 
@@ -57,6 +88,7 @@ export default function TripInfo() {
       }
     };
 
+    fetchAirlines();
     fetchActivities();
   }, []);
 
@@ -79,7 +111,7 @@ export default function TripInfo() {
       console.error("Error saving trip details:", error);
       Alert.alert(
         "Error",
-        error instanceof Error ? error.message : "Failed to save trip details"
+        error instanceof Error ? error.message : "Failed to save trip details",
       );
     } finally {
       setIsLoading(false);
@@ -103,7 +135,7 @@ export default function TripInfo() {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
+          `API error (${response.status}): ${errorText || response.statusText}`,
         );
       }
 
@@ -150,6 +182,16 @@ export default function TripInfo() {
                 value={dates}
                 onChangeText={onChangeDates}
                 placeholder="May 1, 2026 - May 31, 2026"
+              />
+            </View>
+
+            <View className="gap-2">
+              <ThemedText type="subtitle">Airline</ThemedText>
+              <ThemedDropdown
+                value={airline}
+                onChange={(value: string) => onChangeAirline(value)}
+                data={airlineOptions}
+                placeholder="Select airline"
               />
             </View>
 
