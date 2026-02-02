@@ -15,10 +15,17 @@ export enum Gender {
   prefer_not_to_disclose = "Prefer not to disclose",
 }
 
+export enum BagType {
+  carry_on = "Carry-on",
+  checked = "Checked",
+}
+
 export type Trip = {
   destination: string;
   duration_days: number;
   doing_laundry: boolean;
+  airline: string;
+  bag_type: string;
   activities?: string[];
   trip_id?: string;
   total_items_weight?: number;

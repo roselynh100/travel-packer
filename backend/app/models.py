@@ -30,8 +30,8 @@ class Airline(str, Enum):
 
 
 class BagType(str, Enum):
-    carry_on = "carry_on"
-    checked_bag = "checked_bag"
+    carry_on = "Carry-on"
+    checked = "Checked"
 
 
 class BoundingBox(BaseModel):
@@ -122,11 +122,11 @@ class Trip(BaseModel):
     highest_temp: Optional[float] = None
     lowest_temp: Optional[float] = None
     doing_laundry: bool
-    activities: List[Activity] = Field(default_factory=list)
     bag_type: BagType = BagType.carry_on
     airline: Airline = Airline.air_canada
     # probably going to create a map for this internal field?
     # airline_type: Optional[AirlineType] = AirlineType.budget
+    activities: List[Activity] = Field(default_factory=list)
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0

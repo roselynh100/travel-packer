@@ -15,7 +15,7 @@ import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedDropdown } from "@/components/ThemedDropdown";
 import { API_BASE_URL } from "@/constants/api";
-import { Trip } from "@/constants/types";
+import { BagType, Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedLoading } from "@/components/ThemedLoading";
@@ -31,6 +31,7 @@ export default function TripInfo() {
   const [airlineOptions, setAirlineOptions] = useState<
     { label: string; value: string }[]
   >([]);
+  const [bagType, onChangeBagType] = useState<string>("");
   const [activities, onChangeActivities] = useState<string[]>([]);
   const [activityOptions, setActivityOptions] = useState<
     { label: string; value: string }[]
@@ -99,8 +100,10 @@ export default function TripInfo() {
       const trip: Trip = {
         destination,
         duration_days: 5, // TODO: fix, currently hardcoded, figure out date input
-        doing_laundry: laundry,
+        airline,
+        bag_type: bagType,
         activities: activities.length > 0 ? activities : undefined,
+        doing_laundry: laundry,
       };
 
       await saveToAPI(trip);
@@ -192,6 +195,19 @@ export default function TripInfo() {
                 onChange={(value: string) => onChangeAirline(value)}
                 data={airlineOptions}
                 placeholder="Select airline"
+              />
+            </View>
+
+            <View className="gap-2">
+              <ThemedText type="subtitle">Bag Type</ThemedText>
+              <ThemedDropdown
+                value={bagType}
+                onChange={(value: string) => onChangeBagType(value)}
+                data={Object.values(BagType).map((value) => ({
+                  label: value,
+                  value: value,
+                }))}
+                placeholder="Select bag type"
               />
             </View>
 
