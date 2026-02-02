@@ -1,3 +1,4 @@
+import datetime
 from enum import Enum
 from typing import List, Optional
 from uuid import uuid4
@@ -115,12 +116,22 @@ class RemovalRecommendation(BaseModel):
         use_enum_values = True
 
 
+class Destination(BaseModel):
+    city: str
+    state: Optional[str] = None
+    country: str
+
+
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
     destination: str
+    destination_details: Destination
     duration_days: int
+    start_date: datetime.datetime
+    end_date: datetime.datetime
     highest_temp: Optional[float] = None
     lowest_temp: Optional[float] = None
+    precipitation_percentage: Optional[float] = None
     doing_laundry: bool
     bag_type: BagType = BagType.carry_on
     airline: Airline = Airline.air_canada
@@ -138,6 +149,8 @@ class Trip(BaseModel):
 class TripUpdate(BaseModel):
     destination: Optional[str] = None
     duration_days: Optional[int] = None
+    start_date: Optional[datetime.datetime] = None
+    end_date: Optional[datetime.datetime] = None
     doing_laundry: Optional[bool] = None
     activities: Optional[List[Activity]] = None
     bag_type: Optional[BagType] = None
