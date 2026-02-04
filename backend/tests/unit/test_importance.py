@@ -69,6 +69,7 @@ def run_tests():
         activities=[Activity.beach, Activity.swimming],
         lowest_temp=28.0,
         highest_temp=35.0,
+        precipitation_percentage=0.2,
         items=[item.item_id for item in existing_tops_in_suitcase],  # <--- IDs ONLY
     )
 
@@ -83,6 +84,7 @@ def run_tests():
         activities=[Activity.work],
         lowest_temp=15.0,
         highest_temp=22.0,
+        precipitation_percentage=0.5,
         items=[mock_laptop.item_id],
     )
 
@@ -97,13 +99,14 @@ def run_tests():
         activities=[Activity.skiing, Activity.skating, Activity.formal],
         lowest_temp=-15.0,
         highest_temp=-10.0,
+        precipitation_percentage=0.8,
         items=[],
     )
 
     test_cases = [
         (new_top, beach_trip, existing_tops_in_suitcase, "Beach Vacation"),
         (laptop, biz_trip, [], "Business Trip"),
-        (jacket, ski_trip, [mock_jacket], "Ski Trip"),
+        (jacket, ski_trip, [mock_jacket, mock_jacket], "Ski Trip"),
         (laptop, ski_trip, [], "Ski Trip"),
         (new_top, ski_trip, [], "Ski Trip"),
     ]
