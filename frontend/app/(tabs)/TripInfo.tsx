@@ -15,17 +15,22 @@ import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedDropdown } from "@/components/ThemedDropdown";
 import { API_BASE_URL } from "@/constants/api";
-import { BagType, Trip } from "@/constants/types";
+import { BagType, LocationResult, Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedLoading } from "@/components/ThemedLoading";
 import { ThemedMultiSelect } from "@/components/ThemedMultiSelect";
 import { DateSelect } from "@/components/DateSelect";
+import { LocationInput } from "@/components/LocationInput";
 
 export default function TripInfo() {
   const router = useRouter();
 
-  const [destination, onChangeDestination] = useState("");
+  const [destination, onChangeDestination] = useState<LocationResult>({
+    city: "",
+    state: undefined,
+    country: "",
+  });
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
@@ -111,7 +116,7 @@ export default function TripInfo() {
       setIsLoading(true);
 
       const trip: Trip = {
-        destination,
+        destination_details: destination,
         airline,
         start_date: startDate,
         end_date: endDate,
@@ -186,11 +191,7 @@ export default function TripInfo() {
             <ThemedText type="title">Input your trip details 🌴</ThemedText>
             <View className="gap-2">
               <ThemedText type="subtitle">Destination</ThemedText>
-              <ThemedTextInput
-                value={destination}
-                onChangeText={onChangeDestination}
-                placeholder="Toronto, Canada"
-              />
+              <LocationInput onSelect={onChangeDestination} />
             </View>
 
             <View className="gap-2">

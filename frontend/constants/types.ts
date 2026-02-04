@@ -20,8 +20,14 @@ export enum BagType {
   checked = "Checked",
 }
 
+export type LocationResult = {
+  city: string;
+  state?: string;
+  country: string;
+};
+
 export type Trip = {
-  destination: string;
+  destination_details: LocationResult;
   start_date: string;
   end_date: string;
   doing_laundry: boolean;

@@ -124,7 +124,6 @@ class Destination(BaseModel):
 
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
-    destination: str
     destination_details: Destination
     duration_days: int
     start_date: datetime.datetime
