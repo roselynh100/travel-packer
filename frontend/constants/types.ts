@@ -22,7 +22,8 @@ export enum BagType {
 
 export type Trip = {
   destination: string;
-  duration_days: number;
+  start_date: string;
+  end_date: string;
   doing_laundry: boolean;
   airline: string;
   bag_type: string;

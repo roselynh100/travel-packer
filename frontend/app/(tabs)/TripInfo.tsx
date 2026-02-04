@@ -20,12 +20,15 @@ import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedLoading } from "@/components/ThemedLoading";
 import { ThemedMultiSelect } from "@/components/ThemedMultiSelect";
+import { DateSelect } from "@/components/DateSelect";
 
 export default function TripInfo() {
   const router = useRouter();
 
   const [destination, onChangeDestination] = useState("");
-  const [dates, onChangeDates] = useState("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [laundry, onChangeLaundry] = useState(false);
   const [airline, onChangeAirline] = useState<string>("");
   const [airlineOptions, setAirlineOptions] = useState<
@@ -93,14 +96,25 @@ export default function TripInfo() {
     fetchActivities();
   }, []);
 
+  const getDateRangeDisplay = () => {
+    if (!startDate && !endDate) {
+      return "Select dates";
+    }
+    if (startDate && !endDate) {
+      return startDate;
+    }
+    return `${startDate} - ${endDate}`;
+  };
+
   async function handleSave() {
     try {
       setIsLoading(true);
 
       const trip: Trip = {
         destination,
-        duration_days: 5, // TODO: fix, currently hardcoded, figure out date input
         airline,
+        start_date: startDate,
+        end_date: endDate,
         bag_type: bagType,
         activities: activities.length > 0 ? activities : undefined,
         doing_laundry: laundry,
@@ -181,11 +195,25 @@ export default function TripInfo() {
 
             <View className="gap-2">
               <ThemedText type="subtitle">Trip Dates</ThemedText>
-              <ThemedTextInput
-                value={dates}
-                onChangeText={onChangeDates}
-                placeholder="May 1, 2026 - May 31, 2026"
-              />
+              <Pressable
+                onPress={() => setIsCalendarVisible(!isCalendarVisible)}
+              >
+                <ThemedTextInput
+                  value={getDateRangeDisplay()}
+                  editable={false}
+                  pointerEvents="none"
+                />
+              </Pressable>
+              {isCalendarVisible && (
+                <View className="gap-2">
+                  <DateSelect
+                    startDate={startDate}
+                    endDate={endDate}
+                    setStartDate={setStartDate}
+                    setEndDate={setEndDate}
+                  />
+                </View>
+              )}
             </View>
 
             <View className="gap-2">
