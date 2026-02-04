@@ -17,11 +17,9 @@ def train_and_save_model():
     X = df.drop("importance_score", axis=1)
     y = df["importance_score"]
 
-    # Training the Random Forest
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
 
-    # Save it
     joblib.dump(model, model_output)
     print(f"Model saved to {model_output}")
 
