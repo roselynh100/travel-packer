@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
 
 class Activity(str, Enum):
@@ -125,7 +125,6 @@ class Destination(BaseModel):
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
     destination_details: Destination
-    duration_days: int
     start_date: datetime.datetime
     end_date: datetime.datetime
     highest_temp: Optional[float] = None
@@ -140,6 +139,11 @@ class Trip(BaseModel):
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
+
+    @computed_field
+    @property
+    def duration_days(self) -> int:
+        return (self.end_date - self.start_date).days + 1
 
     class Config:
         use_enum_values = True

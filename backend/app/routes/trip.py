@@ -257,9 +257,7 @@ def _trip_within_forecast_window(start: datetime.date, end: datetime.date) -> bo
 
 @router.post("/", response_model=Trip)
 def create_trip(trip: Trip, user_id: Optional[str] = None):
-    trip.duration_days = (trip.end_date - trip.start_date).days + 1
     # TODO: do the airline name to airline type mapping
-
     trips_store[trip.trip_id] = trip
 
     # associate user if provided
