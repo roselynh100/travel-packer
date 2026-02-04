@@ -446,39 +446,6 @@ def get_packing_decision(trip_id: str, item_id: str):
     return packing_decision_algorithm(item, trip, items)
 
 
-@router.post("/{trip_id}/weather")
-def get_weather_deprecated(trip_id: str):
-    if trip_id not in trips_store:
-        raise HTTPException(status_code=404, detail="Trip not found")
-
-    trip = trips_store[trip_id]
-    destination = trip.destination
-
-    print(destination)
-    if destination != "New York":
-        raise HTTPException(status_code=404, detail="Location not supported")
-
-    api_url = TOMORROW_WEATHER_URL.format(location=destination)
-
-    headers = {"accept": "application/json", "accept-encoding": "deflate, gzip, br"}
-    response = requests.get(api_url, headers=headers)
-    weather_json_str = response.text
-    weather_data = json.loads(weather_json_str)
-
-    lowest_temp = 1000
-    highest_temp = -1000
-    for timestamp in weather_data["timelines"]["minutely"]:
-        temperature = timestamp["values"]["temperature"]
-        lowest_temp = min(lowest_temp, temperature)
-        highest_temp = max(highest_temp, temperature)
-
-    print(lowest_temp)
-    print(highest_temp)
-
-    trip.highest_temp = highest_temp
-    trip.lowest_temp = lowest_temp
-
-
 @router.get("/{trip_id}/weather", response_model=Trip)
 def get_weather(trip_id: str):
     if trip_id not in trips_store:

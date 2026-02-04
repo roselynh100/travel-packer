@@ -5,6 +5,7 @@ import {
   Calendar,
   toDateId,
   useDateRange,
+  type CalendarTheme,
 } from "@marceloterreiro/flash-calendar";
 import { ThemedText } from "@/components/ThemedText";
 
@@ -24,6 +25,16 @@ export const DateSelect = ({
   const [currentMonth, setCurrentMonth] = useState(toDateId(new Date()));
 
   const today = toDateId(new Date());
+
+  // Custom theme to hide the built-in month header
+  const calendarTheme: CalendarTheme = {
+    rowMonth: {
+      container: {
+        height: 0,
+        overflow: "hidden",
+      },
+    },
+  };
 
   // Limit: 2 years from today
   const MAX_DATE = toDateId(
@@ -49,7 +60,7 @@ export const DateSelect = ({
     const date = new Date(currentMonth);
     date.setMonth(date.getMonth() - 1);
     const newMonth = toDateId(date);
-    if (newMonth >= today.substring(0, 7)) {
+    if (newMonth >= today) {
       setCurrentMonth(newMonth);
     }
   };
@@ -63,27 +74,25 @@ export const DateSelect = ({
     }
   };
 
-  const canGoPrevious = currentMonth > today.substring(0, 7);
-  const canGoNext = currentMonth < MAX_DATE.substring(0, 7);
+  const canGoPrevious = currentMonth.substring(0, 7) > today.substring(0, 7);
+  const canGoNext = currentMonth.substring(0, 7) < MAX_DATE.substring(0, 7);
+
   return (
     <>
       <View className="flex-row justify-between items-center px-4">
         <Pressable onPress={goToPreviousMonth} disabled={!canGoPrevious}>
-          <ThemedText
-            style={{ opacity: canGoPrevious ? 1 : 0.3 }}
-            type="subtitle"
-          >
+          <ThemedText style={{ opacity: canGoPrevious ? 1 : 0.3 }}>
             ← Prev
           </ThemedText>
         </Pressable>
-        <ThemedText type="subtitle">
+        <ThemedText>
           {new Date(currentMonth).toLocaleDateString("en-US", {
             month: "long",
             year: "numeric",
           })}
         </ThemedText>
         <Pressable onPress={goToNextMonth} disabled={!canGoNext}>
-          <ThemedText style={{ opacity: canGoNext ? 1 : 0.3 }} type="subtitle">
+          <ThemedText style={{ opacity: canGoNext ? 1 : 0.3 }}>
             Next →
           </ThemedText>
         </Pressable>
@@ -94,6 +103,7 @@ export const DateSelect = ({
         calendarMinDateId={today}
         calendarMaxDateId={MAX_DATE}
         onCalendarDayPress={onCalendarDayPress}
+        theme={calendarTheme}
       />
     </>
   );

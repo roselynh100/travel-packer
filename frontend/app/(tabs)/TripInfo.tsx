@@ -259,10 +259,13 @@ export default function TripInfo() {
               size="medium"
             />
           </View>
-
-          <ThemedButton title="Save" onPress={handleSave} />
-          <ThemedLoading isLoading={isLoading} message="Saving your trip..." />
         </ScrollView>
+        <ThemedButton
+          title="Save"
+          onPress={handleSave}
+          className={Platform.OS === "web" ? "mx-12 mb-12" : "mx-6 mb-6"}
+        />
+        <ThemedLoading isLoading={isLoading} message="Saving your trip..." />
       </Pressable>
     </KeyboardAvoidingView>
   );
