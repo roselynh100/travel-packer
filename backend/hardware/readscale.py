@@ -1,69 +1,44 @@
-import usb.core
-import usb.util
-import time
 import json
+import time
 
-# Scale IDs
-VENDOR_ID = 0x0922
-PRODUCT_ID = 0x8009
+import serial
 
-def get_weight(wait_time=6.0):
-    """Reads weight from DYMO M25 scale and returns average (kg) in JSON format."""
-    
-    # Find scale 
-    dev = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
-    if dev is None:
-        return json.dumps({"error": "Scale not detected"})
 
-    # Configure device for communication 
+def get_weight(port="/dev/cu.usbserial-0001", baudrate=115200):
     try:
-        dev.set_configuration()
-    except usb.core.USBError:
-        pass
+        ser = serial.Serial(port, baudrate, timeout=1)
+    except:
+        return json.dumps({"error": "Serial open failed"})
 
-    # Select the first USB endpoint for reading data
-    endpoint = dev[0][(0, 0)][0]
+    print("Place the item on the scale. Measuring in 3, 2, 1...")
+    time.sleep(3)
 
-    print("Place the item on the scale...")
-    time.sleep(2)  # Wait before collecting data for stability
+    readings = []
+    start = time.time()
 
-    readings = []            # Stores valid stable readings
-    start_time = time.time() # Start measurement timer
-
-    # Collect data for the specified duration
-    while time.time() - start_time < wait_time:
+    while time.time() - start < 15:
+        line = ser.readline().decode(errors="ignore").strip()
+        if not line:
+            continue
         try:
-            data = dev.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize, timeout=1000)
-            if len(data) >= 6:
-                status = data[1]                  # Status byte (bit 2 indicates stability for DYMO)
-                grams = data[4] + 256 * data[5]   # Combine bytes 4 and 5 for weight in grams
-
-                # Append only stable readings
-                if status & 0x04 == 0x04:
-                    readings.append(grams)
-
-        except usb.core.USBError:
-            time.sleep(0.1)  # Retry briefly after a read error
+            w = float(line)
+        except:
             continue
 
-    # Release device resources after reading
-    usb.util.dispose_resources(dev)
+        if w >= 0.10:  # start getting readings when weight is greater than 0.1kg
+            readings.append(w)
+            if len(readings) > 5:
+                readings.pop(0)
+            if len(readings) == 5 and all(
+                abs(readings[i] - readings[i - 1]) <= 0.03 for i in range(1, 5)
+            ):  # threshold for stability is 30grams
+                avg = sum(readings) / 5
+                return json.dumps({"total_weight_kg": round(avg, 3)})
+        else:
+            readings = []
 
-    # Handle case where no stable readings were obtained
-    if len(readings) < 1:
-        return json.dumps({"error": "No valid readings"})
-
-    # Average the last 3 stable readings for smoother output
-    recent_readings = readings[-3:]
-    avg_grams = sum(recent_readings) / len(recent_readings)
-    avg_kg = avg_grams / 1000
-
-    # Return final averaged result in kilograms
-    return json.dumps({
-        "total_weight_kg": round(avg_kg, 3)
-    })
+    return json.dumps({"error": "Timeout or unstable readings"})
 
 
 if __name__ == "__main__":
-    result = get_weight(wait_time=6.0)
-    print("Result:", result)
+    print(get_weight())
