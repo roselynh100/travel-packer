@@ -23,13 +23,15 @@ def packing_decision_algorithm(
     """Returns packing status i.e. whether items must be removed."""
 
     # Calculate importance of new item
-    get_item_importance(new_item, trip)
+    new_item.item_importance = get_item_importance(new_item, trip, current_items)
     # Find the minimum importance score of already packed items
     if not current_items:
         min_item_importance = 0
     else:
         for i in current_items:
-            get_item_importance(i, trip)
+            i.item_importance = get_item_importance(
+                i, trip, [item for item in current_items if item is not i]
+            )
         min_item_importance = min(i.item_importance for i in current_items)
 
     # Check Weight

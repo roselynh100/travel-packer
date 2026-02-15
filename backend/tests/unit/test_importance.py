@@ -88,7 +88,7 @@ def run_tests():
         items=[mock_laptop.item_id],
     )
 
-    jacket = create_mock_item("jacket")
+    jacket = create_mock_item("jackets")
     ski_trip = Trip(
         destination="Banff",
         destination_details=mock_banff,

@@ -37,7 +37,7 @@ def map_to_cat_id(item_name: str) -> int:
         4: ["shoes"],
         5: ["toiletries"],
         6: ["electronics"],
-        7: ["jacket"],
+        7: ["jackets"],
     }
 
     for cat_id, keywords in categories.items():
@@ -137,6 +137,8 @@ def get_item_importance(item: Item, trip: Trip, trip_items: List[Item]) -> int:
         if cat_count == 1:
             return 100
         # If there's more than one, we continue to the ML model to decide the penalty
+    if item_category == 6 and is_work == 0:
+        return 0
 
     ## If item = jacket and temp < 0 then importance = 100
     if item_category == 7 and low_temp < 0:
