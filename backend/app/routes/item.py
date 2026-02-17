@@ -225,13 +225,19 @@ def get_item_price(
         if not title:
             continue
 
+        source = entry.get("source")
+        if not source:
+            continue
+
         price = entry.get("extracted_price")
 
         if price is None:
             continue
 
         results.append(
-            ItemPriceResult(item_name=title, price=price, currency=currency_code)
+            ItemPriceResult(
+                item_name=title, source=source, price=price, currency=currency_code
+            )
         )
 
         if len(results) >= limit:

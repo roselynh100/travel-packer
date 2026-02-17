@@ -154,6 +154,7 @@ class TestSerpApiIntegration(unittest.TestCase):
         print(data)
         self.assertGreaterEqual(len(data), 1)
         self.assertIsInstance(data[0]["item_name"], str)
+        self.assertIsInstance(data[0]["source"], str)
         self.assertIsInstance(data[0]["price"], (int, float))
         self.assertEqual(data[0]["currency"], "USD")
 

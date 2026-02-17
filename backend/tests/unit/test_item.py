@@ -41,8 +41,12 @@ class TestGetItemPrice(unittest.TestCase):
         mock_response.ok = True
         mock_response.json.return_value = {
             "shopping_results": [
-                {"title": "Travel Backpack", "extracted_price": 49.99},
-                {"title": "Hiking Pack", "extracted_price": 89.5},
+                {
+                    "title": "Travel Backpack",
+                    "source": "Walmart",
+                    "extracted_price": 49.99,
+                },
+                {"title": "Hiking Pack", "source": "MEC", "extracted_price": 89.5},
             ]
         }
         mock_get.return_value = mock_response
@@ -55,6 +59,7 @@ class TestGetItemPrice(unittest.TestCase):
         data = response.json()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["item_name"], "Travel Backpack")
+        self.assertEqual(data[0]["source"], "Walmart")
         self.assertEqual(data[0]["price"], 49.99)
         self.assertEqual(data[0]["currency"], "USD")
 

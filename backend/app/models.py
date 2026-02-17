@@ -81,6 +81,7 @@ class ItemUpdate(BaseModel):
 
 class ItemPriceResult(BaseModel):
     item_name: str
+    source: str
     price: float
     currency: Optional[str] = None
 
