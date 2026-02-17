@@ -179,7 +179,6 @@ class TestDetectEndpoint(unittest.TestCase):
 
         mock_yolo.return_value = [
             CVResult(
-                item_name="Backpack",
                 class_name="backpack",
                 confidence_score=0.95,
                 bounding_boxes=[BoundingBox(x_min=0, y_min=0, x_max=100, y_max=100)],
@@ -193,7 +192,7 @@ class TestDetectEndpoint(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(items_store["abc"].cv_result.item_name, "Backpack")
+        self.assertEqual(items_store["abc"].cv_result.class_name, "backpack")
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_invalid_yolo_output(self, mock_yolo):
