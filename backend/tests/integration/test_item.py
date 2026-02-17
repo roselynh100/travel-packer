@@ -13,9 +13,8 @@ from app.models import BoundingBox, CVResult, Dimensions, Item
 from app.state.db import items_store
 
 
-def _item_with_cv(item_id: str, item_name: str) -> Item:
+def _item_with_cv(item_id: str) -> Item:
     cv = CVResult(
-        item_name=item_name,
         class_name="bag",
         confidence_score=0.9,
         bounding_boxes=[BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4)],
@@ -143,7 +142,7 @@ class TestSerpApiIntegration(unittest.TestCase):
         items_store.clear()
 
     def test_get_item_price_hits_serpapi(self):
-        items_store["i1"] = _item_with_cv("i1", "Backpack")
+        items_store["i1"] = _item_with_cv("i1")
 
         response = self.client.get(
             "/items/i1/price",

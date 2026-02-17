@@ -179,7 +179,7 @@ def get_item_price(
             status_code=404,
             detail="Item has no CV result and name cannot be retrieved",
         )
-    item_name = item.cv_result.item_name
+    class_name = item.cv_result.class_name
 
     try:
         country_entry = country_info[country.title()]
@@ -196,7 +196,7 @@ def get_item_price(
 
     params = {
         "engine": "google_shopping",
-        "q": item_name,
+        "q": class_name,
         "gl": country_code,
         "hl": "en",
         "api_key": SERPAPI_API_KEY,
@@ -221,7 +221,7 @@ def get_item_price(
     results = []
 
     for entry in shopping_results:
-        title = entry.get("title") or entry.get("product_title") or entry.get("name")
+        title = entry.get("title")
         if not title:
             continue
 
