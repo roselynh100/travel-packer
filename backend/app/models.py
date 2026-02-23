@@ -57,7 +57,6 @@ class Dimensions(BaseModel):
 
 class CVResult(BaseModel):
     item_name: str
-    class_name: str
     confidence_score: float = Field(..., ge=0.0, le=1.0)
     bounding_boxes: List[BoundingBox]
     dimensions: Dimensions

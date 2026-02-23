@@ -1,15 +1,16 @@
-import unittest
+import json
 import sys
+import unittest
 from pathlib import Path
 from unittest.mock import patch
+
 from fastapi.testclient import TestClient
-import json
 
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
+from app.models import BoundingBox, CVResult, Dimensions, Item, ItemUpdate
 from app.state.db import items_store, trips_store
-from app.models import Item, ItemUpdate, CVResult, BoundingBox, Dimensions
 
 
 class TestItemEndpoints(unittest.TestCase):
@@ -40,11 +41,10 @@ class TestItemEndpoints(unittest.TestCase):
             weight_kg=0.3,
             cv_result=CVResult(
                 item_name="Shirt",
-                class_name="clothing",
                 confidence_score=0.8,
                 bounding_boxes=[BoundingBox(x_min=1, y_min=1, x_max=2, y_max=2)],
-                dimensions=Dimensions(length=1, width=1)
-            )
+                dimensions=Dimensions(length=1, width=1),
+            ),
         )
         items_store["abc"] = original
 
@@ -82,7 +82,7 @@ class TestItemEndpoints(unittest.TestCase):
             destination="Paris",
             duration_days=5,
             doing_laundry=False,
-            items=["x1"]
+            items=["x1"],
         )
 
         item = Item(item_id="x1")
@@ -136,13 +136,16 @@ class TestDetectEndpoint(unittest.TestCase):
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_creates_new_item(self, mock_yolo):
         """Test creating a new item via image detection."""
-        mock_yolo.return_value = [CVResult(
-            item_name="Shoes",
-            class_name="shoe",
-            confidence_score=0.85,
-            bounding_boxes=[BoundingBox(x_min=10.1, y_min=20.2, x_max=50.5, y_max=80.8)],
-            dimensions=Dimensions(length=1, width=1)
-        )]
+        mock_yolo.return_value = [
+            CVResult(
+                item_name="Shoes",
+                confidence_score=0.85,
+                bounding_boxes=[
+                    BoundingBox(x_min=10.1, y_min=20.2, x_max=50.5, y_max=80.8)
+                ],
+                dimensions=Dimensions(length=1, width=1),
+            )
+        ]
 
         test_image = ("img.jpg", b"fake", "image/jpeg")
 
@@ -152,7 +155,6 @@ class TestDetectEndpoint(unittest.TestCase):
         data = response.json()
 
         self.assertEqual(data["cv_result"]["item_name"], "Shoes")
-        self.assertEqual(data["cv_result"]["class_name"], "shoe")
         self.assertEqual(data["cv_result"]["confidence_score"], 0.85)
         self.assertEqual(data["cv_result"]["bounding_boxes"][0]["x_min"], 10.1)
 
@@ -160,16 +162,19 @@ class TestDetectEndpoint(unittest.TestCase):
     def test_detect_updates_existing_item(self, mock_yolo):
         items_store["abc"] = Item(item_id="abc")
 
-        mock_yolo.return_value = [CVResult(
-            item_name="Backpack",
-            class_name="backpack",
-            confidence_score=0.95,
-            bounding_boxes=[BoundingBox(x_min=0, y_min=0, x_max=100, y_max=100)],
-            dimensions=Dimensions(length=1, width=1)
-        )]
+        mock_yolo.return_value = [
+            CVResult(
+                item_name="Backpack",
+                confidence_score=0.95,
+                bounding_boxes=[BoundingBox(x_min=0, y_min=0, x_max=100, y_max=100)],
+                dimensions=Dimensions(length=1, width=1),
+            )
+        ]
 
         test_image = ("img.jpg", b"fake", "image/jpeg")
-        response = self.client.post("/items/detect?item_id=abc", files={"image": test_image})
+        response = self.client.post(
+            "/items/detect?item_id=abc", files={"image": test_image}
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(items_store["abc"].cv_result.item_name, "Backpack")

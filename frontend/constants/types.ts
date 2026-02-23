@@ -42,7 +42,6 @@ export type Item = {
 
 export type CVResult = {
   item_name: string;
-  class_name: string;
   confidence_score: number;
   bounding_boxes: BoundingBox[];
   dimensions: Dimensions;

@@ -34,7 +34,6 @@ class TestPackingAlgorithm(unittest.TestCase):
         # Create CVResult
         cv = CVResult(
             item_name=name,
-            class_name="generic",
             confidence_score=0.99,
             bounding_boxes=[bbox],
             dimensions=dims,

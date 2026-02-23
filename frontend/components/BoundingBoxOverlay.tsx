@@ -37,7 +37,7 @@ export function BoundingBoxOverlay({
       },
       (error) => {
         console.warn("Failed to get image size for bounding boxes", error);
-      }
+      },
     );
   }, [uri]);
 
@@ -80,7 +80,7 @@ export function BoundingBoxOverlay({
                   top: top - 38,
                 }}
               >
-                {cvResult.class_name} ({cvResult.confidence_score})
+                {cvResult.item_name} ({cvResult.confidence_score})
               </ThemedText>
               <View
                 className="absolute border-2 border-green-500"

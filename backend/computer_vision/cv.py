@@ -109,7 +109,6 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
             # Create CVResult object
             cv_result = CVResult(
                 item_name=class_name,
-                class_name=class_name,
                 confidence_score=round(confidence, 2),
                 bounding_boxes=[bounding_box],
                 dimensions=dimensions,
