@@ -92,7 +92,7 @@ export function WeightModal({
       onRequestClose={() => status === "success" && handleNext()}
     >
       <View className="flex-1 justify-center items-center bg-black/70 px-6">
-        <View className="bg-[var(--color-bg-nav)] rounded-2xl p-12 items-center w-full max-w-sm">
+        <View className="bg-[var(--color-bg-nav)] rounded-2xl p-12 items-center">
           <ThemedText type="subtitle" className="text-center mb-4">
             Place item in middle of scale
           </ThemedText>

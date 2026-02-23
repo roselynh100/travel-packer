@@ -40,6 +40,11 @@ export type Item = {
   trips: string[];
 };
 
+export type DetectResponse = {
+  item: Item;
+  cv_candidates: CVResult[];
+};
+
 export type CVResult = {
   item_name: string;
   confidence_score: number;

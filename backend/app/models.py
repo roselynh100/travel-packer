@@ -78,6 +78,11 @@ class ItemUpdate(BaseModel):
     cv_result: Optional[CVResult] = None
 
 
+class DetectResponse(BaseModel):
+    item: Item
+    cv_candidates: List[CVResult]
+
+
 class RecommendedItem(BaseModel):
     item_name: str
     reason: Optional[str] = None
