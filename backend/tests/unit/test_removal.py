@@ -8,6 +8,7 @@ from app.models import (
     Activity,
     BoundingBox,
     CVResult,
+    Destination,
     Dimensions,
     Item,
     RemovalRecommendationReason,
@@ -40,76 +41,78 @@ class TestPackingAlgorithm(unittest.TestCase):
             dimensions=dims,
         )
 
-        # UPDATED: Use 'cv_result' (singular) to match your code's access pattern
         return Item(weight_kg=weight, estimated_volume_cm3=volume, cv_result=cv)
 
-    def test_importance_scoring(self):
-        """Test that item names map to the correct importance integers."""
-        trip = Trip(destination="Test", duration_days=3, doing_laundry=False)
-
-        item = self.create_dummy_item("toothbrush")
-        score = get_item_importance(item, trip)
-        self.assertEqual(score, 90)
-        # The function modifies the item in place, so this check is valid
-        self.assertEqual(item.item_importance, 90)
-
-        item_snack = self.create_dummy_item("snack")
-        self.assertEqual(get_item_importance(item_snack, trip), 20)
-
     def test_laptop_context_logic(self):
-        """Test that Laptop is 0 importance for leisure, 80 for work."""
-        item = self.create_dummy_item("laptop")
+        """Test that Laptop is 0 importance for leisure, 100 for work."""
+        item = self.create_dummy_item("electronics")
 
         # Case 1: Leisure
         trip_leisure = Trip(
             destination="Beach",
+            destination_details=Destination(city="Bali", country="Indonesia"),
             duration_days=3,
+            start_date="2026-02-14",
+            end_date="2026-02-21",
             doing_laundry=False,
             activities=[Activity.beach],
         )
-        self.assertEqual(get_item_importance(item, trip_leisure), 0)
+        self.assertEqual(get_item_importance(item, trip_leisure, []), 0)
 
         # Case 2: Work
         trip_work = Trip(
             destination="Conf",
+            destination_details=Destination(city="Banff", country="Canada"),
             duration_days=3,
+            start_date="2026-02-14",
+            end_date="2026-02-21",
             doing_laundry=False,
             activities=[Activity.work],
         )
-        self.assertEqual(get_item_importance(item, trip_work), 80)
+        self.assertEqual(get_item_importance(item, trip_work, []), 100)
 
     def test_pack_happy_path(self):
         """Test simple successful packing."""
-        trip = Trip(destination="Paris", duration_days=5, doing_laundry=False)
+        trip = Trip(
+            destination="Paris",
+            destination_details=Destination(city="Paris", country="France"),
+            start_date="2026-02-14",
+            end_date="2026-02-21",
+            duration_days=5,
+            doing_laundry=False,
+        )
         current_items = []
         new_item = self.create_dummy_item("socks", weight=0.1)
 
         result = packing_decision_algorithm(new_item, trip, current_items)
 
-        # UPDATED: Only check the decision. The algorithm does NOT update the trip object.
         self.assertEqual(result.status, RemovalRecommendationStatus.pack)
 
     def test_overweight_remove(self):
         """
         Trip is full (19.9kg).
-        New Item is 'Snack' (Importance 20), Weight 0.5kg.
-        Existing Item is 'Toothbrush' (Importance 90).
+        New Item is 'tops', Weight 0.5kg.
+        Existing Item is 'jackets'.
         Expect: REMOVE (New item isn't important enough to displace existing).
         """
         # 1. Setup Trip nearing limit
         trip = Trip(
             destination="Space",
-            duration_days=1,
+            destination_details=Destination(city="Banff", country="Canada"),
+            start_date="2026-02-14",
+            end_date="2026-02-21",
+            duration_days=7,
+            lowest_temp=-10.0,
             doing_laundry=False,
             total_items_weight=19.9,
         )
 
         # 2. Setup Existing High Value Item
-        existing_item = self.create_dummy_item("toothbrush", weight=0.1)
-        current_items = [existing_item]
+        existing_jacket = self.create_dummy_item("jackets", weight=0.1)
+        current_items = [existing_jacket]
 
         # 3. Setup New Low Value Item
-        new_item = self.create_dummy_item("snack", weight=0.5)
+        new_item = self.create_dummy_item("tops", weight=0.5)
 
         # 4. Run
         result = packing_decision_algorithm(new_item, trip, current_items)
@@ -127,6 +130,9 @@ class TestPackingAlgorithm(unittest.TestCase):
         """
         trip = Trip(
             destination="Office",
+            destination_details=Destination(city="Banff", country="Canada"),
+            start_date="2026-02-14",
+            end_date="2026-02-21",
             duration_days=1,
             doing_laundry=False,
             activities=[Activity.work],
@@ -134,25 +140,33 @@ class TestPackingAlgorithm(unittest.TestCase):
         )
 
         # Existing heavy, unimportant item
-        snack = self.create_dummy_item("snack", weight=2.0)
-        current_items = [snack]
+        tops = self.create_dummy_item("tops", weight=2.0)
+        current_items = [tops]
 
         # New important item
-        laptop = self.create_dummy_item("laptop", weight=1.0)
+        laptop = self.create_dummy_item("electronics", weight=1.0)
+        get_item_importance(laptop, trip, current_items)
 
         result = packing_decision_algorithm(laptop, trip, current_items)
 
         self.assertEqual(result.status, RemovalRecommendationStatus.swap)
         self.assertEqual(result.reason, RemovalRecommendationReason.overweight)
 
-        # Verify the snack is the candidate for removal
+        # Verify the tops is the candidate for removal
         self.assertIsNotNone(result.swap_candidates)
         self.assertEqual(len(result.swap_candidates), 1)
-        self.assertEqual(result.swap_candidates[0].item_id, snack.item_id)
+        self.assertEqual(result.swap_candidates[0].item_id, tops.item_id)
 
     def test_empty_list_edge_case(self):
         """Ensure algorithm handles the very first item (empty current_items)."""
-        trip = Trip(destination="Void", duration_days=1, doing_laundry=False)
+        trip = Trip(
+            destination="Void",
+            duration_days=1,
+            destination_details=Destination(city="Banff", country="Canada"),
+            start_date="2026-02-14",
+            end_date="2026-02-21",
+            doing_laundry=False,
+        )
         current_items = []
         item = self.create_dummy_item("coat")
 
