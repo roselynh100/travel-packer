@@ -105,7 +105,7 @@ def delete_item(item_id: str):
 def read_weight(item_id: Optional[str] = Query(None)):
     """Read weight from the scale and optionally associate with item."""
 
-    result = get_weight(wait_time=6.0)
+    result = get_weight()
     result_dict = json.loads(result)
 
     if "error" in result_dict:

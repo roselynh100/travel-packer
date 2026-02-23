@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { MultiSelect } from 'react-native-element-dropdown';
 
-interface ThemedMultiSelectProps {
+type ThemedMultiSelectProps = {
   data: { label: string; value: string }[];
   value: string[];
   onChange: (value: string[]) => void;
