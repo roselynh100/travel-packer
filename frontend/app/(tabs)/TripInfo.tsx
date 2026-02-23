@@ -14,7 +14,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedDropdown } from "@/components/ThemedDropdown";
-import { API_BASE_URL } from "@/constants/api";
+import { apiFetch } from "@/constants/api";
 import { BagType, LocationResult, Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
@@ -51,7 +51,7 @@ export default function TripInfo() {
   useEffect(() => {
     const fetchAirlines = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/trips/airlines`);
+        const response = await apiFetch("/trips/airlines");
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -75,7 +75,7 @@ export default function TripInfo() {
 
     const fetchActivities = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/trips/activities`);
+        const response = await apiFetch("/trips/activities");
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -142,15 +142,11 @@ export default function TripInfo() {
 
   async function saveToAPI(tripInput: Trip) {
     try {
-      const url = userId
-        ? `${API_BASE_URL}/trips/?user_id=${userId}`
-        : `${API_BASE_URL}/trips/`;
+      const url = userId ? `/trips/?user_id=${userId}` : "/trips/";
 
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(tripInput),
       });
 

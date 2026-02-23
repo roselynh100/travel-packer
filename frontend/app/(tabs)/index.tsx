@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedButton } from "@/components/ThemedButton";
-import { API_BASE_URL } from "@/constants/api";
+import { apiFetch } from "@/constants/api";
 import { Gender, User } from "@/constants/types";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedDropdown } from "@/components/ThemedDropdown";
@@ -61,7 +61,7 @@ export default function HomeScreen() {
 
   async function saveToAPI(userInput: User) {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/`, {
+      const response = await apiFetch("/users/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
