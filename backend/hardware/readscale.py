@@ -10,8 +10,8 @@ def get_weight(port="/dev/cu.usbserial-0001", baudrate=115200):
     except:
         return json.dumps({"error": "Serial open failed"})
 
-    print("Place the item on the scale. Measuring in 3, 2, 1...")
-    time.sleep(3)
+    print("Place the item on the scale. Measuring in 5, 4, 3, 2, 1...")
+    time.sleep(5)
 
     readings = []
     start = time.time()
