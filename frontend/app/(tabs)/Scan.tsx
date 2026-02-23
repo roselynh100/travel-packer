@@ -1,6 +1,6 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useIsFocused } from "@react-navigation/native";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button, View, ActivityIndicator, Platform } from "react-native";
 
 import { API_BASE_URL } from "@/constants/api";
@@ -13,6 +13,7 @@ import {
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
+import { WeightModal } from "@/components/WeightModal";
 import { BoundingBoxOverlay } from "@/components/BoundingBoxOverlay";
 import { cn } from "@/helpers/cn";
 
@@ -25,6 +26,8 @@ export default function ScanningScreen() {
 
   const cameraRef = useRef<CameraView>(null);
 
+  const [weightModalVisible, setWeightModalVisible] = useState(false);
+  const [weightItem, setWeightItem] = useState<Item | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
@@ -35,6 +38,10 @@ export default function ScanningScreen() {
   } | null>(null);
 
   const isFocused = useIsFocused();
+
+  useEffect(() => {
+    setWeightModalVisible(isFocused);
+  }, [isFocused]);
 
   // Camera permissions are still loading
   if (!permission) {
@@ -69,12 +76,11 @@ export default function ScanningScreen() {
       // Let the "capturing" load for a bit, then send to API and reset camera
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
 
-      const uploadedItem = await uploadPhotoToAPI(photo.uri);
-
-      // TODO: Uncomment when scale is connected
-      // if (uploadedItem?.item_id) {
-      //   await readWeight(uploadedItem.item_id);
-      // }
+      // When scale is connected, we'll already have an item created (with only weight)
+      const uploadedItem = await uploadPhotoToAPI(
+        photo.uri,
+        weightItem?.item_id,
+      );
 
       if (uploadedItem?.item_id) {
         await getPackingRecommendation(uploadedItem.item_id);
@@ -106,7 +112,8 @@ export default function ScanningScreen() {
   }
 
   async function uploadPhotoToAPI(
-    uri: string
+    uri: string,
+    itemId?: string,
   ): Promise<ItemWithPackingRecommendation | null> {
     try {
       setIsUploading(true);
@@ -121,7 +128,7 @@ export default function ScanningScreen() {
           "image",
           new File([blob], "image.jpg", {
             type: "image/jpeg",
-          })
+          }),
         );
       } else {
         // iOS and Android - use the file URI directly
@@ -132,7 +139,11 @@ export default function ScanningScreen() {
         } as any);
       }
 
-      const response = await fetch(`${API_BASE_URL}/items/detect`, {
+      const detectUrl = itemId
+        ? `${API_BASE_URL}/items/detect?item_id=${encodeURIComponent(itemId)}`
+        : `${API_BASE_URL}/items/detect`;
+
+      const response = await fetch(detectUrl, {
         method: "POST",
         body: formData,
       });
@@ -140,7 +151,7 @@ export default function ScanningScreen() {
       if (!response.ok) {
         const errorText = await response.text();
         const error: any = new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
+          `API error (${response.status}): ${errorText || response.statusText}`,
         );
         error.status = response.status;
         throw error;
@@ -165,53 +176,16 @@ export default function ScanningScreen() {
     }
   }
 
-  async function readWeight(itemId: string) {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/items/weight?item_id=${itemId}`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const error: any = new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
-        );
-        error.status = response.status;
-        throw error;
-      }
-
-      const result: Item = await response.json();
-      console.log("Weight read successfully:", result);
-
-      // Only update if currentItem still matches (user hasn't scanned a new item)
-      setCurrentItem((prevItem) => {
-        if (prevItem?.item_id === itemId) {
-          return {
-            ...prevItem,
-            weight_kg: result.weight_kg,
-          };
-        }
-        // If item changed, don't update (user scanned a new item)
-        return prevItem;
-      });
-    } catch (error) {
-      console.error("Error reading weight:", error);
-    }
-  }
-
   async function getPackingRecommendation(itemId: string) {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/trips/${tripId}/item/${itemId}/packing-decision`
+        `${API_BASE_URL}/trips/${tripId}/item/${itemId}/packing-decision`,
       );
 
       if (!response.ok) {
         const errorText = await response.text();
         const error: any = new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
+          `API error (${response.status}): ${errorText || response.statusText}`,
         );
         error.status = response.status;
         throw error;
@@ -256,6 +230,11 @@ export default function ScanningScreen() {
 
   return (
     <View className="flex-1">
+      <WeightModal
+        visible={weightModalVisible}
+        onClose={() => setWeightModalVisible(false)}
+        onWeightReady={setWeightItem}
+      />
       {isFocused && !capturedPhoto && (
         <CameraView
           facing="back"
@@ -276,7 +255,7 @@ export default function ScanningScreen() {
         <View
           className={cn(
             "w-full absolute top-0 left-0 right-0 py-3 items-center",
-            infoBanner.type === "error" ? "bg-red-600" : "bg-blue-600"
+            infoBanner.type === "error" ? "bg-red-600" : "bg-blue-600",
           )}
         >
           <ThemedText type="subtitle" className="text-white text-center">
