@@ -67,7 +67,7 @@ class Dimensions(BaseModel):
 
 
 class CVResult(BaseModel):
-    item_name: str
+    item_name: Optional[str] = None
     class_name: str
     confidence_score: float = Field(..., ge=0.0, le=1.0)
     bounding_boxes: List[BoundingBox]
@@ -88,6 +88,13 @@ class ItemUpdate(BaseModel):
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_result: Optional[CVResult] = None
+
+
+class ItemPriceResult(BaseModel):
+    item_name: str
+    source: str
+    price: float
+    currency: Optional[str] = None
 
 
 class RecommendedItem(BaseModel):
