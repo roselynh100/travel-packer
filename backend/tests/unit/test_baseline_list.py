@@ -6,7 +6,7 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.models import Activity, Destination, RecommendedItem, Trip
+from app.models import Activity, Airline, BagType, Destination, RecommendedItem, Trip
 from machine_learning.generator import (
     CATEGORIES,
     baseline_list_algorithm,
@@ -58,8 +58,41 @@ class TestBaselineAlgorithm(unittest.TestCase):
         self.assertIn(CATEGORIES[2], item_names)
         self.assertNotIn(CATEGORIES[7], item_names)  # No jackets in the heat
 
+    def test_get_conditional_items_water_activities(self):
+        """Rule: Swimsuit (8) and Flip flops (13) for beach, swimming, or surfing."""
+        water_activities = [Activity.beach, Activity.swimming, Activity.surfing]
+
+        for activity in water_activities:
+            with self.subTest(activity=activity):
+                items = get_conditional_items(activities=[activity], low_temp=25.0)
+                item_names = [i.item_name for i in items]
+                self.assertIn(CATEGORIES[8], item_names)
+                self.assertIn(CATEGORIES[13], item_names)
+
+    def test_get_conditional_items_skiing(self):
+        """Rule: Snow pants (9) and Skis (10) for skiing."""
+        items = get_conditional_items(activities=[Activity.skiing], low_temp=-5.0)
+        item_names = [i.item_name for i in items]
+        self.assertIn(CATEGORIES[9], item_names)  # Snow pants
+        self.assertIn(CATEGORIES[10], item_names)  # Skis
+        self.assertNotIn(CATEGORIES[11], item_names)  # No snowboard
+
+    def test_get_conditional_items_snowboarding(self):
+        """Rule: Snow pants (9) and Snowboard (11) for snowboarding."""
+        items = get_conditional_items(activities=[Activity.snowboarding], low_temp=-5.0)
+        item_names = [i.item_name for i in items]
+        self.assertIn(CATEGORIES[9], item_names)  # Snow pants
+        self.assertIn(CATEGORIES[11], item_names)  # Snowboard
+        self.assertNotIn(CATEGORIES[10], item_names)  # No skis
+
+    def test_get_conditional_items_camping(self):
+        """Rule: Tent (12) for camping."""
+        items = get_conditional_items(activities=[Activity.camping], low_temp=15.0)
+        item_names = [i.item_name for i in items]
+        self.assertIn(CATEGORIES[12], item_names)
+
     def test_baseline_list_algorithm_integration(self):
-        """Full integration: Base (4) + Work (1) + Warm (1) = 6 total."""
+        """Full integration: Base (4) + Work (1) + Warm (1) + Swimming (2) = 8 total."""
         trip = Trip(
             destination="Miami",
             destination_details=self.default_dest,
@@ -67,17 +100,21 @@ class TestBaselineAlgorithm(unittest.TestCase):
             start_date=self.start_date,
             end_date=self.end_date,
             doing_laundry=False,
-            activities=[Activity.work],
-            lowest_temp=25.0,  # Should trigger electronics and shorts
+            bag_type=BagType.carry_on,
+            airline=Airline.air_canada,
+            activities=[Activity.work, Activity.swimming],
+            lowest_temp=25.0,  # Should trigger electronics, shorts, swimsuit, flip flops
         )
 
         results = baseline_list_algorithm(trip)
         item_names = [i.item_name for i in results]
 
-        # 4 Base + 1 Electronics + 1 Shorts = 6
-        self.assertEqual(len(results), 6)
+        # 4 Base + 1 Electronics + 1 Shorts + 1 Swimsuit + 1 Flip Flops = 8
+        self.assertEqual(len(results), 8)
         self.assertIn(CATEGORIES[6], item_names)  # Electronics
         self.assertIn(CATEGORIES[2], item_names)  # Shorts
+        self.assertIn(CATEGORIES[8], item_names)  # Swimsuit
+        self.assertIn(CATEGORIES[13], item_names)  # Flip flops
 
     def test_boundary_conditions(self):
         """Test the exact cutoffs for 0 and 10 degrees."""

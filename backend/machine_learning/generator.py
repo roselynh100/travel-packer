@@ -11,6 +11,12 @@ CATEGORIES = {
     5: "toiletries",
     6: "electronics",
     7: "jackets",
+    8: "swimsuit",
+    9: "snow pants",
+    10: "skis",
+    11: "snowboard",
+    12: "tent",
+    13: "flip flops",
 }
 
 
@@ -48,6 +54,50 @@ def get_conditional_items(
         items.append(
             RecommendedItem(
                 item_name=CATEGORIES[2], reason="Warm temperatures", priority=1
+            )
+        )
+
+    if (
+        Activity.beach in (activities or [])
+        or Activity.swimming in (activities or [])
+        or Activity.surfing in (activities or [])
+    ):
+        items.extend(
+            [
+                RecommendedItem(
+                    item_name=CATEGORIES[8], reason="Swimming attire", priority=1
+                ),
+                RecommendedItem(
+                    item_name=CATEGORIES[13], reason="Swimming attire", priority=1
+                ),
+            ]
+        )
+
+    if Activity.skiing in (activities or []) or Activity.snowboarding in (
+        activities or []
+    ):
+        items.append(
+            RecommendedItem(item_name=CATEGORIES[9], reason="Skiing attire", priority=1)
+        )
+
+    if Activity.skiing in (activities or []):
+        items.append(
+            RecommendedItem(
+                item_name=CATEGORIES[10], reason="Ski equipment", priority=1
+            )
+        )
+
+    if Activity.snowboarding in (activities or []):
+        items.append(
+            RecommendedItem(
+                item_name=CATEGORIES[11], reason="Snowboarding equipment", priority=1
+            )
+        )
+
+    if Activity.camping in (activities or []):
+        items.append(
+            RecommendedItem(
+                item_name=CATEGORIES[12], reason="Camping equipment", priority=1
             )
         )
 
