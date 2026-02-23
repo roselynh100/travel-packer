@@ -1,3 +1,4 @@
+import datetime
 import sys
 import unittest
 from pathlib import Path
@@ -5,99 +6,88 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.models import Activity, Trip
-
-# UPDATE: Import the functions to be tested
+from app.models import Activity, Destination, RecommendedItem, Trip
 from machine_learning.generator import (
+    CATEGORIES,
     baseline_list_algorithm,
     get_base_items,
-    get_weather_items,
-    get_work_items,
+    get_conditional_items,
 )
-from machine_learning.item_groups import ACCESSORIES, CLOTHING, ESSENTIALS, TOILETRIES
 
 
 class TestBaselineAlgorithm(unittest.TestCase):
 
     def setUp(self):
-        """Run before every test."""
-        self.dummy_trip = Trip(
-            destination="Test City", duration_days=3, doing_laundry=False
-        )
+        """Set up common data for tests."""
+        self.default_dest = Destination(city="London", country="UK")
+        # Ensure dates are datetime objects as required by the Trip Pydantic model
+        self.start_date = "2027-02-14"
+        self.end_date = "2027-02-20"
 
     def test_get_base_items(self):
-        """
-        Test that get_base_items returns the exact combination of
-        CLOTHING + ACCESSORIES + TOILETRIES + ESSENTIALS from item_groups.py.
-        """
+        """Verify that categories 1, 3, 4, 5 are always returned."""
         items = get_base_items()
-
-        # Calculate expected length dynamically based on the real lists
-        expected_len = (
-            len(CLOTHING) + len(ACCESSORIES) + len(TOILETRIES) + len(ESSENTIALS)
-        )
-
-        self.assertEqual(len(items), expected_len)
-
-        # Verify specific items from your lists appear in the result
         item_names = [i.item_name for i in items]
-        self.assertIn("shirt", item_names)  # From CLOTHING
-        self.assertIn("sunglasses", item_names)  # From ACCESSORIES
-        self.assertIn("toothbrush", item_names)  # From TOILETRIES
-        self.assertIn("cell phone", item_names)  # From ESSENTIALS
 
-    def test_get_work_items_positive(self):
-        """Test that work activity triggers laptop recommendations."""
-        items = get_work_items([Activity.work])
+        # Now exactly 4: tops, pants, shoes, toiletries
+        self.assertEqual(len(items), 4)
+        self.assertIn(CATEGORIES[1], item_names)  # tops
+        self.assertIn(CATEGORIES[3], item_names)  # pants
+        self.assertIn(CATEGORIES[5], item_names)  # toiletries
 
+        # Shorts (2) should NO LONGER be in base items
+        self.assertNotIn(CATEGORIES[2], item_names)
+
+    def test_get_conditional_items_work(self):
+        """Rule: Electronics (ID 6) should appear if Activity.work is in activities."""
+        items = get_conditional_items(activities=[Activity.work], low_temp=5.0)
         item_names = [i.item_name for i in items]
-        self.assertIn("laptop", item_names)
-        self.assertIn("laptop charger", item_names)
+        self.assertIn(CATEGORIES[6], item_names)
 
-    def test_get_work_items_negative(self):
-        """Test that non-work activities return an empty list."""
-        items = get_work_items([Activity.beach])
-        self.assertEqual(items, [])
+    def test_get_conditional_items_weather_cold(self):
+        """Rule: Jackets (ID 7) should appear if low_temp < 0."""
+        items_cold = get_conditional_items(activities=[], low_temp=-5.0)
+        item_names = [i.item_name for i in items_cold]
+        self.assertIn(CATEGORIES[7], item_names)
+        self.assertNotIn(CATEGORIES[2], item_names)  # No shorts in the cold
 
-    def test_get_weather_items_cold(self):
-        """Test that temp < 10 triggers a coat."""
-        items = get_weather_items(5.0)
-        self.assertEqual(len(items), 1)
-        self.assertEqual(items[0].item_name, "coat")
-
-    def test_get_weather_items_warm(self):
-        """Test that temp >= 10 returns no weather items."""
-        self.assertEqual(get_weather_items(25.0), [])
+    def test_get_conditional_items_weather_warm(self):
+        """Rule: Shorts (ID 2) should appear if low_temp > 10."""
+        items_warm = get_conditional_items(activities=[], low_temp=15.0)
+        item_names = [i.item_name for i in items_warm]
+        self.assertIn(CATEGORIES[2], item_names)
+        self.assertNotIn(CATEGORIES[7], item_names)  # No jackets in the heat
 
     def test_baseline_list_algorithm_integration(self):
-        """
-        Test the full packing list generation using real item data.
-        """
+        """Full integration: Base (4) + Work (1) + Warm (1) = 6 total."""
         trip = Trip(
-            destination="New York",
+            destination="Miami",
+            destination_details=self.default_dest,
             duration_days=4,
+            start_date=self.start_date,
+            end_date=self.end_date,
             doing_laundry=False,
-            activities=[Activity.work],  # Triggers work items
-            lowest_temp=0.0,  # Triggers cold weather items
+            activities=[Activity.work],
+            lowest_temp=25.0,  # Should trigger electronics and shorts
         )
 
         results = baseline_list_algorithm(trip)
         item_names = [i.item_name for i in results]
 
-        # 1. Check for Base Items (from item_groups.py)
-        self.assertIn("socks", item_names)
-        self.assertIn("cell phone", item_names)
+        # 4 Base + 1 Electronics + 1 Shorts = 6
+        self.assertEqual(len(results), 6)
+        self.assertIn(CATEGORIES[6], item_names)  # Electronics
+        self.assertIn(CATEGORIES[2], item_names)  # Shorts
 
-        # 2. Check for Logic Items
-        self.assertIn("laptop", item_names)  # From Work logic
-        self.assertIn("coat", item_names)  # From Weather logic
+    def test_boundary_conditions(self):
+        """Test the exact cutoffs for 0 and 10 degrees."""
+        # 0.0 degrees: Neither jacket (<0) nor shorts (>10)
+        items_zero = get_conditional_items(activities=[], low_temp=0.0)
+        self.assertEqual(len(items_zero), 0)
 
-        # 3. Check Total Count
-        # Base items (4+2+2+1 = 8) + Work (2) + Weather (1) = 11 items total
-        expected_count = (
-            len(CLOTHING) + len(ACCESSORIES) + len(TOILETRIES) + len(ESSENTIALS) + 2 + 1
-        )
-        self.assertEqual(len(results), expected_count)
+        # 10.0 degrees: Exactly 10 should not trigger shorts (>10)
+        items_ten = get_conditional_items(activities=[], low_temp=10.0)
+        self.assertEqual(len(items_ten), 0)
 
 
 if __name__ == "__main__":
