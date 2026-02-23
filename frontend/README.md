@@ -13,7 +13,7 @@ npm i
 ### 2. Start the app
 
 ```bash
-npx expo start
+npx expo start --tunnel
 ```
 
 You can now view the app on your laptop at [localhost:8081](http://localhost:8081), or scan the QR code in the terminal to preview the app on your phone!

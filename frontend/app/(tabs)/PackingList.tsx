@@ -3,7 +3,7 @@ import { Platform, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/ThemedText";
-import { API_BASE_URL } from "@/constants/api";
+import { apiFetch } from "@/constants/api";
 import {
   RecommendedItem,
   Trip,
@@ -31,8 +31,8 @@ export default function PackingList() {
       if (!tripId) return;
 
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/trips/${tripId}/recommendations`
+        const response = await apiFetch(
+          `/trips/${tripId}/recommendations`
         );
 
         if (!response.ok) {
@@ -57,7 +57,7 @@ export default function PackingList() {
     if (!tripId) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/trips/${tripId}`);
+      const response = await apiFetch(`/trips/${tripId}`);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -84,8 +84,8 @@ export default function PackingList() {
       if (!tripId) return;
 
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/trips/${tripId}/item/${itemId}`,
+        const response = await apiFetch(
+          `/trips/${tripId}/item/${itemId}`,
           {
             method: "POST",
             headers: {
@@ -122,8 +122,8 @@ export default function PackingList() {
       if (!tripId) return;
 
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/trips/${tripId}/item/${itemId}`,
+        const response = await apiFetch(
+          `/trips/${tripId}/item/${itemId}`,
           {
             method: "DELETE",
             headers: {
