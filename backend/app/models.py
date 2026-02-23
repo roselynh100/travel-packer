@@ -131,8 +131,8 @@ class Trip(BaseModel):
     lowest_temp: Optional[float] = None
     precipitation_percentage: Optional[float] = None
     doing_laundry: bool
-    bag_type: BagType = BagType.carry_on
-    airline: Airline = Airline.air_canada
+    bag_type: BagType
+    airline: Airline
     # probably going to create a map for this internal field?
     # airline_type: Optional[AirlineType] = AirlineType.budget
     activities: List[Activity] = Field(default_factory=list)
