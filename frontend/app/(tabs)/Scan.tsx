@@ -197,54 +197,49 @@ export default function ScanningScreen() {
   }
 
   async function getPackingRecommendation(itemId: string) {
-    try {
-      const response = await apiFetch(
-        `/trips/${tripId}/item/${itemId}/packing-decision`,
+    const response = await apiFetch(
+      `/trips/${tripId}/item/${itemId}/packing-decision`,
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const error: any = new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
       );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const error: any = new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`,
-        );
-        error.status = response.status;
-        throw error;
-      }
-
-      const result: PackingRecommendation = await response.json();
-      console.log("Packing recommendation received:", result);
-
-      // Only update if currentItem still matches (user hasn't scanned a new item)
-      setCurrentItem((prevItem) => {
-        if (prevItem?.item_id === itemId) {
-          return {
-            ...prevItem,
-            packing_recommendation: result.status,
-          };
-        }
-        // If item changed, don't update (user scanned a new item)
-        return prevItem;
-      });
-
-      if (result.status === "pack") {
-        setInfoBanner({
-          type: "info",
-          message: "This item should be packed!",
-        });
-      } else if (result.status === "remove") {
-        setInfoBanner({
-          type: "info",
-          message: `Do not pack this item. ${result.reason}`,
-        });
-      } else if (result.status === "swap") {
-        setInfoBanner({
-          type: "info",
-          message: "You must remove an item to pack this one!",
-        });
-      }
-    } catch (error) {
-      console.error("Error getting packing recommendation:", error);
+      error.status = response.status;
       throw error;
+    }
+
+    const result: PackingRecommendation = await response.json();
+    console.log("Packing recommendation received:", result);
+
+    // Only update if currentItem still matches (user hasn't scanned a new item)
+    setCurrentItem((prevItem) => {
+      if (prevItem?.item_id === itemId) {
+        return {
+          ...prevItem,
+          packing_recommendation: result.status,
+        };
+      }
+      // If item changed, don't update (user scanned a new item)
+      return prevItem;
+    });
+
+    if (result.status === "pack") {
+      setInfoBanner({
+        type: "info",
+        message: "This item should be packed!",
+      });
+    } else if (result.status === "remove") {
+      setInfoBanner({
+        type: "info",
+        message: `Do not pack this item. ${result.reason}`,
+      });
+    } else if (result.status === "swap") {
+      setInfoBanner({
+        type: "info",
+        message: "You must remove an item to pack this one!",
+      });
     }
   }
 
@@ -255,8 +250,8 @@ export default function ScanningScreen() {
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/items/${encodeURIComponent(currentItem.item_id)}`,
+      const response = await apiFetch(
+        `/items/${encodeURIComponent(currentItem.item_id)}`,
         {
           method: "PATCH",
           headers: {

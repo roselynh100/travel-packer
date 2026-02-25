@@ -60,28 +60,24 @@ export default function HomeScreen() {
   }
 
   async function saveToAPI(userInput: User) {
-    try {
-      const response = await apiFetch("/users/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userInput),
-      });
+    const response = await apiFetch("/users/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userInput),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`,
-        );
-      }
-
-      const result: User = await response.json();
-      console.log("Save success:", result);
-      setUserId(result.user_id ?? "No user id saved");
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
     }
+
+    const result: User = await response.json();
+    console.log("Save success:", result);
+    setUserId(result.user_id ?? "No user id saved");
   }
 
   return (

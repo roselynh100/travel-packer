@@ -141,28 +141,24 @@ export default function TripInfo() {
   }
 
   async function saveToAPI(tripInput: Trip) {
-    try {
-      const url = userId ? `/trips/?user_id=${userId}` : "/trips/";
+    const url = userId ? `/trips/?user_id=${userId}` : "/trips/";
 
-      const response = await apiFetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tripInput),
-      });
+    const response = await apiFetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tripInput),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`,
-        );
-      }
-
-      const result: Trip = await response.json();
-      console.log("Save success:", result);
-      setTripId(result.trip_id ?? "No trip id saved");
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
     }
+
+    const result: Trip = await response.json();
+    console.log("Save success:", result);
+    setTripId(result.trip_id ?? "No trip id saved");
   }
 
   return (
