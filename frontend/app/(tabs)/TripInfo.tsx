@@ -125,7 +125,10 @@ export default function TripInfo() {
         doing_laundry: laundry,
       };
 
-      await saveToAPI(trip);
+      const savedTrip = await saveToAPI(trip);
+      if (savedTrip.trip_id) {
+        await fetchWeather(savedTrip.trip_id);
+      }
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
       router.push("/PackingList");
@@ -140,7 +143,7 @@ export default function TripInfo() {
     }
   }
 
-  async function saveToAPI(tripInput: Trip) {
+  async function saveToAPI(tripInput: Trip): Promise<Trip> {
     const url = userId ? `/trips/?user_id=${userId}` : "/trips/";
 
     const response = await apiFetch(url, {
@@ -159,6 +162,21 @@ export default function TripInfo() {
     const result: Trip = await response.json();
     console.log("Save success:", result);
     setTripId(result.trip_id ?? "No trip id saved");
+    return result;
+  }
+
+  async function fetchWeather(tripId: string) {
+    const response = await apiFetch(`/trips/${tripId}/weather`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
+    }
+
+    const result: Trip = await response.json();
+    console.log("Fetched weather:", result);
   }
 
   return (
