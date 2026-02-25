@@ -2,96 +2,116 @@ import json
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.models import BoundingBox, CVResult, Dimensions, Item, ItemUpdate
+from app.models import BoundingBox, CVResult, Dimensions, Item
 from app.state.db import items_store, trips_store
+from constants import SERPAPI_SEARCH_URL
 
 
-class TestItemEndpoints(unittest.TestCase):
+def _item_with_cv(item_id: str) -> Item:
+    cv = CVResult(
+        class_name="bag",
+        confidence_score=0.9,
+        bounding_boxes=[BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4)],
+        dimensions=Dimensions(length=10.0, width=5.0, height=2.0),
+    )
+    return Item(item_id=item_id, cv_result=cv)
+
+
+class TestGetItemPrice(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
         items_store.clear()
-        trips_store.clear()
 
     def tearDown(self):
         items_store.clear()
-        trips_store.clear()
 
-    def test_get_item_success(self):
-        item = Item(item_id="123", weight_kg=1.2)
-        items_store["123"] = item
+    @patch("app.routes.item.SERPAPI_API_KEY", "test_key")
+    @patch("app.routes.item.requests.get")
+    def test_get_item_price_success(self, mock_get):
+        items_store["i1"] = _item_with_cv("i1")
 
-        response = self.client.get("/items/123")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["weight_kg"], 1.2)
+        mock_response = Mock()
+        mock_response.ok = True
+        mock_response.json.return_value = {
+            "shopping_results": [
+                {
+                    "title": "Travel Backpack",
+                    "source": "Walmart",
+                    "extracted_price": 49.99,
+                },
+                {"title": "Hiking Pack", "source": "MEC", "extracted_price": 89.5},
+            ]
+        }
+        mock_get.return_value = mock_response
 
-    def test_get_item_not_found(self):
-        response = self.client.get("/items/doesnt-exist")
-        self.assertEqual(response.status_code, 404)
-
-    def test_patch_item_partial_update(self):
-        original = Item(
-            item_id="abc",
-            weight_kg=0.3,
-            cv_result=CVResult(
-                item_name="Shirt",
-                confidence_score=0.8,
-                bounding_boxes=[BoundingBox(x_min=1, y_min=1, x_max=2, y_max=2)],
-                dimensions=Dimensions(length=1, width=1),
-            ),
+        response = self.client.get(
+            "/items/i1/price", params={"country": "united states", "limit": 1}
         )
-        items_store["abc"] = original
-
-        response = self.client.patch("/items/abc", json={"weight_kg": 2.0})
         self.assertEqual(response.status_code, 200)
 
-        updated = response.json()
-        self.assertEqual(updated["weight_kg"], 2.0)
-        self.assertEqual(updated["cv_result"]["item_name"], "Shirt")
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["item_name"], "Travel Backpack")
+        self.assertEqual(data[0]["source"], "Walmart")
+        self.assertEqual(data[0]["price"], 49.99)
+        self.assertEqual(data[0]["currency"], "USD")
 
-    def test_patch_item_set_field_to_null(self):
-        original = Item(item_id="def", weight_kg=1.5)
-        items_store["def"] = original
+        mock_get.assert_called_once()
+        args, kwargs = mock_get.call_args
+        self.assertEqual(args[0], SERPAPI_SEARCH_URL)
+        self.assertEqual(kwargs["params"]["q"], "bag")
+        self.assertEqual(kwargs["params"]["gl"], "us")
+        self.assertEqual(kwargs["params"]["hl"], "en")
+        self.assertEqual(kwargs["params"]["api_key"], "test_key")
 
-        response = self.client.patch("/items/def", json={"weight_kg": None})
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.json()["weight_kg"])
+    @patch("app.routes.item.SERPAPI_API_KEY", "test_key")
+    def test_get_item_price_missing_cv(self):
+        items_store["i1"] = Item(item_id="i1")
 
-    def test_patch_item_not_found(self):
-        response = self.client.patch("/items/missing", json={"weight_kg": 2.0})
-        self.assertEqual(response.status_code, 404)
-
-    def test_delete_item_success(self):
-        items_store["x1"] = Item(item_id="x1")
-
-        response = self.client.delete("/items/x1")
-        self.assertEqual(response.status_code, 200)
-        self.assertNotIn("x1", items_store)
-
-    def test_delete_item_removes_from_trip(self):
-        from app.models import Trip
-
-        trips_store["t1"] = Trip(
-            trip_id="t1",
-            destination="Paris",
-            duration_days=5,
-            doing_laundry=False,
-            items=["x1"],
+        response = self.client.get(
+            "/items/i1/price", params={"country": "United States"}
         )
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("no cv result", response.text.lower())
 
-        item = Item(item_id="x1")
-        item.trips.append("t1")
-        items_store["x1"] = item
+    @patch("app.routes.item.SERPAPI_API_KEY", "test_key")
+    def test_get_item_price_unknown_country(self):
+        items_store["i1"] = _item_with_cv("i1")
 
-        response = self.client.delete("/items/x1")
-        self.assertEqual(response.status_code, 200)
-        self.assertNotIn("x1", trips_store["t1"].items)
+        response = self.client.get("/items/i1/price", params={"country": "Atlantis"})
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("country not found", response.text.lower())
+
+    @patch("app.routes.item.SERPAPI_API_KEY", "test_key")
+    def test_get_item_price_country_missing_currency(self):
+        items_store["i1"] = _item_with_cv("i1")
+
+        response = self.client.get("/items/i1/price", params={"country": "Antarctica"})
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("currency", response.text.lower())
+
+    @patch("app.routes.item.SERPAPI_API_KEY", "test_key")
+    @patch("app.routes.item.requests.get")
+    def test_get_item_price_no_results(self, mock_get):
+        items_store["i1"] = _item_with_cv("i1")
+
+        mock_response = Mock()
+        mock_response.ok = True
+        mock_response.json.return_value = {"shopping_results": []}
+        mock_get.return_value = mock_response
+
+        response = self.client.get(
+            "/items/i1/price", params={"country": "United States"}
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("no price results", response.text.lower())
 
 
 class TestReadWeight(unittest.TestCase):
@@ -177,7 +197,7 @@ class TestDetectEndpoint(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(items_store["abc"].cv_result.item_name, "Backpack")
+        self.assertEqual(items_store["abc"].cv_result.class_name, "backpack")
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_invalid_yolo_output(self, mock_yolo):

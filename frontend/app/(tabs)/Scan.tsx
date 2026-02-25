@@ -3,7 +3,7 @@ import { useIsFocused } from "@react-navigation/native";
 import { useState, useRef, useEffect } from "react";
 import { Button, View, ActivityIndicator, Platform } from "react-native";
 
-import { API_BASE_URL } from "@/constants/api";
+import { apiFetch } from "@/constants/api";
 import {
   CVResult,
   DetectResponse,
@@ -148,10 +148,10 @@ export default function ScanningScreen() {
       }
 
       const detectUrl = itemId
-        ? `${API_BASE_URL}/items/detect?item_id=${encodeURIComponent(itemId)}`
-        : `${API_BASE_URL}/items/detect`;
+        ? `/items/detect?item_id=${encodeURIComponent(itemId)}`
+        : "/items/detect";
 
-      const response = await fetch(detectUrl, {
+      const response = await apiFetch(detectUrl, {
         method: "POST",
         body: formData,
       });
@@ -198,8 +198,8 @@ export default function ScanningScreen() {
 
   async function getPackingRecommendation(itemId: string) {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/trips/${tripId}/item/${itemId}/packing-decision`,
+      const response = await apiFetch(
+        `/trips/${tripId}/item/${itemId}/packing-decision`,
       );
 
       if (!response.ok) {

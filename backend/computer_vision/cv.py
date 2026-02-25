@@ -57,7 +57,7 @@ def debug_test_image(image_bytes: bytes):
 
 
 def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
-    model = YOLO("yolov8s.pt")
+    model = YOLO("backend/computer_vision/model_train/best.pt")
     img = bytes_to_numpy(image_bytes)
     results = model(
         img,
@@ -67,14 +67,13 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
 
     # Define the list of target class names
     TARGET_CLASSES = {
-        "backpack",
-        "handbag",
-        "suitcase",
-        "bottle",
-        "laptop",
-        "cell phone",
-        "book",
-        "toothbrush",
+        "container",
+        "electronics",
+        "jackets",
+        "pants",
+        "shoes",
+        "shorts",
+        "tops",
     }
 
     detections_list = []

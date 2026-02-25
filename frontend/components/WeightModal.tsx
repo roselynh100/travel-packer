@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, View } from "react-native";
 
-import { API_BASE_URL } from "@/constants/api";
+import { apiFetch } from "@/constants/api";
 import { Item } from "@/constants/types";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
@@ -58,7 +58,7 @@ export function WeightModal({
 
     (async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/items/weight`, {
+        const response = await apiFetch("/items/weight", {
           method: "POST",
         });
 

@@ -1,56 +1,67 @@
-# Main function: baseline_list_algorithm()
-# Returns: List[RecommendedItem]
-
 from typing import List, Optional
 
-from app.models import (
-    Activity,
-    RecommendedItem,
-    Trip,
-)
+from app.models import Activity, RecommendedItem, Trip
 
-from .item_groups import ACCESSORIES, CLOTHING, ESSENTIALS, TOILETRIES
+CATEGORIES = {
+    0: "unknown",
+    1: "tops",
+    2: "shorts",
+    3: "pants",
+    4: "shoes",
+    5: "toiletries",
+    6: "electronics",
+    7: "jackets",
+}
 
 
 def get_base_items() -> List[RecommendedItem]:
-    """Returns the static list of items needed for every trip."""
-    return CLOTHING + ACCESSORIES + TOILETRIES + ESSENTIALS
+    """Returns items that are always required."""
+    base_ids = [1, 3, 4, 5]
+    return [RecommendedItem(item_name=CATEGORIES[i], priority=1) for i in base_ids]
 
 
-def get_work_items(activities: List[Activity]) -> List[RecommendedItem]:
-    """Returns items specific to work trips."""
+def get_conditional_items(
+    activities: List[Activity], low_temp: Optional[float]
+) -> List[RecommendedItem]:
     items = []
-    if Activity.work in activities:
-        items.append(
-            RecommendedItem(item_name="laptop", reason="Needed for work", priority=1)
-        )
+
+    # If work is in activities, pack electronics
+    if Activity.work in (activities or []):
         items.append(
             RecommendedItem(
-                item_name="laptop charger", reason="Needed for work", priority=2
+                item_name=CATEGORIES[6], reason="Work requirements", priority=2
             )
         )
-    return items
 
-
-def get_weather_items(lowest_temp: Optional[float]) -> List[RecommendedItem]:
-    """Returns items based on temperature logic."""
-    items = []
-    if lowest_temp is not None and lowest_temp < 10:
+    # If lowest temp is less than 0, pack jacket
+    if low_temp is not None and low_temp < 0:
         items.append(
             RecommendedItem(
-                item_name="coat", reason="Needed for cold weather", priority=1
+                item_name=CATEGORIES[7],
+                reason="Below freezing temperatures",
+                priority=1,
             )
         )
+
+    # If lowest temp is greater than 10, pack shorts
+    if low_temp is not None and low_temp > 10:
+        items.append(
+            RecommendedItem(
+                item_name=CATEGORIES[2], reason="Warm temperatures", priority=1
+            )
+        )
+
     return items
 
 
 def baseline_list_algorithm(trip: Trip) -> List[RecommendedItem]:
-    """Returns a list of things that the user should pack based on trip details."""
+    """Primary entry point to generate the packing list."""
     recs = []
 
-    # Compose the final list using the helpers
+    # 1. Add the "always-pack" items
     recs.extend(get_base_items())
-    recs.extend(get_work_items(trip.activities))
-    recs.extend(get_weather_items(trip.lowest_temp))
+
+    # 2. Add items based on specific rules
+    recs.extend(get_conditional_items(trip.activities, trip.lowest_temp))
 
     return recs
