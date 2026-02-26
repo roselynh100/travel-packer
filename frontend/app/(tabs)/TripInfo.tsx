@@ -275,7 +275,7 @@ export default function TripInfo() {
         <ThemedButton
           title="Save"
           onPress={handleSave}
-          className={Platform.OS === "web" ? "mx-12 mb-12" : "mx-6 mb-6"}
+          className={Platform.OS === "web" ? "mx-12 mb-12" : "mx-6 my-6"}
         />
         <ThemedLoading isLoading={isLoading} message="Saving your trip..." />
       </Pressable>

@@ -1,7 +1,7 @@
-import { cn } from '@/helpers/cn';
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { MultiSelect } from 'react-native-element-dropdown';
+import { cn } from "@/helpers/cn";
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity } from "react-native";
+import { MultiSelect } from "react-native-element-dropdown";
 
 type ThemedMultiSelectProps = {
   data: { label: string; value: string }[];
@@ -9,31 +9,34 @@ type ThemedMultiSelectProps = {
   onChange: (value: string[]) => void;
   placeholder?: string;
   searchPlaceholder?: string;
-}
+};
 
 export const ThemedMultiSelect = ({
   data,
   value,
   onChange,
-  placeholder = 'Select item',
-  searchPlaceholder = 'Search...',
+  placeholder = "Select item",
+  searchPlaceholder = "Search...",
 }: ThemedMultiSelectProps) => {
   const [focused, setFocused] = useState(false);
 
   const ringColor = focused
-  ? "border-[var(--color-primary)]"
-  : "border-transparent";
+    ? "border-[var(--color-primary)]"
+    : "border-transparent";
 
   const renderItem = (item: { label: string; value: string }) => {
     const isSelected = value.includes(item.value);
     return (
-      <View className={cn("p-3", isSelected ? "bg-teal-400/40" : "bg-[var(--color-bg-nav)]")}>
+      <View className={cn("p-3", isSelected ? "bg-teal-400/40" : "bg-white")}>
         <Text className="text-[var(--color-text)]">{item.label}</Text>
       </View>
     );
   };
 
-  const renderSelectedItem = (item: { label: string; value: string }, unSelect?: (item: { label: string; value: string }) => void) => {
+  const renderSelectedItem = (
+    item: { label: string; value: string },
+    unSelect?: (item: { label: string; value: string }) => void,
+  ) => {
     return (
       <TouchableOpacity
         onPress={() => unSelect && unSelect(item)}
@@ -49,34 +52,33 @@ export const ThemedMultiSelect = ({
 
   return (
     <View className={cn("rounded-2xl border-2", ringColor)}>
-      <MultiSelect
-        style={{
-          borderRadius: 12,
-          padding: 12,
-          backgroundColor: "var(--color-bg-nav)",
-          borderColor: "var(--color-text-placeholder)",
-          borderWidth: 2,
-        }}
-        placeholderStyle={{
-          color: "var(--color-text-placeholder)",
-        }}
-        data={data}
-        renderItem={renderItem}
-        renderSelectedItem={renderSelectedItem}
-        search
-        maxHeight={300}
-        labelField="label"
-        valueField="value"
-        placeholder={!focused ? placeholder : ""}
-        searchPlaceholder={searchPlaceholder}
-        value={value}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        onChange={item => {
-          onChange(item);
-        }}
-        inside
-      />
+      <View className="rounded-xl border-2 border-[var(--color-text-placeholder)] bg-[var(--color-bg-nav)]">
+        <MultiSelect
+          style={{
+            borderRadius: 12,
+            padding: 12,
+          }}
+          placeholderStyle={{
+            color: "var(--color-text-placeholder)",
+          }}
+          data={data}
+          renderItem={renderItem}
+          renderSelectedItem={renderSelectedItem}
+          search
+          maxHeight={300}
+          labelField="label"
+          valueField="value"
+          placeholder={!focused ? placeholder : ""}
+          searchPlaceholder={searchPlaceholder}
+          value={value}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onChange={(item) => {
+            onChange(item);
+          }}
+          inside
+        />
+      </View>
     </View>
   );
 };
