@@ -22,6 +22,7 @@ import { ThemedLoading } from "@/components/ThemedLoading";
 import { ThemedMultiSelect } from "@/components/ThemedMultiSelect";
 import { DateSelect } from "@/components/DateSelect";
 import { LocationInput } from "@/components/LocationInput";
+import { RequiredLabel } from "@/components/RequiredLabel";
 
 export default function TripInfo() {
   const router = useRouter();
@@ -200,12 +201,12 @@ export default function TripInfo() {
           <View className="flex-col gap-6">
             <ThemedText type="title">Input your trip details 🌴</ThemedText>
             <View className="gap-2">
-              <ThemedText type="subtitle">Destination</ThemedText>
+              <RequiredLabel>Destination</RequiredLabel>
               <LocationInput onSelect={onChangeDestination} />
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Trip Dates</ThemedText>
+              <RequiredLabel>Trip Dates</RequiredLabel>
               <Pressable
                 onPress={() => setIsCalendarVisible(!isCalendarVisible)}
               >
@@ -228,7 +229,7 @@ export default function TripInfo() {
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Airline</ThemedText>
+              <RequiredLabel>Airline</RequiredLabel>
               <ThemedDropdown
                 value={airline}
                 onChange={(value: string) => onChangeAirline(value)}
@@ -238,7 +239,7 @@ export default function TripInfo() {
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Bag Type</ThemedText>
+              <RequiredLabel>Bag Type</RequiredLabel>
               <ThemedDropdown
                 value={bagType}
                 onChange={(value: string) => onChangeBagType(value)}

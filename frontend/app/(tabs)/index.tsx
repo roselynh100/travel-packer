@@ -18,6 +18,7 @@ import { Gender, User } from "@/constants/types";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedDropdown } from "@/components/ThemedDropdown";
 import { ThemedLoading } from "@/components/ThemedLoading";
+import { RequiredLabel } from "@/components/RequiredLabel";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -101,7 +102,7 @@ export default function HomeScreen() {
           <View className="flex-col gap-6">
             <ThemedText type="title">Input your information 🤸</ThemedText>
             <View className="gap-2">
-              <ThemedText type="subtitle">Name</ThemedText>
+              <RequiredLabel>Name</RequiredLabel>
               <ThemedTextInput
                 value={name}
                 onChangeText={onChangeName}
@@ -110,7 +111,7 @@ export default function HomeScreen() {
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Email</ThemedText>
+              <RequiredLabel>Email</RequiredLabel>
               <ThemedTextInput
                 value={email}
                 onChangeText={onChangeEmail}
@@ -128,7 +129,7 @@ export default function HomeScreen() {
               </View> */}
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Age</ThemedText>
+              <RequiredLabel>Age</RequiredLabel>
               <ThemedTextInput
                 value={age}
                 onChangeText={onChangeAge}
@@ -137,7 +138,7 @@ export default function HomeScreen() {
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Gender</ThemedText>
+              <RequiredLabel>Gender</RequiredLabel>
               <ThemedDropdown
                 value={gender}
                 onChange={(value: string) => onChangeGender(value)}
