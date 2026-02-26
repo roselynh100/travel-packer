@@ -9,6 +9,9 @@ from ultralytics import YOLO
 
 from app.models import BoundingBox, CVResult, Dimensions
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+YOLO_MODEL_PATH = os.path.join(BASE_DIR, "model_train", "best.pt")
+
 
 def bytes_to_numpy(image_bytes: bytes):
     nparr = np.frombuffer(image_bytes, np.uint8)
@@ -57,7 +60,7 @@ def debug_test_image(image_bytes: bytes):
 
 
 def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
-    model = YOLO("backend/computer_vision/model_train/best.pt")
+    model = YOLO(YOLO_MODEL_PATH)
     img = bytes_to_numpy(image_bytes)
     results = model(
         img,
