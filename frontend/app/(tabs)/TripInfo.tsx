@@ -22,6 +22,7 @@ import { ThemedLoading } from "@/components/ThemedLoading";
 import { ThemedMultiSelect } from "@/components/ThemedMultiSelect";
 import { DateSelect } from "@/components/DateSelect";
 import { LocationInput } from "@/components/LocationInput";
+import { RequiredLabel } from "@/components/RequiredLabel";
 
 export default function TripInfo() {
   const router = useRouter();
@@ -125,7 +126,10 @@ export default function TripInfo() {
         doing_laundry: laundry,
       };
 
-      await saveToAPI(trip);
+      const savedTrip = await saveToAPI(trip);
+      if (savedTrip.trip_id) {
+        await fetchWeather(savedTrip.trip_id);
+      }
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
       router.push("/PackingList");
@@ -140,29 +144,40 @@ export default function TripInfo() {
     }
   }
 
-  async function saveToAPI(tripInput: Trip) {
-    try {
-      const url = userId ? `/trips/?user_id=${userId}` : "/trips/";
+  async function saveToAPI(tripInput: Trip): Promise<Trip> {
+    const url = userId ? `/trips/?user_id=${userId}` : "/trips/";
 
-      const response = await apiFetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tripInput),
-      });
+    const response = await apiFetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tripInput),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`,
-        );
-      }
-
-      const result: Trip = await response.json();
-      console.log("Save success:", result);
-      setTripId(result.trip_id ?? "No trip id saved");
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
     }
+
+    const result: Trip = await response.json();
+    console.log("Save success:", result);
+    setTripId(result.trip_id ?? "No trip id saved");
+    return result;
+  }
+
+  async function fetchWeather(tripId: string) {
+    const response = await apiFetch(`/trips/${tripId}/weather`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
+    }
+
+    const result: Trip = await response.json();
+    console.log("Fetched weather:", result);
   }
 
   return (
@@ -186,12 +201,12 @@ export default function TripInfo() {
           <View className="flex-col gap-6">
             <ThemedText type="title">Input your trip details 🌴</ThemedText>
             <View className="gap-2">
-              <ThemedText type="subtitle">Destination</ThemedText>
+              <RequiredLabel>Destination</RequiredLabel>
               <LocationInput onSelect={onChangeDestination} />
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Trip Dates</ThemedText>
+              <RequiredLabel>Trip Dates</RequiredLabel>
               <Pressable
                 onPress={() => setIsCalendarVisible(!isCalendarVisible)}
               >
@@ -214,7 +229,7 @@ export default function TripInfo() {
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Airline</ThemedText>
+              <RequiredLabel>Airline</RequiredLabel>
               <ThemedDropdown
                 value={airline}
                 onChange={(value: string) => onChangeAirline(value)}
@@ -224,7 +239,7 @@ export default function TripInfo() {
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Bag Type</ThemedText>
+              <RequiredLabel>Bag Type</RequiredLabel>
               <ThemedDropdown
                 value={bagType}
                 onChange={(value: string) => onChangeBagType(value)}
@@ -260,7 +275,7 @@ export default function TripInfo() {
         <ThemedButton
           title="Save"
           onPress={handleSave}
-          className={Platform.OS === "web" ? "mx-12 mb-12" : "mx-6 mb-6"}
+          className={Platform.OS === "web" ? "mx-12 mb-12" : "mx-6 my-6"}
         />
         <ThemedLoading isLoading={isLoading} message="Saving your trip..." />
       </Pressable>

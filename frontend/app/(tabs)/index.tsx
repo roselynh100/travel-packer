@@ -18,6 +18,7 @@ import { Gender, User } from "@/constants/types";
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedDropdown } from "@/components/ThemedDropdown";
 import { ThemedLoading } from "@/components/ThemedLoading";
+import { RequiredLabel } from "@/components/RequiredLabel";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -60,28 +61,24 @@ export default function HomeScreen() {
   }
 
   async function saveToAPI(userInput: User) {
-    try {
-      const response = await apiFetch("/users/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userInput),
-      });
+    const response = await apiFetch("/users/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userInput),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`,
-        );
-      }
-
-      const result: User = await response.json();
-      console.log("Save success:", result);
-      setUserId(result.user_id ?? "No user id saved");
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
     }
+
+    const result: User = await response.json();
+    console.log("Save success:", result);
+    setUserId(result.user_id ?? "No user id saved");
   }
 
   return (
@@ -105,7 +102,7 @@ export default function HomeScreen() {
           <View className="flex-col gap-6">
             <ThemedText type="title">Input your information 🤸</ThemedText>
             <View className="gap-2">
-              <ThemedText type="subtitle">Name</ThemedText>
+              <RequiredLabel>Name</RequiredLabel>
               <ThemedTextInput
                 value={name}
                 onChangeText={onChangeName}
@@ -114,7 +111,7 @@ export default function HomeScreen() {
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Email</ThemedText>
+              <RequiredLabel>Email</RequiredLabel>
               <ThemedTextInput
                 value={email}
                 onChangeText={onChangeEmail}
@@ -132,7 +129,7 @@ export default function HomeScreen() {
               </View> */}
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Age</ThemedText>
+              <RequiredLabel>Age</RequiredLabel>
               <ThemedTextInput
                 value={age}
                 onChangeText={onChangeAge}
@@ -141,7 +138,7 @@ export default function HomeScreen() {
             </View>
 
             <View className="gap-2">
-              <ThemedText type="subtitle">Gender</ThemedText>
+              <RequiredLabel>Gender</RequiredLabel>
               <ThemedDropdown
                 value={gender}
                 onChange={(value: string) => onChangeGender(value)}

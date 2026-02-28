@@ -1,4 +1,4 @@
-import { StyleSheet, Text, type TextProps } from "react-native";
+import { Platform, StyleSheet, Text, type TextProps } from "react-native";
 import { cn } from "@/helpers/cn";
 
 export type ThemedTextProps = TextProps & {
@@ -40,9 +40,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   title: {
-    fontSize: 32,
+    fontSize: Platform.select({ web: 32, default: 28 }),
     fontWeight: "bold",
-    lineHeight: 40,
+    lineHeight: Platform.select({ web: 40, default: 36 }),
   },
   subtitle: {
     fontSize: 20,

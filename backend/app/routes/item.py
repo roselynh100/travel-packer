@@ -6,7 +6,7 @@ import requests
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 from app.google_countries import country_info
-from app.models import CVResult, Item, ItemPriceResult, ItemUpdate
+from app.models import CVResult, DetectResponse, Item, ItemPriceResult, ItemUpdate
 from app.routes.trip import recalculate_trip_totals
 from app.state.db import items_store, trips_store
 from computer_vision.cv import detect_objects_yolo
@@ -14,6 +14,8 @@ from constants import SERPAPI_API_KEY, SERPAPI_SEARCH_URL
 from hardware.readscale import get_weight
 
 router = APIRouter()
+
+CONFIDENCE_THRESHOLD = 0.5
 
 
 @router.post("/", response_model=Item)
@@ -129,39 +131,48 @@ def read_weight(item_id: Optional[str] = Query(None)):
     return item
 
 
-@router.post("/detect", response_model=Item)
+@router.post("/detect", response_model=DetectResponse)
 async def detect_item_from_image(
     image: UploadFile = File(...), item_id: Optional[str] = Query(None)
 ):
-    """Run YOLO detection, and create an item."""
+    """Run YOLO detection. Then create/update an item (if single cv_result), or return item + cv_candidates for correction modal."""
 
     image_bytes = await image.read()
     cv_results = detect_objects_yolo(image_bytes)
     if not cv_results:
         raise HTTPException(status_code=500, detail="Invalid YOLO output")
 
-    # assuming cv_results only ever returns result of one item
-    cv_result = cv_results[0]
+    # Sort by confidence (highest first)
+    cv_results_sorted = sorted(
+        cv_results, key=lambda r: r.confidence_score, reverse=True
+    )
+
+    primary_result = cv_results_sorted[0]
+
+    # Only include a second candidate when confidence is low (so frontend can show correction modal)
+    cv_candidates: List[CVResult] = [primary_result]
+    if (
+        primary_result.confidence_score < CONFIDENCE_THRESHOLD
+        and len(cv_results_sorted) > 1
+    ):
+        cv_candidates.append(cv_results_sorted[1])
 
     volume = 0
-
-    # calculate volume for item
-    if cv_result.dimensions:
-        h = cv_result.dimensions.height or 1
-        volume = cv_result.dimensions.length * cv_result.dimensions.width * h
+    if primary_result.dimensions:
+        h = primary_result.dimensions.height or 1
+        volume = primary_result.dimensions.length * primary_result.dimensions.width * h
 
     if item_id and item_id in items_store:
         item = items_store[item_id]
-        item.cv_result = cv_result
+        item.cv_result = primary_result
         item.estimated_volume_cm3 = volume
         for trip_id in item.trips:
             recalculate_trip_totals(trip_id)
     else:
-        item = Item(cv_result=cv_result, estimated_volume_cm3=volume)
-        # need to store so we can update this item when we read weight
+        item = Item(cv_result=primary_result, estimated_volume_cm3=volume)
         items_store[item.item_id] = item
 
-    return item
+    return DetectResponse(item=item, cv_candidates=cv_candidates)
 
 
 @router.get("/{item_id}/price", response_model=List[ItemPriceResult])

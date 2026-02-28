@@ -25,12 +25,7 @@ export function ThemedDropdown({
   const renderItem = (item: { label: string; value: string }) => {
     const isSelected = value === item.value;
     return (
-      <View
-        className={cn(
-          "p-3",
-          isSelected ? "bg-teal-400/40" : "bg-[var(--color-bg-nav)]",
-        )}
-      >
+      <View className={cn("p-3", isSelected ? "bg-teal-400/40" : "bg-white")}>
         <Text className="text-[var(--color-text)]">{item.label}</Text>
       </View>
     );
@@ -38,30 +33,29 @@ export function ThemedDropdown({
 
   return (
     <View className={cn("rounded-2xl border-2", ringColor)}>
-      <Dropdown
-        style={{
-          borderRadius: 12,
-          padding: 12,
-          backgroundColor: "var(--color-bg-nav)",
-          borderColor: "var(--color-text-placeholder)",
-          borderWidth: 2,
-        }}
-        placeholderStyle={{
-          color: "var(--color-text-placeholder)",
-        }}
-        data={data}
-        renderItem={renderItem}
-        maxHeight={300}
-        labelField="label"
-        valueField="value"
-        placeholder={!focused ? placeholder : ""}
-        value={value}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        onChange={(item) => {
-          onChange(item.value);
-        }}
-      />
+      <View className="rounded-xl border-2 border-[var(--color-text-placeholder)] bg-[var(--color-bg-nav)]">
+        <Dropdown
+          style={{
+            borderRadius: 12,
+            padding: 12,
+          }}
+          placeholderStyle={{
+            color: "var(--color-text-placeholder)",
+          }}
+          data={data}
+          renderItem={renderItem}
+          maxHeight={300}
+          labelField="label"
+          valueField="value"
+          placeholder={!focused ? placeholder : ""}
+          value={value}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onChange={(item) => {
+            onChange(item.value);
+          }}
+        />
+      </View>
     </View>
   );
 }

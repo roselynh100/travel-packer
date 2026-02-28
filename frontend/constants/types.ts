@@ -54,9 +54,13 @@ export type Item = {
   trips: string[];
 };
 
+export type DetectResponse = {
+  item: Item;
+  cv_candidates: CVResult[];
+};
+
 export type CVResult = {
   item_name: string;
-  class_name: string;
   confidence_score: number;
   bounding_boxes: BoundingBox[];
   dimensions: Dimensions;

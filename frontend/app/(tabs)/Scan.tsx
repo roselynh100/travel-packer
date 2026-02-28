@@ -6,6 +6,7 @@ import { Button, View, ActivityIndicator, Platform } from "react-native";
 import { apiFetch } from "@/constants/api";
 import {
   CVResult,
+  DetectResponse,
   Item,
   ItemWithPackingRecommendation,
   PackingRecommendation,
@@ -14,6 +15,7 @@ import { useAppContext } from "@/helpers/AppContext";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { WeightModal } from "@/components/WeightModal";
+import { CVCorrectionModal } from "@/components/CVCorrectionModal";
 import { BoundingBoxOverlay } from "@/components/BoundingBoxOverlay";
 import { cn } from "@/helpers/cn";
 
@@ -21,7 +23,7 @@ const CAMERA_CAPTURE_DELAY = 1500;
 
 // TODO: Merge CVResult and currentItem???
 export default function ScanningScreen() {
-  const { tripId, setCurrentItem } = useAppContext();
+  const { tripId, currentItem, setCurrentItem } = useAppContext();
   const [permission, requestPermission] = useCameraPermissions();
 
   const cameraRef = useRef<CameraView>(null);
@@ -31,11 +33,12 @@ export default function ScanningScreen() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const [cvResult, setCvResult] = useState<CVResult | null>(null);
+  const [cvResults, setCvResults] = useState<CVResult[] | null>(null);
   const [infoBanner, setInfoBanner] = useState<{
     type: "error" | "info";
     message: string;
   } | null>(null);
+  const [correctionModalVisible, setCorrectionModalVisible] = useState(false);
 
   const isFocused = useIsFocused();
 
@@ -65,7 +68,7 @@ export default function ScanningScreen() {
     try {
       // Clear any previous results when starting a new scan
       setInfoBanner(null);
-      setCvResult(null);
+      setCvResults(null);
 
       setIsCapturing(true);
 
@@ -77,12 +80,14 @@ export default function ScanningScreen() {
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
 
       // When scale is connected, we'll already have an item created (with only weight)
-      const uploadedItem = await uploadPhotoToAPI(
+      const { item: uploadedItem, shouldDelayPacking } = await uploadPhotoToAPI(
         photo.uri,
         weightItem?.item_id,
       );
 
-      if (uploadedItem?.item_id) {
+      // Only fetch packing recommendation immediately when we are confident about the CV result.
+      // If low confidence, we defer this until after the user confirms the correct item.
+      if (uploadedItem?.item_id && !shouldDelayPacking) {
         await getPackingRecommendation(uploadedItem.item_id);
       }
     } catch (error) {
@@ -114,7 +119,10 @@ export default function ScanningScreen() {
   async function uploadPhotoToAPI(
     uri: string,
     itemId?: string,
-  ): Promise<ItemWithPackingRecommendation | null> {
+  ): Promise<{
+    item: ItemWithPackingRecommendation | null;
+    shouldDelayPacking: boolean;
+  }> {
     try {
       setIsUploading(true);
 
@@ -157,74 +165,131 @@ export default function ScanningScreen() {
         throw error;
       }
 
-      const result: Item = await response.json();
+      const result: DetectResponse = await response.json();
       console.log("Upload success:", result);
 
-      setCvResult(result.cv_result);
+      const { item, cv_candidates } = result;
+      setCvResults(cv_candidates);
+
       const updatedItem: ItemWithPackingRecommendation = {
-        ...result,
-        item_name: result.cv_result.item_name,
+        ...item,
+        item_name: item.cv_result.item_name,
         packing_recommendation: null,
       };
       setCurrentItem(updatedItem);
 
+      const shouldDelayPacking = cv_candidates.length > 1;
+
+      if (shouldDelayPacking) {
+        setCorrectionModalVisible(true);
+        setInfoBanner({
+          type: "info",
+          message: "We’re not fully sure what this is—please confirm below.",
+        });
+      }
+
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
 
-      return updatedItem;
+      return { item: updatedItem, shouldDelayPacking };
     } finally {
       setIsUploading(false);
     }
   }
 
   async function getPackingRecommendation(itemId: string) {
+    const response = await apiFetch(
+      `/trips/${tripId}/item/${itemId}/packing-decision`,
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const error: any = new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
+      error.status = response.status;
+      throw error;
+    }
+
+    const result: PackingRecommendation = await response.json();
+    console.log("Packing recommendation received:", result);
+
+    // Only update if currentItem still matches (user hasn't scanned a new item)
+    setCurrentItem((prevItem) => {
+      if (prevItem?.item_id === itemId) {
+        return {
+          ...prevItem,
+          packing_recommendation: result.status,
+        };
+      }
+      // If item changed, don't update (user scanned a new item)
+      return prevItem;
+    });
+
+    if (result.status === "pack") {
+      setInfoBanner({
+        type: "info",
+        message: "This item should be packed!",
+      });
+    } else if (result.status === "remove") {
+      setInfoBanner({
+        type: "info",
+        message: `Do not pack this item. ${result.reason}`,
+      });
+    } else if (result.status === "swap") {
+      setInfoBanner({
+        type: "info",
+        message: "You must remove an item to pack this one!",
+      });
+    }
+  }
+
+  async function handleCorrectionSelect(choice: CVResult) {
+    if (!currentItem) {
+      setCorrectionModalVisible(false);
+      return;
+    }
+
     try {
       const response = await apiFetch(
-        `/trips/${tripId}/item/${itemId}/packing-decision`,
+        `/items/${encodeURIComponent(currentItem.item_id)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ cv_result: choice }),
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
-        const error: any = new Error(
+        throw new Error(
           `API error (${response.status}): ${errorText || response.statusText}`,
         );
-        error.status = response.status;
-        throw error;
       }
 
-      const result: PackingRecommendation = await response.json();
-      console.log("Packing recommendation received:", result);
+      const updatedServerItem: Item = await response.json();
 
-      // Only update if currentItem still matches (user hasn't scanned a new item)
-      setCurrentItem((prevItem) => {
-        if (prevItem?.item_id === itemId) {
-          return {
-            ...prevItem,
-            packing_recommendation: result.status,
-          };
-        }
-        // If item changed, don't update (user scanned a new item)
-        return prevItem;
-      });
+      const updatedItem: ItemWithPackingRecommendation = {
+        ...currentItem,
+        item_name: choice.item_name,
+        cv_result: choice,
+      };
 
-      if (result.status === "pack") {
-        setInfoBanner({
-          type: "info",
-          message: "This item should be packed!",
-        });
-      } else if (result.status === "remove") {
-        setInfoBanner({
-          type: "info",
-          message: `Do not pack this item. ${result.reason}`,
-        });
-      } else if (result.status === "swap") {
-        setInfoBanner({
-          type: "info",
-          message: "You must remove an item to pack this one!",
-        });
+      setCvResults([choice]);
+      setCurrentItem(updatedItem);
+
+      if (updatedServerItem.item_id) {
+        await getPackingRecommendation(updatedServerItem.item_id);
       }
     } catch (error) {
-      console.error("Error getting packing recommendation:", error);
-      throw error;
+      console.error("Error correcting item classification:", error);
+      setInfoBanner({
+        type: "error",
+        message: "Failed to update item classification. Please try again.",
+      });
+    } finally {
+      setCorrectionModalVisible(false);
     }
   }
 
@@ -246,11 +311,17 @@ export default function ScanningScreen() {
       {capturedPhoto && (
         <BoundingBoxOverlay
           uri={capturedPhoto}
-          cvResult={cvResult}
+          cvResult={cvResults?.[0] ?? null}
           isCapturing={isCapturing}
           isUploading={isUploading}
         />
       )}
+      <CVCorrectionModal
+        visible={correctionModalVisible && !!capturedPhoto && !isUploading}
+        cvResults={cvResults}
+        onSelect={handleCorrectionSelect}
+        onDismiss={() => setCorrectionModalVisible(false)}
+      />
       {capturedPhoto && infoBanner && !isUploading && (
         <View
           className={cn(
@@ -281,7 +352,7 @@ export default function ScanningScreen() {
             onPress={() => {
               setCapturedPhoto(null);
               setInfoBanner(null);
-              setCvResult(null);
+              setCvResults(null);
             }}
           />
         )}

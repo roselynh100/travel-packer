@@ -158,7 +158,7 @@ class TestDetectEndpoint(unittest.TestCase):
         """Test creating a new item via image detection."""
         mock_yolo.return_value = [
             CVResult(
-                class_name="shoe",
+                item_name="Shoes",
                 confidence_score=0.85,
                 bounding_boxes=[
                     BoundingBox(x_min=10.1, y_min=20.2, x_max=50.5, y_max=80.8)
@@ -174,7 +174,7 @@ class TestDetectEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
-        self.assertEqual(data["cv_result"]["class_name"], "shoe")
+        self.assertEqual(data["cv_result"]["item_name"], "Shoes")
         self.assertEqual(data["cv_result"]["confidence_score"], 0.85)
         self.assertEqual(data["cv_result"]["bounding_boxes"][0]["x_min"], 10.1)
 
@@ -184,7 +184,7 @@ class TestDetectEndpoint(unittest.TestCase):
 
         mock_yolo.return_value = [
             CVResult(
-                class_name="backpack",
+                item_name="Backpack",
                 confidence_score=0.95,
                 bounding_boxes=[BoundingBox(x_min=0, y_min=0, x_max=100, y_max=100)],
                 dimensions=Dimensions(length=1, width=1),

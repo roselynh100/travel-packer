@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { View, Text, FlatList, Pressable } from "react-native";
+import { View, Text, Pressable, ScrollView } from "react-native";
 import { LocationResult } from "@/constants/types";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedText } from "@/components/ThemedText";
@@ -138,19 +138,18 @@ export function LocationInput({
       />
 
       {results.length > 0 && (
-        <View className="border border-gray-200 rounded mt-1 bg-white">
-          <FlatList
-            data={results}
-            keyExtractor={(item) => item.place_id.toString()}
-            renderItem={({ item }) => (
+        <View className="border border-gray-200 rounded mt-1 bg-white max-h-64">
+          <ScrollView>
+            {results.map((item) => (
               <Pressable
+                key={item.place_id.toString()}
                 onPress={() => handleSelect(item)}
                 className="p-3 border-b border-gray-100"
               >
                 <Text>{formatLocationDisplay(item)}</Text>
               </Pressable>
-            )}
-          />
+            ))}
+          </ScrollView>
         </View>
       )}
 

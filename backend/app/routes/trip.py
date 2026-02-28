@@ -21,7 +21,6 @@ from constants import (
     OPENWEATHERMAP_API_KEY,
     OPENWEATHERMAP_FORECAST_URL,
     OPENWEATHERMAP_HISTORY_URL,
-    TOMORROW_WEATHER_URL,
 )
 from machine_learning.generator import baseline_list_algorithm
 from machine_learning.optimizer import packing_decision_algorithm
