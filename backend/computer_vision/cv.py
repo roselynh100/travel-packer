@@ -53,13 +53,20 @@ def debug_test_image(image_bytes: bytes):
             f.write(image_bytes)
         print(f"Saved debug image to: {debug_path}")
     except Exception as e:
-        print(f"WARNING: Could not save debug image: {e}")
-
-    print("=== End Image Verification ===\n")
-    return
+        print(f"WARNING: Could not save debug images: {e}")
 
 
-def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
+def annotate_image_with_yolo_plot(yolo_result) -> bytes:
+    """
+    Annotate an image using YOLO's built-in plot() (bounding boxes, labels, confidence).
+    Standalone so it can be reused from /detect and from any future re-annotation (e.g. CV correction).
+    """
+    annotated_img = yolo_result.plot()
+    _, jpeg_buffer = cv2.imencode(".jpg", annotated_img)
+    return jpeg_buffer.tobytes()
+
+
+def detect_objects_yolo(image_bytes: bytes) -> Tuple[List[CVResult], bytes]:
     model = YOLO(YOLO_MODEL_PATH)
     img = bytes_to_numpy(image_bytes)
     results = model(
@@ -119,7 +126,9 @@ def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
             detections_list.append(cv_result)
         # If the class name is not in TARGET_CLASSES, we just skip it
 
-    return detections_list
+    annotated_bytes = annotate_image_with_yolo_plot(result)
+
+    return detections_list, annotated_bytes
 
 
 def detect_object_dimensions(

@@ -1,7 +1,14 @@
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { useCameraPermissions } from "expo-camera";
 import { useIsFocused } from "@react-navigation/native";
-import { useState, useRef, useEffect } from "react";
-import { Button, View, ActivityIndicator, Platform } from "react-native";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Button,
+  View,
+  Image,
+  ActivityIndicator,
+  Platform,
+  type LayoutChangeEvent,
+} from "react-native";
 
 import { apiFetch } from "@/constants/api";
 import {
@@ -16,42 +23,74 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { WeightModal } from "@/components/WeightModal";
 import { CVCorrectionModal } from "@/components/CVCorrectionModal";
-import { BoundingBoxOverlay } from "@/components/BoundingBoxOverlay";
+import { CameraCaptureView } from "@/components/CameraCaptureView";
 import { cn } from "@/helpers/cn";
 
 const CAMERA_CAPTURE_DELAY = 1500;
+
+type InfoBanner = { type: "error" | "info"; message: string } | null;
+
+type ScanResult = {
+  photoUri: string;
+  annotatedUri: string | null;
+  cvResults: CVResult[];
+} | null;
+
+function setBannerFromApiError(
+  error: unknown,
+  setInfoBanner: (b: InfoBanner) => void,
+) {
+  const apiError = error as { status?: number };
+  if (apiError.status === 500) {
+    setInfoBanner({
+      type: "error",
+      message: "YOLO error - object not in target list",
+    });
+  } else if (apiError.status === 404) {
+    setInfoBanner({ type: "error", message: "App error - trip not found" });
+  } else {
+    setInfoBanner({
+      type: "error",
+      message: error instanceof Error ? error.message : "Failed to scan item",
+    });
+  }
+}
 
 // TODO: Merge CVResult and currentItem???
 export default function ScanningScreen() {
   const { tripId, currentItem, setCurrentItem } = useAppContext();
   const [permission, requestPermission] = useCameraPermissions();
 
-  const cameraRef = useRef<CameraView>(null);
-
   const [weightModalVisible, setWeightModalVisible] = useState(false);
   const [weightItem, setWeightItem] = useState<Item | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const [cvResults, setCvResults] = useState<CVResult[] | null>(null);
-  const [infoBanner, setInfoBanner] = useState<{
-    type: "error" | "info";
-    message: string;
-  } | null>(null);
+  const [scanResult, setScanResult] = useState<ScanResult>(null);
+  const [infoBanner, setInfoBanner] = useState<InfoBanner>(null);
   const [correctionModalVisible, setCorrectionModalVisible] = useState(false);
+  const [resultImageSize, setResultImageSize] = useState<number | null>(null);
 
   const isFocused = useIsFocused();
+
+  const onResultImageLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setResultImageSize(Math.min(width, height));
+  }, []);
+
+  const clearScanResult = useCallback(() => {
+    setScanResult(null);
+    setInfoBanner(null);
+    setResultImageSize(null);
+  }, []);
 
   useEffect(() => {
     setWeightModalVisible(isFocused);
   }, [isFocused]);
 
-  // Camera permissions are still loading
   if (!permission) {
     return <View />;
   }
 
-  // Camera permissions are not granted yet
   if (!permission.granted) {
     return (
       <View className="flex-1">
@@ -61,58 +100,28 @@ export default function ScanningScreen() {
     );
   }
 
-  // TODO: Clean up this function
-  async function handleScan() {
-    if (!cameraRef.current || isCapturing || isUploading) return;
+  async function handleCaptured(squareUri: string) {
+    setInfoBanner(null);
+    setScanResult({
+      photoUri: squareUri,
+      annotatedUri: null,
+      cvResults: [],
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
 
     try {
-      // Clear any previous results when starting a new scan
-      setInfoBanner(null);
-      setCvResults(null);
-
-      setIsCapturing(true);
-
-      const photo = await cameraRef.current.takePictureAsync();
-      setCapturedPhoto(photo.uri);
-      console.log("Photo captured successfully:", photo.uri);
-
-      // Let the "capturing" load for a bit, then send to API and reset camera
-      await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
-
-      // When scale is connected, we'll already have an item created (with only weight)
       const { item: uploadedItem, shouldDelayPacking } = await uploadPhotoToAPI(
-        photo.uri,
+        squareUri,
         weightItem?.item_id,
       );
 
-      // Only fetch packing recommendation immediately when we are confident about the CV result.
-      // If low confidence, we defer this until after the user confirms the correct item.
       if (uploadedItem?.item_id && !shouldDelayPacking) {
         await getPackingRecommendation(uploadedItem.item_id);
       }
     } catch (error) {
-      console.error("Error capturing photo:", error);
-
-      const apiError = error as any;
-      if (apiError.status === 500) {
-        setInfoBanner({
-          type: "error",
-          message: "YOLO error - object not in target list",
-        });
-      } else if (apiError.status === 404) {
-        setInfoBanner({
-          type: "error",
-          message: "App error - trip not found",
-        });
-      } else {
-        setInfoBanner({
-          type: "error",
-          message:
-            error instanceof Error ? error.message : "Failed to scan item",
-        });
-      }
-    } finally {
-      setIsCapturing(false);
+      console.error("Error after capture:", error);
+      setBannerFromApiError(error, setInfoBanner);
     }
   }
 
@@ -168,8 +177,18 @@ export default function ScanningScreen() {
       const result: DetectResponse = await response.json();
       console.log("Upload success:", result);
 
-      const { item, cv_candidates } = result;
-      setCvResults(cv_candidates);
+      const { item, cv_candidates, annotated_image } = result;
+      setScanResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              cvResults: cv_candidates,
+              annotatedUri: annotated_image
+                ? `data:image/jpeg;base64,${annotated_image}`
+                : prev.annotatedUri,
+            }
+          : null,
+      );
 
       const updatedItem: ItemWithPackingRecommendation = {
         ...item,
@@ -276,7 +295,7 @@ export default function ScanningScreen() {
         cv_result: choice,
       };
 
-      setCvResults([choice]);
+      setScanResult((prev) => (prev ? { ...prev, cvResults: [choice] } : null));
       setCurrentItem(updatedItem);
 
       if (updatedServerItem.item_id) {
@@ -300,40 +319,54 @@ export default function ScanningScreen() {
         onClose={() => setWeightModalVisible(false)}
         onWeightReady={setWeightItem}
       />
-      {isFocused && !capturedPhoto && (
-        <CameraView
-          facing="back"
-          ref={cameraRef}
-          zoom={0.1}
-          style={{ flex: 1 }}
+      {isFocused && !scanResult && (
+        <CameraCaptureView
+          onCaptureStart={() => setIsCapturing(true)}
+          onCaptured={handleCaptured}
+          onCaptureEnd={() => setIsCapturing(false)}
         />
       )}
-      {capturedPhoto && (
-        <BoundingBoxOverlay
-          uri={capturedPhoto}
-          cvResult={cvResults?.[0] ?? null}
-          isCapturing={isCapturing}
-          isUploading={isUploading}
-        />
+      {scanResult && (
+        <>
+          {infoBanner && !isUploading && (
+            <View
+              className={cn(
+                "w-full py-3 px-4 items-center",
+                infoBanner.type === "error" ? "bg-red-600" : "bg-blue-600",
+              )}
+            >
+              <ThemedText type="subtitle" className="text-white text-center">
+                {infoBanner.message}
+              </ThemedText>
+            </View>
+          )}
+          <View
+            className="flex-1 items-center justify-center"
+            onLayout={onResultImageLayout}
+          >
+            {resultImageSize != null && (
+              <View
+                style={{ width: resultImageSize, height: resultImageSize }}
+                className="bg-black"
+              >
+                <Image
+                  source={{
+                    uri: scanResult.annotatedUri ?? scanResult.photoUri,
+                  }}
+                  className="w-full h-full"
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+          </View>
+        </>
       )}
       <CVCorrectionModal
-        visible={correctionModalVisible && !!capturedPhoto && !isUploading}
-        cvResults={cvResults}
+        visible={correctionModalVisible && !!scanResult && !isUploading}
+        cvResults={scanResult?.cvResults ?? null}
         onSelect={handleCorrectionSelect}
         onDismiss={() => setCorrectionModalVisible(false)}
       />
-      {capturedPhoto && infoBanner && !isUploading && (
-        <View
-          className={cn(
-            "w-full absolute top-0 left-0 right-0 py-3 items-center",
-            infoBanner.type === "error" ? "bg-red-600" : "bg-blue-600",
-          )}
-        >
-          <ThemedText type="subtitle" className="text-white text-center">
-            {infoBanner.message}
-          </ThemedText>
-        </View>
-      )}
       {(isCapturing || isUploading) && (
         <View className="w-full h-full absolute bg-black/50 justify-center items-center">
           <ActivityIndicator size="large" color="#fff" />
@@ -342,21 +375,11 @@ export default function ScanningScreen() {
           </ThemedText>
         </View>
       )}
-      <View className="w-full absolute bottom-8 items-center">
-        {!capturedPhoto && (
-          <ThemedButton title="Scan Item" onPress={handleScan} />
-        )}
-        {capturedPhoto && !isUploading && !isCapturing && (
-          <ThemedButton
-            title="Scan Again"
-            onPress={() => {
-              setCapturedPhoto(null);
-              setInfoBanner(null);
-              setCvResults(null);
-            }}
-          />
-        )}
-      </View>
+      {scanResult && !isUploading && !isCapturing && (
+        <View className="w-full absolute bottom-8 items-center">
+          <ThemedButton title="Scan Again" onPress={clearScanResult} />
+        </View>
+      )}
     </View>
   );
 }
