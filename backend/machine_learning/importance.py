@@ -13,6 +13,7 @@ from app.models import (
     Item,
     Trip,
 )
+from machine_learning.helpers import all_present, default
 
 # Loading model in
 base_path = os.path.dirname(__file__)
@@ -69,14 +70,10 @@ def extract_features(item: Item, trip: Trip, trip_items: List[Item]) -> List[flo
     # Weather
     temperature = (
         (trip.lowest_temp + trip.highest_temp) / 2
-        if (trip.lowest_temp is not None and trip.highest_temp is not None)
+        if all_present(trip.lowest_temp, trip.highest_temp)
         else 20.0
     )
-    precipitation = (
-        trip.precipitation_percentage
-        if trip.precipitation_percentage is not None
-        else 0
-    )
+    precipitation = default(trip.precipitation_percentage, 0)
 
     duration = trip.duration_days
 
@@ -119,7 +116,7 @@ def get_item_importance(item: Item, trip: Trip, trip_items: List[Item]) -> int:
     # Extraction for explicit rules
     item_category = map_to_cat_id(item.cv_result.item_name if item.cv_result else "")
     is_work = 1 if Activity.work in trip.activities else 0
-    low_temp = trip.lowest_temp if trip.lowest_temp is not None else 20.0
+    low_temp = default(trip.lowest_temp, 20.0)
     cat_count = (
         sum(
             1
