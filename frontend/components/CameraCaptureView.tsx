@@ -5,9 +5,7 @@ import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { ThemedButton } from "@/components/ThemedButton";
 
 type Props = {
-  onCaptureStart: () => void;
   onCaptured: (squareUri: string) => void;
-  onCaptureEnd: () => void;
 };
 
 /**
@@ -43,11 +41,7 @@ async function cropToCenterSquare(uri: string): Promise<string> {
   }
 }
 
-export function CameraCaptureView({
-  onCaptureStart,
-  onCaptured,
-  onCaptureEnd,
-}: Props) {
+export function CameraCaptureView({ onCaptured }: Props) {
   const cameraRef = useRef<CameraView>(null);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const size = Math.min(screenWidth, screenHeight);
@@ -55,15 +49,10 @@ export function CameraCaptureView({
   async function handleCapturePress() {
     if (!cameraRef.current) return;
 
-    onCaptureStart();
-    try {
-      const photo = await cameraRef.current.takePictureAsync();
-      if (!photo?.uri) throw new Error("Failed to take picture");
-      const squareUri = await cropToCenterSquare(photo.uri);
-      onCaptured(squareUri);
-    } finally {
-      onCaptureEnd();
-    }
+    const photo = await cameraRef.current.takePictureAsync();
+    if (!photo?.uri) throw new Error("Failed to take picture");
+    const squareUri = await cropToCenterSquare(photo.uri);
+    onCaptured(squareUri);
   }
 
   return (

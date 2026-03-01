@@ -63,8 +63,7 @@ export default function ScanningScreen() {
 
   const [weightModalVisible, setWeightModalVisible] = useState(false);
   const [weightItem, setWeightItem] = useState<Item | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [infoBanner, setInfoBanner] = useState<InfoBanner>(null);
   const [correctionModalVisible, setCorrectionModalVisible] = useState(false);
@@ -113,10 +112,11 @@ export default function ScanningScreen() {
       annotatedUri: null,
       cvResults: [],
     });
-
-    await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
+    setIsProcessing(true);
 
     try {
+      await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
+
       const { item: uploadedItem, shouldDelayPacking } = await uploadPhotoToAPI(
         squareUri,
         weightItem?.item_id,
@@ -128,6 +128,8 @@ export default function ScanningScreen() {
     } catch (error) {
       console.error("Error after capture:", error);
       setBannerFromApiError(error, setInfoBanner);
+    } finally {
+      setIsProcessing(false);
     }
   }
 
@@ -138,87 +140,77 @@ export default function ScanningScreen() {
     item: ItemWithPackingRecommendation | null;
     shouldDelayPacking: boolean;
   }> {
-    try {
-      setIsUploading(true);
+    const formData = new FormData();
 
-      const formData = new FormData();
-
-      if (Platform.OS === "web") {
-        // On web, uri is a blob URL -> need to fetch and convert it
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        formData.append(
-          "image",
-          new File([blob], "image.jpg", {
-            type: "image/jpeg",
-          }),
-        );
-      } else {
-        // iOS and Android - use the file URI directly
-        formData.append("image", {
-          uri,
-          name: "image.jpg",
+    if (Platform.OS === "web") {
+      // On web, uri is a blob URL -> need to fetch and convert it
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      formData.append(
+        "image",
+        new File([blob], "image.jpg", {
           type: "image/jpeg",
-        } as any);
-      }
-
-      const detectUrl = itemId
-        ? `/items/detect?item_id=${encodeURIComponent(itemId)}`
-        : "/items/detect";
-
-      const response = await apiFetch(detectUrl, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const error: any = new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`,
-        );
-        error.status = response.status;
-        throw error;
-      }
-
-      const result: DetectResponse = await response.json();
-      console.log("Upload success:", result);
-
-      const { item, cv_candidates, annotated_image } = result;
-      setScanResult((prev) =>
-        prev
-          ? {
-              ...prev,
-              cvResults: cv_candidates,
-              annotatedUri: annotated_image
-                ? `data:image/jpeg;base64,${annotated_image}`
-                : prev.annotatedUri,
-            }
-          : null,
+        }),
       );
-
-      const updatedItem: ItemWithPackingRecommendation = {
-        ...item,
-        item_name: item.cv_result.item_name,
-        packing_recommendation: null,
-      };
-      setCurrentItem(updatedItem);
-
-      const shouldDelayPacking = cv_candidates.length > 1;
-
-      if (shouldDelayPacking) {
-        setCorrectionModalVisible(true);
-        setInfoBanner({
-          type: "info",
-          message: "We’re not fully sure what this is—please confirm below.",
-        });
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
-
-      return { item: updatedItem, shouldDelayPacking };
-    } finally {
-      setIsUploading(false);
+    } else {
+      // iOS and Android - use the file URI directly
+      formData.append("image", {
+        uri,
+        name: "image.jpg",
+        type: "image/jpeg",
+      } as any);
     }
+
+    const detectUrl = itemId
+      ? `/items/detect?item_id=${encodeURIComponent(itemId)}`
+      : "/items/detect";
+
+    const response = await apiFetch(detectUrl, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const error: any = new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
+      error.status = response.status;
+      throw error;
+    }
+
+    const result: DetectResponse = await response.json();
+    console.log("Upload success:", result);
+
+    const { item, cv_candidates, annotated_image } = result;
+    setScanResult({
+      photoUri: uri,
+      cvResults: cv_candidates,
+      annotatedUri: annotated_image
+        ? `data:image/jpeg;base64,${annotated_image}`
+        : null,
+    });
+
+    const updatedItem: ItemWithPackingRecommendation = {
+      ...item,
+      item_name: item.cv_result.item_name,
+      packing_recommendation: null,
+    };
+    setCurrentItem(updatedItem);
+
+    const shouldDelayPacking = cv_candidates.length > 1;
+
+    if (shouldDelayPacking) {
+      setCorrectionModalVisible(true);
+      setInfoBanner({
+        type: "info",
+        message: "We’re not fully sure what this is—please confirm below.",
+      });
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
+
+    return { item: updatedItem, shouldDelayPacking };
   }
 
   async function getPackingRecommendation(itemId: string) {
@@ -325,16 +317,12 @@ export default function ScanningScreen() {
         onClose={() => setWeightModalVisible(false)}
         onWeightReady={setWeightItem}
       />
-      {isFocused && !scanResult && (
-        <CameraCaptureView
-          onCaptureStart={() => setIsCapturing(true)}
-          onCaptured={handleCaptured}
-          onCaptureEnd={() => setIsCapturing(false)}
-        />
+      {isFocused && !scanResult && !isProcessing && (
+        <CameraCaptureView onCaptured={handleCaptured} />
       )}
       {scanResult && (
         <>
-          {infoBanner && !isUploading && (
+          {infoBanner && (
             <View
               className={cn(
                 "w-full py-3 px-4 items-center",
@@ -368,20 +356,20 @@ export default function ScanningScreen() {
         </>
       )}
       <CVCorrectionModal
-        visible={correctionModalVisible && !!scanResult && !isUploading}
+        visible={correctionModalVisible && !!scanResult && !isProcessing}
         cvResults={scanResult?.cvResults ?? null}
         onSelect={handleCorrectionSelect}
         onDismiss={() => setCorrectionModalVisible(false)}
       />
-      {(isCapturing || isUploading) && (
+      {isProcessing && (
         <View className="w-full h-full absolute bg-black/50 justify-center items-center">
           <ActivityIndicator size="large" color="#fff" />
           <ThemedText type="subtitle" className="text-white mt-8">
-            {isUploading ? "Uploading..." : "Capturing..."}
+            Processing...
           </ThemedText>
         </View>
       )}
-      {scanResult && !isUploading && !isCapturing && (
+      {scanResult && !isProcessing && (
         <View className="w-full absolute bottom-8 items-center">
           <ThemedButton title="Scan Again" onPress={clearScanResult} />
         </View>

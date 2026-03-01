@@ -22,7 +22,7 @@ const steps = [
     title: "Scan your items",
     detail:
       "First, connect the scale and make sure nothing's on it. Then, open the Pack Items tab take a photo to scan your items one at a time.",
-    icon: "gauge" as const,
+    icon: "camera.fill" as const,
   },
   {
     number: 4,
