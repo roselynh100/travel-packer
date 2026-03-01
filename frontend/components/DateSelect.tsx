@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Pressable } from "react-native";
 
 import {
@@ -14,6 +14,7 @@ type DateSelectProps = {
   endDate: string;
   setStartDate: (date: string) => void;
   setEndDate: (date: string) => void;
+  onRangeComplete?: () => void;
 };
 
 export const DateSelect = ({
@@ -21,6 +22,7 @@ export const DateSelect = ({
   endDate,
   setStartDate,
   setEndDate,
+  onRangeComplete,
 }: DateSelectProps) => {
   const [currentMonth, setCurrentMonth] = useState(toDateId(new Date()));
 
@@ -47,6 +49,11 @@ export const DateSelect = ({
       endId: endDate || undefined,
     });
 
+  const prevRangeRef = useRef({
+    startId: startDate || undefined,
+    endId: endDate || undefined,
+  });
+
   useEffect(() => {
     if (dateRange.startId) {
       setStartDate(dateRange.startId);
@@ -54,7 +61,18 @@ export const DateSelect = ({
     if (dateRange.endId) {
       setEndDate(dateRange.endId);
     }
-  }, [dateRange]);
+    // Make sure we only run onRangeComplete when the end date is selected for the first time
+    // Not when we open the calendar with two dates already selected
+    const hadEndBefore = !!prevRangeRef.current.endId;
+    const hasEndNow = !!dateRange.endId;
+    if (dateRange.startId && hasEndNow && !hadEndBefore) {
+      onRangeComplete?.();
+    }
+    prevRangeRef.current = {
+      startId: dateRange.startId,
+      endId: dateRange.endId,
+    };
+  }, [dateRange, onRangeComplete, setStartDate, setEndDate]);
 
   const goToPreviousMonth = () => {
     const date = new Date(currentMonth);

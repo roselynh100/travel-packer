@@ -1,24 +1,14 @@
 import { useState } from "react";
-import {
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { Alert, View } from "react-native";
 import { useRouter } from "expo-router";
 
-import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
-import { ThemedButton } from "@/components/ThemedButton";
+import { ThemedDropdown } from "@/components/ThemedDropdown";
 import { apiFetch } from "@/constants/api";
 import { Gender, User } from "@/constants/types";
 import { useAppContext } from "@/helpers/AppContext";
-import { ThemedDropdown } from "@/components/ThemedDropdown";
-import { ThemedLoading } from "@/components/ThemedLoading";
 import { RequiredLabel } from "@/components/RequiredLabel";
+import { FormScreenLayout } from "@/components/FormScreenLayout";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -32,16 +22,20 @@ export default function HomeScreen() {
 
   const { setUserId } = useAppContext();
 
+  const ageNum = age.trim() === "" ? NaN : parseInt(age, 10);
+  const isAgeValid = !Number.isNaN(ageNum) && ageNum > 0;
+  const canSave =
+    name.trim() !== "" && email.trim() !== "" && isAgeValid && gender !== "";
+
   async function handleSave() {
     try {
       setIsLoading(true);
 
-      // TODO: Fix stuff about password
       const user: User = {
         name,
         email,
         password,
-        age: parseInt(age),
+        age: ageNum,
         gender,
       };
 
@@ -82,82 +76,52 @@ export default function HomeScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1"
+    <FormScreenLayout
+      title="Input your information 🤸"
+      onSave={handleSave}
+      saveDisabled={!canSave}
+      isLoading={isLoading}
+      loadingMessage="Saving user information..."
     >
-      <Pressable
-        onPress={Platform.OS === "web" ? undefined : Keyboard.dismiss}
-        className="flex-1"
-      >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: "space-between",
-          }}
-          className={Platform.OS === "web" ? "p-12" : "p-6"}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View className="flex-col gap-6">
-            <ThemedText type="title">Input your information 🤸</ThemedText>
-            <View className="gap-2">
-              <RequiredLabel>Name</RequiredLabel>
-              <ThemedTextInput
-                value={name}
-                onChangeText={onChangeName}
-                placeholder="John Doe"
-              />
-            </View>
+      <View className="gap-2">
+        <RequiredLabel>Name</RequiredLabel>
+        <ThemedTextInput
+          value={name}
+          onChangeText={onChangeName}
+          placeholder="John Doe"
+        />
+      </View>
 
-            <View className="gap-2">
-              <RequiredLabel>Email</RequiredLabel>
-              <ThemedTextInput
-                value={email}
-                onChangeText={onChangeEmail}
-                placeholder="john.doe@gmail.com"
-              />
-            </View>
+      <View className="gap-2">
+        <RequiredLabel>Email</RequiredLabel>
+        <ThemedTextInput
+          value={email}
+          onChangeText={onChangeEmail}
+          placeholder="john.doe@gmail.com"
+        />
+      </View>
 
-            {/* <View className="gap-2">
-                <ThemedText type="subtitle">Password</ThemedText>
-                <ThemedTextInput
-                  value={password}
-                  onChangeText={onChangePassword}
-                  secureTextEntry={true}
-                />
-              </View> */}
+      <View className="gap-2">
+        <RequiredLabel>Age</RequiredLabel>
+        <ThemedTextInput
+          value={age}
+          onChangeText={onChangeAge}
+          keyboardType="numeric"
+        />
+      </View>
 
-            <View className="gap-2">
-              <RequiredLabel>Age</RequiredLabel>
-              <ThemedTextInput
-                value={age}
-                onChangeText={onChangeAge}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View className="gap-2">
-              <RequiredLabel>Gender</RequiredLabel>
-              <ThemedDropdown
-                value={gender}
-                onChange={(value: string) => onChangeGender(value)}
-                data={Object.entries(Gender).map(([key, value]) => ({
-                  label: value,
-                  value: key,
-                }))}
-                placeholder="Select gender"
-              />
-            </View>
-          </View>
-
-          <ThemedButton title="Save" onPress={handleSave} />
-          <ThemedLoading
-            isLoading={isLoading}
-            message="Saving user information..."
-          />
-        </ScrollView>
-      </Pressable>
-    </KeyboardAvoidingView>
+      <View className="gap-2">
+        <RequiredLabel>Gender</RequiredLabel>
+        <ThemedDropdown
+          value={gender}
+          onChange={(value: string) => onChangeGender(value)}
+          data={Object.entries(Gender).map(([key, value]) => ({
+            label: value,
+            value: key,
+          }))}
+          placeholder="Select gender"
+        />
+      </View>
+    </FormScreenLayout>
   );
 }
