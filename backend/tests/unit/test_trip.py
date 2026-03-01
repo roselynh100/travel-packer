@@ -317,7 +317,6 @@ class _MockResponse:
 def _make_trip(trip_id: str, start: datetime.date, end: datetime.date) -> Trip:
     start_dt = datetime.datetime.combine(start, datetime.time(hour=9))
     end_dt = datetime.datetime.combine(end, datetime.time(hour=17))
-    duration_days = (end - start).days + 1
     return Trip(
         trip_id=trip_id,
         origin_details=Location(city="Home", country="US", airport_code="JFK"),
@@ -541,6 +540,61 @@ class TestRecalculateTripTotals(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["total_weight"], 5.0)
         self.assertEqual(data["total_volume"], 15.0)
+
+
+class TestAirlineWeightLimits(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        trips_store.clear()
+
+    def tearDown(self):
+        trips_store.clear()
+
+    def _trip_payload(self, airline: str) -> dict:
+        start = datetime.datetime(2026, 6, 1, 9, 0, 0)
+        end = datetime.datetime(2026, 6, 5, 9, 0, 0)
+        return {
+            "destination_details": {"city": "Toronto", "country": "Canada"},
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "doing_laundry": False,
+            "bag_type": "Carry-on",
+            "airline": airline,
+            "activities": [],
+            "items": [],
+        }
+
+    def test_create_trip_sets_regular_limits(self):
+        response = self.client.post("/trips/", json=self._trip_payload("Air Canada"))
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["carry_on_limit_kg"], 10.0)
+        self.assertEqual(data["checked_limit_kg"], 23.0)
+
+    def test_create_trip_sets_budget_limits(self):
+        response = self.client.post("/trips/", json=self._trip_payload("Porter"))
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["carry_on_limit_kg"], 8.0)
+        self.assertEqual(data["checked_limit_kg"], 20.0)
+
+    def test_update_airline_recomputes_limits(self):
+        create_response = self.client.post(
+            "/trips/", json=self._trip_payload("Air Canada")
+        )
+        self.assertEqual(create_response.status_code, 200)
+        trip_id = create_response.json()["trip_id"]
+
+        update_response = self.client.put(
+            f"/trips/{trip_id}",
+            json={"airline": "Porter"},
+        )
+        self.assertEqual(update_response.status_code, 200)
+        data = update_response.json()
+        self.assertEqual(data["carry_on_limit_kg"], 8.0)
+        self.assertEqual(data["checked_limit_kg"], 20.0)
 
 
 if __name__ == "__main__":

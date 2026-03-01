@@ -4,6 +4,7 @@
 from typing import List
 
 from app.models import (
+    BagType,
     Item,
     RemovalRecommendation,
     RemovalRecommendationReason,
@@ -13,9 +14,13 @@ from app.models import (
 from machine_learning.helpers import over_limit
 from machine_learning.importance import get_item_importance
 
-# Hard coded limits for now TODO: figure out where to put these
-WEIGHT_LIMIT_KG = 20.0
 VOLUME_LIMIT_CM3 = 50000.0
+
+
+def _trip_weight_limit_kg(trip: Trip) -> float:
+    if trip.bag_type is BagType.carry_on:
+        return trip.carry_on_limit_kg
+    return trip.checked_limit_kg
 
 
 def packing_decision_algorithm(
@@ -35,6 +40,8 @@ def packing_decision_algorithm(
             )
         min_item_importance = min(i.item_importance for i in current_items)
 
+    weight_limit_kg = _trip_weight_limit_kg(trip)
+
     # Check Weight
     if over_limit(
         current=trip.total_items_weight,
@@ -52,7 +59,7 @@ def packing_decision_algorithm(
             # Order by importance ASC and add items to list until overflow is fixed
             weight_overflow = (
                 trip.total_items_weight + new_item.weight_kg
-            ) - WEIGHT_LIMIT_KG
+            ) - weight_limit_kg
             candidates = []
             weight_cleared = 0.0
             for i in sorted(current_items, key=lambda x: x.item_importance):

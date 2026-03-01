@@ -35,6 +35,8 @@ export type Trip = {
   doing_laundry: boolean;
   airline: string;
   bag_type: string;
+  carry_on_limit_kg?: number;
+  checked_limit_kg?: number;
   activities?: string[];
   trip_id?: string;
   lowest_temp?: number;

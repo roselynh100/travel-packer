@@ -30,6 +30,18 @@ class Airline(str, Enum):
     westjet = "Westjet"
 
 
+class AirlineType(str, Enum):
+    budget = "budget"
+    regular = "regular"
+
+
+AIRLINE_TYPES = {
+    Airline.air_canada.value: AirlineType.regular,
+    Airline.porter.value: AirlineType.budget,
+    Airline.westjet.value: AirlineType.regular,
+}
+
+
 class BagType(str, Enum):
     carry_on = "Carry-on"
     checked = "Checked"
@@ -158,12 +170,26 @@ class Trip(BaseModel):
     doing_laundry: bool
     bag_type: BagType
     airline: Airline
-    # probably going to create a map for this internal field?
-    # airline_type: Optional[AirlineType] = AirlineType.budget
+    carry_on_limit_kg: float = 10.0
+    checked_limit_kg: float = 23.0
     activities: List[Activity] = Field(default_factory=list)
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
+
+    @model_validator(mode="after")
+    def set_weight_limits_by_airline(self):
+        airline_value = (
+            self.airline.value if isinstance(self.airline, Airline) else self.airline
+        )
+        airline_type = AIRLINE_TYPES[airline_value]
+        if airline_type == AirlineType.budget:
+            self.carry_on_limit_kg = 8.0
+            self.checked_limit_kg = 20.0
+        else:
+            self.carry_on_limit_kg = 10.0
+            self.checked_limit_kg = 23.0
+        return self
 
     @computed_field
     @property
