@@ -14,6 +14,7 @@ import { DateSelect } from "@/components/DateSelect";
 import { LocationInput } from "@/components/LocationInput";
 import { RequiredLabel } from "@/components/RequiredLabel";
 import { FormScreenLayout } from "@/components/FormScreenLayout";
+import { ThemedButton } from "@/components/ThemedButton";
 
 export default function TripInfo() {
   const router = useRouter();
@@ -92,6 +93,19 @@ export default function TripInfo() {
     fetchAirlines();
     fetchActivities();
   }, []);
+
+  // DEV MODE ONLY TODO: REMOVE FOR PROD
+  const fillDemoData = () => {
+    onChangeDestination({
+      city: "Toronto",
+      state: "Ontario",
+      country: "Canada",
+    });
+    setStartDate("2026-06-01");
+    setEndDate("2026-06-06");
+    onChangeAirline("Air Canada");
+    onChangeBagType(BagType.checked);
+  };
 
   const getDateRangeDisplay = () => {
     if (!startDate && !endDate) {
@@ -186,6 +200,12 @@ export default function TripInfo() {
       isLoading={isLoading}
       loadingMessage="Saving your trip..."
     >
+      <ThemedButton
+        onPress={fillDemoData}
+        title="Fill demo data"
+        className="self-start"
+        variant="outline"
+      />
       <View className="gap-2">
         <RequiredLabel>Destination</RequiredLabel>
         <LocationInput onSelect={onChangeDestination} />
