@@ -25,11 +25,14 @@ export default function PackingList() {
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const [tripInfo, setTripInfo] = useState<Trip | null>(null);
 
-  // Only re-fetch recommendations when the tripId changes
+  // Re-fetch recommendations when tripId changes; clear list first so we don't show previous trip's data
   useEffect(() => {
-    const fetchRecommendations = async () => {
-      if (!tripId) return;
+    if (!tripId) return;
 
+    setPackingListItems([]);
+    setCheckedItems(new Set());
+
+    const fetchRecommendations = async () => {
       try {
         const response = await apiFetch(
           `/trips/${tripId}/recommendations`
@@ -74,8 +77,11 @@ export default function PackingList() {
     }
   }, [tripId]);
 
-  // Re-fetch trip info when tripId changes
+  // Re-fetch trip info when tripId changes; clear first so weight/volume show 0 until loaded
   useEffect(() => {
+    if (!tripId) return;
+
+    setTripInfo(null);
     fetchTripInfo();
   }, [tripId, fetchTripInfo]);
 

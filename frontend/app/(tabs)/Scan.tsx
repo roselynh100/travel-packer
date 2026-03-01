@@ -81,7 +81,13 @@ export default function ScanningScreen() {
     setScanResult(null);
     setInfoBanner(null);
     setResultImageSize(null);
+    setCorrectionModalVisible(false);
   }, []);
+
+  // Reset everything when a new trip starts
+  useEffect(() => {
+    clearScanResult();
+  }, [tripId, clearScanResult]);
 
   useEffect(() => {
     setWeightModalVisible(isFocused);
