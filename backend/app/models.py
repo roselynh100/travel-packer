@@ -170,26 +170,30 @@ class Trip(BaseModel):
     doing_laundry: bool
     bag_type: BagType
     airline: Airline
-    carry_on_limit_kg: float = 10.0
-    checked_limit_kg: float = 23.0
     activities: List[Activity] = Field(default_factory=list)
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
 
-    @model_validator(mode="after")
-    def set_weight_limits_by_airline(self):
+    def _airline_type(self) -> AirlineType:
         airline_value = (
             self.airline.value if isinstance(self.airline, Airline) else self.airline
         )
-        airline_type = AIRLINE_TYPES[airline_value]
-        if airline_type == AirlineType.budget:
-            self.carry_on_limit_kg = 8.0
-            self.checked_limit_kg = 20.0
-        else:
-            self.carry_on_limit_kg = 10.0
-            self.checked_limit_kg = 23.0
-        return self
+        return AIRLINE_TYPES[airline_value]
+
+    @computed_field
+    @property
+    def carry_on_limit_kg(self) -> float:
+        if self._airline_type() == AirlineType.budget:
+            return 8.0
+        return 10.0
+
+    @computed_field
+    @property
+    def checked_limit_kg(self) -> float:
+        if self._airline_type() == AirlineType.budget:
+            return 20.0
+        return 23.0
 
     @computed_field
     @property

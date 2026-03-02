@@ -18,7 +18,7 @@ VOLUME_LIMIT_CM3 = 50000.0
 
 
 def _trip_weight_limit_kg(trip: Trip) -> float:
-    if trip.bag_type is BagType.carry_on:
+    if trip.bag_type in (BagType.carry_on, BagType.carry_on.value):
         return trip.carry_on_limit_kg
     return trip.checked_limit_kg
 
