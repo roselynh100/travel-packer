@@ -17,7 +17,7 @@ __pycache__/
 # CV
 *.pt
 debug_images/
-/backend/computer_vision/model_train/
-/backend/computer_vision/models/
+computer_vision/model_train/
+computer_vision/models/
 
 /backend/constants.py
