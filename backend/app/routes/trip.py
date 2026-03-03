@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.models import (
     Activity,
+    Airline,
     Item,
     RecommendedItem,
     RemovalRecommendation,
@@ -20,7 +21,6 @@ from constants import (
     OPENWEATHERMAP_API_KEY,
     OPENWEATHERMAP_FORECAST_URL,
     OPENWEATHERMAP_HISTORY_URL,
-    TOMORROW_WEATHER_URL,
 )
 from machine_learning.generator import baseline_list_algorithm
 from machine_learning.optimizer import packing_decision_algorithm
@@ -256,6 +256,7 @@ def _trip_within_forecast_window(start: datetime.date, end: datetime.date) -> bo
 
 @router.post("/", response_model=Trip)
 def create_trip(trip: Trip, user_id: Optional[str] = None):
+    # TODO: do the airline name to airline type mapping
     trips_store[trip.trip_id] = trip
 
     # associate user if provided
@@ -280,6 +281,12 @@ def get_trips():
 def get_activities():
     """Get all activities."""
     return [activity.value for activity in Activity]
+
+
+@router.get("/airlines", response_model=List[str])
+def get_airlines():
+    """Get all airlines."""
+    return [airline.value for airline in Airline]
 
 
 @router.get("/{trip_id}", response_model=Trip)
@@ -436,39 +443,6 @@ def get_packing_decision(trip_id: str, item_id: str):
     items = get_trip_items(trip_id)
 
     return packing_decision_algorithm(item, trip, items)
-
-
-@router.post("/{trip_id}/weather")
-def get_weather_deprecated(trip_id: str):
-    if trip_id not in trips_store:
-        raise HTTPException(status_code=404, detail="Trip not found")
-
-    trip = trips_store[trip_id]
-    destination = trip.destination
-
-    print(destination)
-    if destination != "New York":
-        raise HTTPException(status_code=404, detail="Location not supported")
-
-    api_url = TOMORROW_WEATHER_URL.format(location=destination)
-
-    headers = {"accept": "application/json", "accept-encoding": "deflate, gzip, br"}
-    response = requests.get(api_url, headers=headers)
-    weather_json_str = response.text
-    weather_data = json.loads(weather_json_str)
-
-    lowest_temp = 1000
-    highest_temp = -1000
-    for timestamp in weather_data["timelines"]["minutely"]:
-        temperature = timestamp["values"]["temperature"]
-        lowest_temp = min(lowest_temp, temperature)
-        highest_temp = max(highest_temp, temperature)
-
-    print(lowest_temp)
-    print(highest_temp)
-
-    trip.highest_temp = highest_temp
-    trip.lowest_temp = lowest_temp
 
 
 @router.get("/{trip_id}/weather", response_model=Trip)

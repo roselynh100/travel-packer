@@ -10,6 +10,7 @@ from app.models import (
     RemovalRecommendationStatus,
     Trip,
 )
+from machine_learning.helpers import over_limit
 from machine_learning.importance import get_item_importance
 
 # Hard coded limits for now TODO: figure out where to put these
@@ -23,18 +24,22 @@ def packing_decision_algorithm(
     """Returns packing status i.e. whether items must be removed."""
 
     # Calculate importance of new item
-    get_item_importance(new_item, trip)
+    new_item.item_importance = get_item_importance(new_item, trip, current_items)
     # Find the minimum importance score of already packed items
     if not current_items:
         min_item_importance = 0
     else:
         for i in current_items:
-            get_item_importance(i, trip)
+            i.item_importance = get_item_importance(
+                i, trip, [item for item in current_items if item is not i]
+            )
         min_item_importance = min(i.item_importance for i in current_items)
 
     # Check Weight
-    if new_item.weight_kg is not None and (
-        trip.total_items_weight + new_item.weight_kg > WEIGHT_LIMIT_KG
+    if over_limit(
+        current=trip.total_items_weight,
+        additional=new_item.weight_kg,
+        limit=WEIGHT_LIMIT_KG,
     ):
         if new_item.item_importance > min_item_importance:
 
@@ -65,8 +70,10 @@ def packing_decision_algorithm(
             )
 
     # Check Volume
-    if new_item.estimated_volume_cm3 is not None and (
-        trip.total_items_volume + new_item.estimated_volume_cm3 > VOLUME_LIMIT_CM3
+    if over_limit(
+        current=trip.total_items_volume,
+        additional=new_item.estimated_volume_cm3,
+        limit=VOLUME_LIMIT_CM3,
     ):
         if new_item.item_importance > min_item_importance:
 

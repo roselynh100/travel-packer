@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
 
 class Activity(str, Enum):
@@ -22,6 +22,17 @@ class Activity(str, Enum):
     surfing = "Surfing"
     swimming = "Swimming"
     work = "Work"
+
+
+class Airline(str, Enum):
+    air_canada = "Air Canada"
+    porter = "Porter"
+    westjet = "Westjet"
+
+
+class BagType(str, Enum):
+    carry_on = "Carry-on"
+    checked = "Checked"
 
 
 class BoundingBox(BaseModel):
@@ -57,7 +68,6 @@ class Dimensions(BaseModel):
 
 class CVResult(BaseModel):
     item_name: str
-    class_name: str
     confidence_score: float = Field(..., ge=0.0, le=1.0)
     bounding_boxes: List[BoundingBox]
     dimensions: Dimensions
@@ -77,6 +87,19 @@ class ItemUpdate(BaseModel):
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_result: Optional[CVResult] = None
+
+
+class DetectResponse(BaseModel):
+    item: Item
+    cv_candidates: List[CVResult]
+    annotated_image: Optional[str] = None
+
+
+class ItemPriceResult(BaseModel):
+    item_name: str
+    source: str
+    price: float
+    currency: Optional[str] = None
 
 
 class RecommendedItem(BaseModel):
@@ -113,19 +136,26 @@ class Destination(BaseModel):
 
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
-    destination: str
     destination_details: Destination
-    duration_days: int
     start_date: datetime.datetime
     end_date: datetime.datetime
     highest_temp: Optional[float] = None
     lowest_temp: Optional[float] = None
     precipitation_percentage: Optional[float] = None
     doing_laundry: bool
+    bag_type: BagType
+    airline: Airline
+    # probably going to create a map for this internal field?
+    # airline_type: Optional[AirlineType] = AirlineType.budget
     activities: List[Activity] = Field(default_factory=list)
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
+
+    @computed_field
+    @property
+    def duration_days(self) -> int:
+        return (self.end_date - self.start_date).days + 1
 
     class Config:
         use_enum_values = True
@@ -137,15 +167,17 @@ class TripUpdate(BaseModel):
     start_date: Optional[datetime.datetime] = None
     end_date: Optional[datetime.datetime] = None
     doing_laundry: Optional[bool] = None
-    items: Optional[List[str]] = None
     activities: Optional[List[Activity]] = None
+    bag_type: Optional[BagType] = None
+    airline: Optional[Airline] = None
+    items: Optional[List[str]] = None
 
 
 class Gender(str, Enum):
     male = "male"
     female = "female"
     non_binary = "non-binary"
-    other = ("other",)
+    other = "other"
     prefer_not_to_disclose = "prefer not to disclose"
 
 

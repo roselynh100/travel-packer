@@ -1,11 +1,19 @@
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { useCameraPermissions } from "expo-camera";
 import { useIsFocused } from "@react-navigation/native";
-import { useState, useRef } from "react";
-import { Button, View, ActivityIndicator, Platform } from "react-native";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Button,
+  View,
+  Image,
+  ActivityIndicator,
+  Platform,
+  type LayoutChangeEvent,
+} from "react-native";
 
-import { API_BASE_URL } from "@/constants/api";
+import { apiFetch } from "@/constants/api";
 import {
   CVResult,
+  DetectResponse,
   Item,
   ItemWithPackingRecommendation,
   PackingRecommendation,
@@ -13,35 +21,81 @@ import {
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
-import { BoundingBoxOverlay } from "@/components/BoundingBoxOverlay";
+import { WeightModal } from "@/components/WeightModal";
+import { CVCorrectionModal } from "@/components/CVCorrectionModal";
+import { CameraCaptureView } from "@/components/CameraCaptureView";
 import { cn } from "@/helpers/cn";
 
 const CAMERA_CAPTURE_DELAY = 1500;
 
+type InfoBanner = { type: "error" | "info"; message: string } | null;
+
+type ScanResult = {
+  photoUri: string;
+  annotatedUri: string | null;
+  cvResults: CVResult[];
+} | null;
+
+function setBannerFromApiError(
+  error: unknown,
+  setInfoBanner: (b: InfoBanner) => void,
+) {
+  const apiError = error as { status?: number };
+  if (apiError.status === 500) {
+    setInfoBanner({
+      type: "error",
+      message: "YOLO error - object not in target list",
+    });
+  } else if (apiError.status === 404) {
+    setInfoBanner({ type: "error", message: "App error - trip not found" });
+  } else {
+    setInfoBanner({
+      type: "error",
+      message: error instanceof Error ? error.message : "Failed to scan item",
+    });
+  }
+}
+
 // TODO: Merge CVResult and currentItem???
 export default function ScanningScreen() {
-  const { tripId, setCurrentItem } = useAppContext();
+  const { tripId, currentItem, setCurrentItem } = useAppContext();
   const [permission, requestPermission] = useCameraPermissions();
 
-  const cameraRef = useRef<CameraView>(null);
-
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const [cvResult, setCvResult] = useState<CVResult | null>(null);
-  const [infoBanner, setInfoBanner] = useState<{
-    type: "error" | "info";
-    message: string;
-  } | null>(null);
+  const [weightModalVisible, setWeightModalVisible] = useState(false);
+  const [weightItem, setWeightItem] = useState<Item | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult>(null);
+  const [infoBanner, setInfoBanner] = useState<InfoBanner>(null);
+  const [correctionModalVisible, setCorrectionModalVisible] = useState(false);
+  const [resultImageSize, setResultImageSize] = useState<number | null>(null);
 
   const isFocused = useIsFocused();
 
-  // Camera permissions are still loading
+  const onResultImageLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setResultImageSize(Math.min(width, height));
+  }, []);
+
+  const clearScanResult = useCallback(() => {
+    setScanResult(null);
+    setInfoBanner(null);
+    setResultImageSize(null);
+    setCorrectionModalVisible(false);
+  }, []);
+
+  // Reset everything when a new trip starts
+  useEffect(() => {
+    clearScanResult();
+  }, [tripId, clearScanResult]);
+
+  useEffect(() => {
+    setWeightModalVisible(isFocused);
+  }, [isFocused]);
+
   if (!permission) {
     return <View />;
   }
 
-  // Camera permissions are not granted yet
   if (!permission.granted) {
     return (
       <View className="flex-1">
@@ -51,262 +105,275 @@ export default function ScanningScreen() {
     );
   }
 
-  // TODO: Clean up this function
-  async function handleScan() {
-    if (!cameraRef.current || isCapturing || isUploading) return;
+  async function handleCaptured(squareUri: string) {
+    setInfoBanner(null);
+    setScanResult({
+      photoUri: squareUri,
+      annotatedUri: null,
+      cvResults: [],
+    });
+    setIsProcessing(true);
 
     try {
-      // Clear any previous results when starting a new scan
-      setInfoBanner(null);
-      setCvResult(null);
-
-      setIsCapturing(true);
-
-      const photo = await cameraRef.current.takePictureAsync();
-      setCapturedPhoto(photo.uri);
-      console.log("Photo captured successfully:", photo.uri);
-
-      // Let the "capturing" load for a bit, then send to API and reset camera
       await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
 
-      const uploadedItem = await uploadPhotoToAPI(photo.uri);
+      const { item: uploadedItem, shouldDelayPacking } = await uploadPhotoToAPI(
+        squareUri,
+        weightItem?.item_id,
+      );
 
-      // TODO: Uncomment when scale is connected
-      // if (uploadedItem?.item_id) {
-      //   await readWeight(uploadedItem.item_id);
-      // }
-
-      if (uploadedItem?.item_id) {
+      if (uploadedItem?.item_id && !shouldDelayPacking) {
         await getPackingRecommendation(uploadedItem.item_id);
       }
     } catch (error) {
-      console.error("Error capturing photo:", error);
-
-      const apiError = error as any;
-      if (apiError.status === 500) {
-        setInfoBanner({
-          type: "error",
-          message: "YOLO error - object not in target list",
-        });
-      } else if (apiError.status === 404) {
-        setInfoBanner({
-          type: "error",
-          message: "App error - trip not found",
-        });
-      } else {
-        setInfoBanner({
-          type: "error",
-          message:
-            error instanceof Error ? error.message : "Failed to scan item",
-        });
-      }
+      console.error("Error after capture:", error);
+      setBannerFromApiError(error, setInfoBanner);
     } finally {
-      setIsCapturing(false);
+      setIsProcessing(false);
     }
   }
 
   async function uploadPhotoToAPI(
-    uri: string
-  ): Promise<ItemWithPackingRecommendation | null> {
-    try {
-      setIsUploading(true);
+    uri: string,
+    itemId?: string,
+  ): Promise<{
+    item: ItemWithPackingRecommendation | null;
+    shouldDelayPacking: boolean;
+  }> {
+    const formData = new FormData();
 
-      const formData = new FormData();
-
-      if (Platform.OS === "web") {
-        // On web, uri is a blob URL -> need to fetch and convert it
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        formData.append(
-          "image",
-          new File([blob], "image.jpg", {
-            type: "image/jpeg",
-          })
-        );
-      } else {
-        // iOS and Android - use the file URI directly
-        formData.append("image", {
-          uri,
-          name: "image.jpg",
+    if (Platform.OS === "web") {
+      // On web, uri is a blob URL -> need to fetch and convert it
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      formData.append(
+        "image",
+        new File([blob], "image.jpg", {
           type: "image/jpeg",
-        } as any);
-      }
-
-      const response = await fetch(`${API_BASE_URL}/items/detect`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const error: any = new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
-        );
-        error.status = response.status;
-        throw error;
-      }
-
-      const result: Item = await response.json();
-      console.log("Upload success:", result);
-
-      setCvResult(result.cv_result);
-      const updatedItem: ItemWithPackingRecommendation = {
-        ...result,
-        item_name: result.cv_result.item_name,
-        packing_recommendation: null,
-      };
-      setCurrentItem(updatedItem);
-
-      await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
-
-      return updatedItem;
-    } finally {
-      setIsUploading(false);
-    }
-  }
-
-  async function readWeight(itemId: string) {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/items/weight?item_id=${itemId}`,
-        {
-          method: "POST",
-        }
+        }),
       );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const error: any = new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
-        );
-        error.status = response.status;
-        throw error;
-      }
-
-      const result: Item = await response.json();
-      console.log("Weight read successfully:", result);
-
-      // Only update if currentItem still matches (user hasn't scanned a new item)
-      setCurrentItem((prevItem) => {
-        if (prevItem?.item_id === itemId) {
-          return {
-            ...prevItem,
-            weight_kg: result.weight_kg,
-          };
-        }
-        // If item changed, don't update (user scanned a new item)
-        return prevItem;
-      });
-    } catch (error) {
-      console.error("Error reading weight:", error);
+    } else {
+      // iOS and Android - use the file URI directly
+      formData.append("image", {
+        uri,
+        name: "image.jpg",
+        type: "image/jpeg",
+      } as any);
     }
+
+    const detectUrl = itemId
+      ? `/items/detect?item_id=${encodeURIComponent(itemId)}`
+      : "/items/detect";
+
+    const response = await apiFetch(detectUrl, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const error: any = new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
+      error.status = response.status;
+      throw error;
+    }
+
+    const result: DetectResponse = await response.json();
+    console.log("Upload success:", result);
+
+    const { item, cv_candidates, annotated_image } = result;
+    setScanResult({
+      photoUri: uri,
+      cvResults: cv_candidates,
+      annotatedUri: annotated_image
+        ? `data:image/jpeg;base64,${annotated_image}`
+        : null,
+    });
+
+    const updatedItem: ItemWithPackingRecommendation = {
+      ...item,
+      item_name: item.cv_result.item_name,
+      packing_recommendation: null,
+    };
+    setCurrentItem(updatedItem);
+
+    const shouldDelayPacking = cv_candidates.length > 1;
+
+    if (shouldDelayPacking) {
+      setCorrectionModalVisible(true);
+      setInfoBanner({
+        type: "info",
+        message: "We’re not fully sure what this is—please confirm below.",
+      });
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, CAMERA_CAPTURE_DELAY));
+
+    return { item: updatedItem, shouldDelayPacking };
   }
 
   async function getPackingRecommendation(itemId: string) {
+    const response = await apiFetch(
+      `/trips/${tripId}/item/${itemId}/packing-decision`,
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const error: any = new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
+      error.status = response.status;
+      throw error;
+    }
+
+    const result: PackingRecommendation = await response.json();
+    console.log("Packing recommendation received:", result);
+
+    // Only update if currentItem still matches (user hasn't scanned a new item)
+    setCurrentItem((prevItem) => {
+      if (prevItem?.item_id === itemId) {
+        return {
+          ...prevItem,
+          packing_recommendation: result.status,
+        };
+      }
+      // If item changed, don't update (user scanned a new item)
+      return prevItem;
+    });
+
+    if (result.status === "pack") {
+      setInfoBanner({
+        type: "info",
+        message: "This item should be packed!",
+      });
+    } else if (result.status === "remove") {
+      setInfoBanner({
+        type: "info",
+        message: `Do not pack this item. ${result.reason}`,
+      });
+    } else if (result.status === "swap") {
+      setInfoBanner({
+        type: "info",
+        message: "You must remove an item to pack this one!",
+      });
+    }
+  }
+
+  async function handleCorrectionSelect(choice: CVResult) {
+    if (!currentItem) {
+      setCorrectionModalVisible(false);
+      return;
+    }
+
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/trips/${tripId}/item/${itemId}/packing-decision`
+      const response = await apiFetch(
+        `/items/${encodeURIComponent(currentItem.item_id)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ cv_result: choice }),
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
-        const error: any = new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
+        throw new Error(
+          `API error (${response.status}): ${errorText || response.statusText}`,
         );
-        error.status = response.status;
-        throw error;
       }
 
-      const result: PackingRecommendation = await response.json();
-      console.log("Packing recommendation received:", result);
+      const updatedServerItem: Item = await response.json();
 
-      // Only update if currentItem still matches (user hasn't scanned a new item)
-      setCurrentItem((prevItem) => {
-        if (prevItem?.item_id === itemId) {
-          return {
-            ...prevItem,
-            packing_recommendation: result.status,
-          };
-        }
-        // If item changed, don't update (user scanned a new item)
-        return prevItem;
-      });
+      const updatedItem: ItemWithPackingRecommendation = {
+        ...currentItem,
+        item_name: choice.item_name,
+        cv_result: choice,
+      };
 
-      if (result.status === "pack") {
-        setInfoBanner({
-          type: "info",
-          message: "This item should be packed!",
-        });
-      } else if (result.status === "remove") {
-        setInfoBanner({
-          type: "info",
-          message: `Do not pack this item. ${result.reason}`,
-        });
-      } else if (result.status === "swap") {
-        setInfoBanner({
-          type: "info",
-          message: "You must remove an item to pack this one!",
-        });
+      setScanResult((prev) => (prev ? { ...prev, cvResults: [choice] } : null));
+      setCurrentItem(updatedItem);
+
+      if (updatedServerItem.item_id) {
+        await getPackingRecommendation(updatedServerItem.item_id);
       }
     } catch (error) {
-      console.error("Error getting packing recommendation:", error);
-      throw error;
+      console.error("Error correcting item classification:", error);
+      setInfoBanner({
+        type: "error",
+        message: "Failed to update item classification. Please try again.",
+      });
+    } finally {
+      setCorrectionModalVisible(false);
     }
   }
 
   return (
     <View className="flex-1">
-      {isFocused && !capturedPhoto && (
-        <CameraView
-          facing="back"
-          ref={cameraRef}
-          zoom={0.1}
-          style={{ flex: 1 }}
-        />
+      <WeightModal
+        visible={weightModalVisible}
+        onClose={() => setWeightModalVisible(false)}
+        onWeightReady={setWeightItem}
+      />
+      {isFocused && !scanResult && !isProcessing && (
+        <CameraCaptureView onCaptured={handleCaptured} />
       )}
-      {capturedPhoto && (
-        <BoundingBoxOverlay
-          uri={capturedPhoto}
-          cvResult={cvResult}
-          isCapturing={isCapturing}
-          isUploading={isUploading}
-        />
-      )}
-      {capturedPhoto && infoBanner && !isUploading && (
-        <View
-          className={cn(
-            "w-full absolute top-0 left-0 right-0 py-3 items-center",
-            infoBanner.type === "error" ? "bg-red-600" : "bg-blue-600"
+      {scanResult && (
+        <>
+          {infoBanner && (
+            <View
+              className={cn(
+                "w-full py-3 px-4 items-center",
+                infoBanner.type === "error" ? "bg-red-600" : "bg-blue-600",
+              )}
+            >
+              <ThemedText type="subtitle" className="text-white text-center">
+                {infoBanner.message}
+              </ThemedText>
+            </View>
           )}
-        >
-          <ThemedText type="subtitle" className="text-white text-center">
-            {infoBanner.message}
-          </ThemedText>
-        </View>
+          <View
+            className="flex-1 items-center justify-center"
+            onLayout={onResultImageLayout}
+          >
+            {resultImageSize != null && (
+              <View
+                style={{ width: resultImageSize, height: resultImageSize }}
+                className="bg-black"
+              >
+                <Image
+                  source={{
+                    uri: scanResult.annotatedUri ?? scanResult.photoUri,
+                  }}
+                  className="w-full h-full"
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+          </View>
+        </>
       )}
-      {(isCapturing || isUploading) && (
+      <CVCorrectionModal
+        visible={correctionModalVisible && !!scanResult && !isProcessing}
+        cvResults={scanResult?.cvResults ?? null}
+        onSelect={handleCorrectionSelect}
+        onDismiss={() => setCorrectionModalVisible(false)}
+      />
+      {isProcessing && (
         <View className="w-full h-full absolute bg-black/50 justify-center items-center">
           <ActivityIndicator size="large" color="#fff" />
           <ThemedText type="subtitle" className="text-white mt-8">
-            {isUploading ? "Uploading..." : "Capturing..."}
+            Processing...
           </ThemedText>
         </View>
       )}
-      <View className="w-full absolute bottom-8 items-center">
-        {!capturedPhoto && (
-          <ThemedButton title="Scan Item" onPress={handleScan} />
-        )}
-        {capturedPhoto && !isUploading && !isCapturing && (
-          <ThemedButton
-            title="Scan Again"
-            onPress={() => {
-              setCapturedPhoto(null);
-              setInfoBanner(null);
-              setCvResult(null);
-            }}
-          />
-        )}
-      </View>
+      {scanResult && !isProcessing && (
+        <View className="w-full absolute bottom-8 items-center">
+          <ThemedButton title="Scan Again" onPress={clearScanResult} />
+        </View>
+      )}
     </View>
   );
 }

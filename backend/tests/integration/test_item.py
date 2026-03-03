@@ -1,13 +1,27 @@
+import os
+import sys
 import unittest
+from pathlib import Path
+
 import usb.core
 from fastapi.testclient import TestClient
-import sys
-from pathlib import Path
 
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
+from app.models import BoundingBox, CVResult, Dimensions, Item
 from app.state.db import items_store
+
+
+def _item_with_cv(item_id: str) -> Item:
+    cv = CVResult(
+        item_name="bag",
+        confidence_score=0.9,
+        bounding_boxes=[BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4)],
+        dimensions=Dimensions(length=10.0, width=5.0, height=2.0),
+    )
+    return Item(item_id=item_id, cv_result=cv)
+
 
 def scale_available():
     """Check if DYMO scale is connected."""
@@ -25,37 +39,42 @@ class TestRealScaleIntegration(unittest.TestCase):
         self.client = TestClient(app)
         items_store.clear()
         from app.state.db import trips_store
+
         trips_store.clear()
 
         from app.models import Trip
+
         trips_store["realtrip"] = Trip(
             trip_id="realtrip",
             destination="TestCity",
             duration_days=1,
             doing_laundry=False,
-            items=[]
+            items=[],
         )
         trips_store["t1"] = Trip(
             trip_id="t1",
             destination="TestCity",
             duration_days=1,
             doing_laundry=False,
-            items=[]
+            items=[],
         )
 
     def tearDown(self):
         items_store.clear()
         from app.state.db import trips_store
+
         trips_store.clear()
 
     @unittest.skipUnless(scale_available(), "DYMO scale not connected")
     def test_real_scale_read_creates_item(self):
         """Create an item"""
         from uuid import uuid4
-        
+
         # Note: item_id must be provided due to current implementation
         new_item_id = str(uuid4())
-        response = self.client.post(f"/items/weight?trip_id=realtrip&item_id={new_item_id}")
+        response = self.client.post(
+            f"/items/weight?trip_id=realtrip&item_id={new_item_id}"
+        )
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
@@ -73,11 +92,13 @@ class TestRealScaleIntegration(unittest.TestCase):
         """Update an item using scale weight reading."""
 
         from app.models import Item
+
         item = Item(item_id="i1")
         item.trips.append("t1")
         items_store["i1"] = item
 
         from app.state.db import trips_store
+
         trips_store["t1"].items.append("i1")
 
         response = self.client.post("/items/weight?trip_id=t1&item_id=i1")
@@ -95,7 +116,7 @@ class TestRealScaleIntegration(unittest.TestCase):
     def test_real_scale_association_with_trip(self):
         """Ensure scale readings associate item to the trip."""
         from uuid import uuid4
-        
+
         # Note: item_id must be provided due to current implementation
         new_item_id = str(uuid4())
         response = self.client.post(f"/items/weight?trip_id=t1&item_id={new_item_id}")
@@ -106,7 +127,37 @@ class TestRealScaleIntegration(unittest.TestCase):
         self.assertEqual(item_id, new_item_id)
 
         from app.state.db import trips_store
+
         self.assertIn(item_id, trips_store["t1"].items)
 
-if __name__ == '__main__':
+
+class TestSerpApiIntegration(unittest.TestCase):
+    """Integration test using real SerpAPI endpoint."""
+
+    def setUp(self):
+        self.client = TestClient(app)
+        items_store.clear()
+
+    def tearDown(self):
+        items_store.clear()
+
+    def test_get_item_price_hits_serpapi(self):
+        items_store["i1"] = _item_with_cv("i1")
+
+        response = self.client.get(
+            "/items/i1/price",
+            params={"country": "United States", "limit": 1},
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+
+        data = response.json()
+        print(data)
+        self.assertGreaterEqual(len(data), 1)
+        self.assertIsInstance(data[0]["item_name"], str)
+        self.assertIsInstance(data[0]["source"], str)
+        self.assertIsInstance(data[0]["price"], (int, float))
+        self.assertEqual(data[0]["currency"], "USD")
+
+
+if __name__ == "__main__":
     unittest.main()

@@ -3,22 +3,36 @@ export type User = {
   email: string;
   password: string; // TODO: how to safely save their password (this is a BE thing)
   age?: number;
-  gender?: Gender;
+  gender?: string;
   user_id?: string;
 };
 
 export enum Gender {
-  Male = "male",
-  Female = "female",
-  NonBinary = "non-binary",
-  Other = "other",
-  PrefNotToDisclose = "prefer not to disclose",
+  male = "Male",
+  female = "Female",
+  non_binary = "Non-binary",
+  other = "Other",
+  prefer_not_to_disclose = "Prefer not to disclose",
 }
 
+export enum BagType {
+  carry_on = "Carry-on",
+  checked = "Checked",
+}
+
+export type LocationResult = {
+  city: string;
+  state?: string;
+  country: string;
+};
+
 export type Trip = {
-  destination: string;
-  duration_days: number;
+  destination_details: LocationResult;
+  start_date: string;
+  end_date: string;
   doing_laundry: boolean;
+  airline: string;
+  bag_type: string;
   activities?: string[];
   trip_id?: string;
   total_items_weight?: number;
@@ -40,9 +54,14 @@ export type Item = {
   trips: string[];
 };
 
+export type DetectResponse = {
+  item: Item;
+  cv_candidates: CVResult[];
+  annotated_image?: string | null;
+};
+
 export type CVResult = {
   item_name: string;
-  class_name: string;
   confidence_score: number;
   bounding_boxes: BoundingBox[];
   dimensions: Dimensions;

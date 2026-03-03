@@ -1,46 +1,79 @@
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { Alert, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
-import { ThemedButton } from "@/components/ThemedButton";
-import { API_BASE_URL } from "@/constants/api";
-import { Trip } from "@/constants/types";
+import { ThemedDropdown } from "@/components/ThemedDropdown";
+import { apiFetch } from "@/constants/api";
+import { BagType, LocationResult, Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
-import { ThemedLoading } from "@/components/ThemedLoading";
 import { ThemedMultiSelect } from "@/components/ThemedMultiSelect";
+import { DateSelect } from "@/components/DateSelect";
+import { LocationInput } from "@/components/LocationInput";
+import { RequiredLabel } from "@/components/RequiredLabel";
+import { FormScreenLayout } from "@/components/FormScreenLayout";
+import { ThemedButton } from "@/components/ThemedButton";
 
 export default function TripInfo() {
   const router = useRouter();
 
-  const [destination, onChangeDestination] = useState("");
-  const [dates, onChangeDates] = useState("");
+  const [destination, onChangeDestination] = useState<LocationResult>({
+    city: "",
+    state: undefined,
+    country: "",
+  });
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [laundry, onChangeLaundry] = useState(false);
+  const [airline, onChangeAirline] = useState<string>("");
+  const [airlineOptions, setAirlineOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [bagType, onChangeBagType] = useState<string>("");
   const [activities, onChangeActivities] = useState<string[]>([]);
-  const [activityOptions, setActivityOptions] = useState<{ label: string; value: string }[]>([]);
+  const [activityOptions, setActivityOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const { userId, setTripId } = useAppContext();
 
   useEffect(() => {
-    const fetchActivities = async () => {
+    const fetchAirlines = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/trips/activities`);
+        const response = await apiFetch("/trips/airlines");
 
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(
-            `API error (${response.status}): ${errorText || response.statusText}`
+            `API error (${response.status}): ${errorText || response.statusText}`,
+          );
+        }
+
+        const airlinesList: string[] = await response.json();
+        const formattedAirlines = airlinesList.map((airline) => ({
+          label: airline,
+          value: airline,
+        }));
+
+        setAirlineOptions(formattedAirlines);
+        console.log("Fetched airlines:", formattedAirlines);
+      } catch (error) {
+        console.error("Error fetching airlines:", error);
+      }
+    };
+
+    const fetchActivities = async () => {
+      try {
+        const response = await apiFetch("/trips/activities");
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `API error (${response.status}): ${errorText || response.statusText}`,
           );
         }
 
@@ -57,21 +90,58 @@ export default function TripInfo() {
       }
     };
 
+    fetchAirlines();
     fetchActivities();
   }, []);
+
+  // DEV MODE ONLY TODO: REMOVE FOR PROD
+  const fillDemoData = () => {
+    onChangeDestination({
+      city: "Toronto",
+      state: "Ontario",
+      country: "Canada",
+    });
+    setStartDate("2026-06-01");
+    setEndDate("2026-06-06");
+    onChangeAirline("Air Canada");
+    onChangeBagType(BagType.checked);
+  };
+
+  const getDateRangeDisplay = () => {
+    if (!startDate && !endDate) {
+      return "Select dates";
+    }
+    if (startDate && !endDate) {
+      return startDate;
+    }
+    return `${startDate} - ${endDate}`;
+  };
+
+  const canSave =
+    destination.country.trim() !== "" &&
+    startDate !== "" &&
+    endDate !== "" &&
+    airline !== "" &&
+    bagType !== "";
 
   async function handleSave() {
     try {
       setIsLoading(true);
 
       const trip: Trip = {
-        destination,
-        duration_days: 5, // TODO: fix, currently hardcoded, figure out date input
-        doing_laundry: laundry,
+        destination_details: destination,
+        airline,
+        start_date: startDate,
+        end_date: endDate,
+        bag_type: bagType,
         activities: activities.length > 0 ? activities : undefined,
+        doing_laundry: laundry,
       };
 
-      await saveToAPI(trip);
+      const savedTrip = await saveToAPI(trip);
+      if (savedTrip.trip_id) {
+        await fetchWeather(savedTrip.trip_id);
+      }
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
       router.push("/PackingList");
@@ -79,105 +149,130 @@ export default function TripInfo() {
       console.error("Error saving trip details:", error);
       Alert.alert(
         "Error",
-        error instanceof Error ? error.message : "Failed to save trip details"
+        error instanceof Error ? error.message : "Failed to save trip details",
       );
     } finally {
       setIsLoading(false);
     }
   }
 
-  async function saveToAPI(tripInput: Trip) {
-    try {
-      const url = userId
-        ? `${API_BASE_URL}/trips/?user_id=${userId}`
-        : `${API_BASE_URL}/trips/`;
+  async function saveToAPI(tripInput: Trip): Promise<Trip> {
+    const url = userId ? `/trips/?user_id=${userId}` : "/trips/";
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(tripInput),
-      });
+    const response = await apiFetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tripInput),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `API error (${response.status}): ${errorText || response.statusText}`
-        );
-      }
-
-      const result: Trip = await response.json();
-      console.log("Save success:", result);
-      setTripId(result.trip_id ?? "No trip id saved");
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
     }
+
+    const result: Trip = await response.json();
+    console.log("Save success:", result);
+    setTripId(result.trip_id ?? "No trip id saved");
+    return result;
+  }
+
+  async function fetchWeather(tripId: string) {
+    const response = await apiFetch(`/trips/${tripId}/weather`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`,
+      );
+    }
+
+    const result: Trip = await response.json();
+    console.log("Fetched weather:", result);
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1"
+    <FormScreenLayout
+      title="Input your trip details 🌴"
+      onSave={handleSave}
+      saveDisabled={!canSave}
+      isLoading={isLoading}
+      loadingMessage="Saving your trip..."
     >
-      <Pressable
-        onPress={Platform.OS === "web" ? undefined : Keyboard.dismiss}
-        className="flex-1"
-      >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: "space-between",
-          }}
-          className={Platform.OS === "web" ? "p-12" : "p-6"}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View className="flex-col gap-6">
-            <ThemedText type="title">Input your trip details 🌴</ThemedText>
-            <View className="gap-2">
-              <ThemedText type="subtitle">Destination</ThemedText>
-              <ThemedTextInput
-                value={destination}
-                onChangeText={onChangeDestination}
-                placeholder="Toronto, Canada"
-              />
-            </View>
+      <ThemedButton
+        onPress={fillDemoData}
+        title="Fill demo data"
+        className="self-start"
+        variant="outline"
+      />
+      <View className="gap-2">
+        <RequiredLabel>Destination</RequiredLabel>
+        <LocationInput onSelect={onChangeDestination} />
+      </View>
 
-            <View className="gap-2">
-              <ThemedText type="subtitle">Trip Dates</ThemedText>
-              <ThemedTextInput
-                value={dates}
-                onChangeText={onChangeDates}
-                placeholder="May 1, 2026 - May 31, 2026"
-              />
-            </View>
-
-            <View className="gap-2">
-              <ThemedText type="subtitle">
-                Activities Planned (Optional)
-              </ThemedText>
-              <ThemedMultiSelect
-                data={activityOptions}
-                value={activities}
-                onChange={onChangeActivities}
-                placeholder="Search and select activities"
-                searchPlaceholder="Search activities..."
-              />
-            </View>
-
-            <ThemedCheckbox
-              label="I am planning to do laundry"
-              value={laundry}
-              onValueChange={onChangeLaundry}
-              size="medium"
+      <View className="gap-2">
+        <RequiredLabel>Trip Dates</RequiredLabel>
+        <Pressable onPress={() => setIsCalendarVisible(!isCalendarVisible)}>
+          <ThemedTextInput
+            value={getDateRangeDisplay()}
+            editable={false}
+            pointerEvents="none"
+          />
+        </Pressable>
+        {isCalendarVisible && (
+          <View className="gap-2">
+            <DateSelect
+              startDate={startDate}
+              endDate={endDate}
+              setStartDate={setStartDate}
+              setEndDate={setEndDate}
+              onRangeComplete={() => setIsCalendarVisible(false)}
             />
           </View>
+        )}
+      </View>
 
-          <ThemedButton title="Save" onPress={handleSave} />
-          <ThemedLoading isLoading={isLoading} message="Saving your trip..." />
-        </ScrollView>
-      </Pressable>
-    </KeyboardAvoidingView>
+      <View className="gap-2">
+        <RequiredLabel>Airline</RequiredLabel>
+        <ThemedDropdown
+          value={airline}
+          onChange={(value: string) => onChangeAirline(value)}
+          data={airlineOptions}
+          placeholder="Select airline"
+        />
+      </View>
+
+      <View className="gap-2">
+        <RequiredLabel>Bag Type</RequiredLabel>
+        <ThemedDropdown
+          value={bagType}
+          onChange={(value: string) => onChangeBagType(value)}
+          data={Object.values(BagType).map((value) => ({
+            label: value,
+            value: value,
+          }))}
+          placeholder="Select bag type"
+        />
+      </View>
+
+      <View className="gap-2">
+        <ThemedText type="subtitle">Activities Planned (Optional)</ThemedText>
+        <ThemedMultiSelect
+          data={activityOptions}
+          value={activities}
+          onChange={onChangeActivities}
+          placeholder="Search and select activities"
+          searchPlaceholder="Search activities..."
+        />
+      </View>
+
+      <ThemedCheckbox
+        label="I am planning to do laundry"
+        value={laundry}
+        onValueChange={onChangeLaundry}
+        size="medium"
+      />
+    </FormScreenLayout>
   );
 }

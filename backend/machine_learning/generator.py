@@ -1,56 +1,128 @@
-# Main function: baseline_list_algorithm()
-# Returns: List[RecommendedItem]
+from typing import List
 
-from typing import List, Optional
+from app.models import Activity, RecommendedItem, Trip
+from machine_learning.helpers import gt, lt
 
-from app.models import (
-    Activity,
-    RecommendedItem,
-    Trip,
-)
-
-from .item_groups import ACCESSORIES, CLOTHING, ESSENTIALS, TOILETRIES
+CATEGORIES = {
+    0: "unknown",
+    1: "tops",
+    2: "shorts",
+    3: "pants",
+    4: "shoes",
+    5: "toiletries",
+    6: "electronics",
+    7: "jackets",
+    8: "swimsuit",
+    9: "snow pants",
+    10: "skis",
+    11: "snowboard",
+    12: "tent",
+    13: "flip flops",
+    14: "umbrella",
+}
 
 
 def get_base_items() -> List[RecommendedItem]:
-    """Returns the static list of items needed for every trip."""
-    return CLOTHING + ACCESSORIES + TOILETRIES + ESSENTIALS
+    """Returns items that are always required."""
+    base_ids = [1, 3, 4, 5]
+    return [RecommendedItem(item_name=CATEGORIES[i], priority=1) for i in base_ids]
 
 
-def get_work_items(activities: List[Activity]) -> List[RecommendedItem]:
-    """Returns items specific to work trips."""
+def get_conditional_items(trip: Trip) -> List[RecommendedItem]:
     items = []
-    if Activity.work in activities:
-        items.append(
-            RecommendedItem(item_name="laptop", reason="Needed for work", priority=1)
-        )
+
+    # If work is in activities, pack electronics
+    if Activity.work in (trip.activities or []):
         items.append(
             RecommendedItem(
-                item_name="laptop charger", reason="Needed for work", priority=2
+                item_name=CATEGORIES[6], reason="Work requirements", priority=2
             )
         )
-    return items
 
-
-def get_weather_items(lowest_temp: Optional[float]) -> List[RecommendedItem]:
-    """Returns items based on temperature logic."""
-    items = []
-    if lowest_temp is not None and lowest_temp < 10:
+    # If lowest temp is less than 0, pack jacket
+    if lt(trip.lowest_temp, 0):
         items.append(
             RecommendedItem(
-                item_name="coat", reason="Needed for cold weather", priority=1
+                item_name=CATEGORIES[7],
+                reason="Below freezing temperatures",
+                priority=1,
             )
         )
+
+    # If lowest temp is greater than 10, pack shorts
+    if gt(trip.lowest_temp, 10):
+        items.append(
+            RecommendedItem(
+                item_name=CATEGORIES[2], reason="Warm temperatures", priority=1
+            )
+        )
+
+    # If swimming, add swimming attire
+    if (
+        Activity.beach in (trip.activities or [])
+        or Activity.swimming in (trip.activities or [])
+        or Activity.surfing in (trip.activities or [])
+    ):
+        items.extend(
+            [
+                RecommendedItem(
+                    item_name=CATEGORIES[8], reason="Swimming attire", priority=1
+                ),
+                RecommendedItem(
+                    item_name=CATEGORIES[13], reason="Swimming attire", priority=1
+                ),
+            ]
+        )
+
+    # Ski and snowboarding rules
+    if Activity.skiing in (trip.activities or []) or Activity.snowboarding in (
+        trip.activities or []
+    ):
+        items.append(
+            RecommendedItem(item_name=CATEGORIES[9], reason="Skiing attire", priority=1)
+        )
+
+    if Activity.skiing in (trip.activities or []):
+        items.append(
+            RecommendedItem(
+                item_name=CATEGORIES[10], reason="Ski equipment", priority=1
+            )
+        )
+
+    if Activity.snowboarding in (trip.activities or []):
+        items.append(
+            RecommendedItem(
+                item_name=CATEGORIES[11], reason="Snowboarding equipment", priority=1
+            )
+        )
+
+    # Tent for camping
+    if Activity.camping in (trip.activities or []):
+        items.append(
+            RecommendedItem(
+                item_name=CATEGORIES[12], reason="Camping equipment", priority=1
+            )
+        )
+
+    # Pack umbrella if high precipitation & it's not snow
+    if gt(trip.precipitation_percentage, 0.5) and gt(trip.lowest_temp, 0):
+        items.append(
+            RecommendedItem(
+                item_name=CATEGORIES[14], reason="Needed for rain", priority=1
+            )
+        )
+
     return items
 
 
 def baseline_list_algorithm(trip: Trip) -> List[RecommendedItem]:
-    """Returns a list of things that the user should pack based on trip details."""
+    """Primary entry point to generate the packing list."""
     recs = []
 
-    # Compose the final list using the helpers
+    # 1. Add the "always-pack" items
     recs.extend(get_base_items())
-    recs.extend(get_work_items(trip.activities))
-    recs.extend(get_weather_items(trip.lowest_temp))
+
+    # 2. Add items based on specific rules
+    recs.extend(get_conditional_items(trip))
 
     return recs
