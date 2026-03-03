@@ -58,7 +58,7 @@ def annotate_image_with_yolo_plot(yolo_result) -> bytes:
 
 
 def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
-    model = YOLO("backend/computer_vision/model_train/best.pt")
+    model = YOLO("backend/computer_vision/models/post-albumentations.pt")
     img = bytes_to_numpy(image_bytes)
     results = model(
         img,
