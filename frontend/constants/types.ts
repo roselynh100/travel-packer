@@ -57,6 +57,7 @@ export type Item = {
 export type DetectResponse = {
   item: Item;
   cv_candidates: CVResult[];
+  annotated_image?: string | null;
 };
 
 export type CVResult = {

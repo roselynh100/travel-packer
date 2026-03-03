@@ -6,7 +6,7 @@ import { Item } from "@/constants/types";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
 
-type WeightModalStatus = "pending" | "success";
+type WeightModalStatus = "intro" | "pending" | "success";
 
 type WeightModalProps = {
   visible: boolean;
@@ -23,15 +23,15 @@ export function WeightModal({
   onClose,
   onWeightReady,
 }: WeightModalProps) {
-  const [status, setStatus] = useState<WeightModalStatus>("pending");
+  const [status, setStatus] = useState<WeightModalStatus>("intro");
   const [countdown, setCountdown] = useState<number>(-1);
   const [weightItem, setWeightItem] = useState<Item | null>(null);
 
-  // Reset and start countdown when modal opens
+  // Reset when modal opens
   useEffect(() => {
     if (visible) {
-      setStatus("pending");
-      setCountdown(5);
+      setStatus("intro");
+      setCountdown(-1);
       setWeightItem(null);
     }
   }, [visible]);
@@ -78,6 +78,12 @@ export function WeightModal({
     })();
   }, [visible, status, onClose]);
 
+  const handleConfirmEmptyScale = () => {
+    // User has confirmed the scale is empty; start countdown and begin reading
+    setStatus("pending");
+    setCountdown(5);
+  };
+
   const handleNext = () => {
     if (!weightItem) return;
     onWeightReady(weightItem);
@@ -93,35 +99,53 @@ export function WeightModal({
     >
       <View className="flex-1 justify-center items-center bg-black/70 px-6">
         <View className="bg-[var(--color-bg-nav)] rounded-2xl p-12 items-center">
-          <ThemedText type="subtitle" className="text-center mb-4">
-            Place item in middle of scale
-          </ThemedText>
-          {countdown >= 0 && (
-            <ThemedText type="title" className="text-4xl mb-6">
-              {countdown}
-            </ThemedText>
-          )}
-          {countdown < 0 && status === "pending" && (
+          {status === "intro" && (
             <>
-              <ActivityIndicator size="large" color="#fff" />
-              <ThemedText type="subtitle" className="mt-4">
-                Reading weight...
+              <ThemedText type="subtitle" className="text-center mb-4">
+                Get ready to weigh your item
               </ThemedText>
-            </>
-          )}
-          {status === "success" && weightItem && (
-            <>
-              <ThemedText type="subtitle" className="mb-2">
-                Weight:{" "}
-                {weightItem.weight_kg != null
-                  ? `${weightItem.weight_kg} kg`
-                  : "—"}
+              <ThemedText className="text-center mb-6">
+                Please make sure nothing is on the scale.
               </ThemedText>
               <ThemedButton
-                title="Next"
-                onPress={handleNext}
-                className="mt-4"
+                title="I'm ready"
+                onPress={handleConfirmEmptyScale}
               />
+            </>
+          )}
+          {status !== "intro" && (
+            <>
+              <ThemedText type="subtitle" className="text-center mb-4">
+                For accurate results, place the item in the middle of the scale.
+              </ThemedText>
+              {countdown >= 0 && (
+                <ThemedText type="title" className="text-4xl mb-6">
+                  {countdown}
+                </ThemedText>
+              )}
+              {countdown < 0 && status === "pending" && (
+                <>
+                  <ActivityIndicator size="large" color="#fff" />
+                  <ThemedText type="subtitle" className="mt-4">
+                    Reading weight...
+                  </ThemedText>
+                </>
+              )}
+              {status === "success" && weightItem && (
+                <>
+                  <ThemedText type="subtitle" className="mb-2">
+                    Weight:{" "}
+                    {weightItem.weight_kg != null
+                      ? `${weightItem.weight_kg} kg`
+                      : "—"}
+                  </ThemedText>
+                  <ThemedButton
+                    title="Next"
+                    onPress={handleNext}
+                    className="mt-4"
+                  />
+                </>
+              )}
             </>
           )}
         </View>

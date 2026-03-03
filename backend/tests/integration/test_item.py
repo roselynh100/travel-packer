@@ -15,7 +15,7 @@ from app.state.db import items_store
 
 def _item_with_cv(item_id: str) -> Item:
     cv = CVResult(
-        class_name="bag",
+        item_name="bag",
         confidence_score=0.9,
         bounding_boxes=[BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4)],
         dimensions=Dimensions(length=10.0, width=5.0, height=2.0),

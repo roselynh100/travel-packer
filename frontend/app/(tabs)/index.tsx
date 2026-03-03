@@ -1,163 +1,94 @@
-import { useState } from "react";
-import {
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
-import { useRouter } from "expo-router";
-
+import { ScrollView, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
-import { ThemedTextInput } from "@/components/ThemedTextInput";
-import { ThemedButton } from "@/components/ThemedButton";
-import { apiFetch } from "@/constants/api";
-import { Gender, User } from "@/constants/types";
-import { useAppContext } from "@/helpers/AppContext";
-import { ThemedDropdown } from "@/components/ThemedDropdown";
-import { ThemedLoading } from "@/components/ThemedLoading";
-import { RequiredLabel } from "@/components/RequiredLabel";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
-export default function HomeScreen() {
-  const router = useRouter();
+const steps = [
+  {
+    number: 1,
+    title: "Input your trip information",
+    detail:
+      "Go to the Trip Info tab and add your destination, dates, and travel details.",
+    icon: "sun.max" as const,
+  },
+  {
+    number: 2,
+    title: "Review your packing list",
+    detail:
+      "Check out the Packing List tab to see suggested items for your trip.",
+    icon: "list.bullet" as const,
+  },
+  {
+    number: 3,
+    title: "Scan your items",
+    detail:
+      "First, connect the scale and make sure nothing's on it. Then, open the Pack Items tab take a photo to scan your items one at a time.",
+    icon: "camera.fill" as const,
+  },
+  {
+    number: 4,
+    title: "Receive a packing recommendation",
+    detail: "Get a tailored recommendation based on your items and trip.",
+    icon: "cube.box.fill" as const,
+  },
+];
 
-  const [name, onChangeName] = useState("");
-  const [email, onChangeEmail] = useState("");
-  const [password, onChangePassword] = useState("");
-  const [age, onChangeAge] = useState("");
-  const [gender, onChangeGender] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const { setUserId } = useAppContext();
-
-  async function handleSave() {
-    try {
-      setIsLoading(true);
-
-      // TODO: Fix stuff about password
-      const user: User = {
-        name,
-        email,
-        password,
-        age: parseInt(age),
-        gender,
-      };
-
-      await saveToAPI(user);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-
-      router.push("/TripInfo");
-    } catch (error) {
-      console.error("Error creating user:", error);
-      Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Failed to create user",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function saveToAPI(userInput: User) {
-    const response = await apiFetch("/users/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(userInput),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `API error (${response.status}): ${errorText || response.statusText}`,
-      );
-    }
-
-    const result: User = await response.json();
-    console.log("Save success:", result);
-    setUserId(result.user_id ?? "No user id saved");
-  }
-
+export default function Welcome() {
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <ScrollView
       className="flex-1"
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 32 }}
+      showsVerticalScrollIndicator={false}
     >
-      <Pressable
-        onPress={Platform.OS === "web" ? undefined : Keyboard.dismiss}
-        className="flex-1"
-      >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: "space-between",
-          }}
-          className={Platform.OS === "web" ? "p-12" : "p-6"}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View className="flex-col gap-6">
-            <ThemedText type="title">Input your information 🤸</ThemedText>
-            <View className="gap-2">
-              <RequiredLabel>Name</RequiredLabel>
-              <ThemedTextInput
-                value={name}
-                onChangeText={onChangeName}
-                placeholder="John Doe"
-              />
-            </View>
-
-            <View className="gap-2">
-              <RequiredLabel>Email</RequiredLabel>
-              <ThemedTextInput
-                value={email}
-                onChangeText={onChangeEmail}
-                placeholder="john.doe@gmail.com"
-              />
-            </View>
-
-            {/* <View className="gap-2">
-                <ThemedText type="subtitle">Password</ThemedText>
-                <ThemedTextInput
-                  value={password}
-                  onChangeText={onChangePassword}
-                  secureTextEntry={true}
-                />
-              </View> */}
-
-            <View className="gap-2">
-              <RequiredLabel>Age</RequiredLabel>
-              <ThemedTextInput
-                value={age}
-                onChangeText={onChangeAge}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View className="gap-2">
-              <RequiredLabel>Gender</RequiredLabel>
-              <ThemedDropdown
-                value={gender}
-                onChange={(value: string) => onChangeGender(value)}
-                data={Object.entries(Gender).map(([key, value]) => ({
-                  label: value,
-                  value: key,
-                }))}
-                placeholder="Select gender"
-              />
-            </View>
+      <View className="px-6 pt-8 pb-6">
+        {/* Hero */}
+        <View className="items-center mb-10">
+          <View className="w-20 h-20 bg-[var(--color-primary)]/20 items-center justify-center mb-4">
+            <IconSymbol
+              name="cube.box.fill"
+              size={44}
+              color="var(--color-primary)"
+            />
           </View>
+          <ThemedText type="title" className="text-center">
+            Welcome to Packulus.
+          </ThemedText>
+          <ThemedText className="text-center mt-2 opacity-80 max-w-xs">
+            Pack smarter with weight tracking and smart recommendations!
+          </ThemedText>
+        </View>
 
-          <ThemedButton title="Save" onPress={handleSave} />
-          <ThemedLoading
-            isLoading={isLoading}
-            message="Saving user information..."
-          />
-        </ScrollView>
-      </Pressable>
-    </KeyboardAvoidingView>
+        {/* Steps */}
+        <ThemedText type="subtitle" className="mb-4">
+          How it works
+        </ThemedText>
+        <View className="gap-6">
+          {steps.map((step) => (
+            <View
+              key={step.number}
+              className="flex-row gap-4 p-4 rounded-2xl bg-[var(--color-bg-nav)]"
+            >
+              <View className="w-10 h-10 rounded-full bg-[var(--color-primary)] items-center justify-center">
+                <ThemedText className="text-white font-bold text-lg">
+                  {step.number}
+                </ThemedText>
+              </View>
+              <View className="flex-1">
+                <View className="flex-row gap-2">
+                  <IconSymbol
+                    name={step.icon}
+                    size={22}
+                    color="var(--color-primary)"
+                  />
+                  <ThemedText type="defaultSemiBold" className="mb-1">
+                    {step.title}
+                  </ThemedText>
+                </View>
+                <ThemedText className="text-sm">{step.detail}</ThemedText>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+    </ScrollView>
   );
 }

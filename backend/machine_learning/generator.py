@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import List
 
 from app.models import Activity, RecommendedItem, Trip
+from machine_learning.helpers import gt, lt
 
 CATEGORIES = {
     0: "unknown",
@@ -39,7 +40,7 @@ def get_conditional_items(trip: Trip) -> List[RecommendedItem]:
         )
 
     # If lowest temp is less than 0, pack jacket
-    if trip.lowest_temp is not None and trip.lowest_temp < 0:
+    if lt(trip.lowest_temp, 0):
         items.append(
             RecommendedItem(
                 item_name=CATEGORIES[7],
@@ -49,7 +50,7 @@ def get_conditional_items(trip: Trip) -> List[RecommendedItem]:
         )
 
     # If lowest temp is greater than 10, pack shorts
-    if trip.lowest_temp is not None and trip.lowest_temp > 10:
+    if gt(trip.lowest_temp, 10):
         items.append(
             RecommendedItem(
                 item_name=CATEGORIES[2], reason="Warm temperatures", priority=1
@@ -104,7 +105,7 @@ def get_conditional_items(trip: Trip) -> List[RecommendedItem]:
         )
 
     # Pack umbrella if high precipitation & it's not snow
-    if trip.precipitation_percentage > 0.5 and trip.lowest_temp > 0:
+    if gt(trip.precipitation_percentage, 0.5) and gt(trip.lowest_temp, 0):
         items.append(
             RecommendedItem(
                 item_name=CATEGORIES[14], reason="Needed for rain", priority=1

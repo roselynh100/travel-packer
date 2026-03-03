@@ -1,3 +1,4 @@
+import base64
 import json
 import re
 from typing import List, Optional, Tuple
@@ -138,9 +139,15 @@ async def detect_item_from_image(
     """Run YOLO detection. Then create/update an item (if single cv_result), or return item + cv_candidates for correction modal."""
 
     image_bytes = await image.read()
-    cv_results = detect_objects_yolo(image_bytes)
+    cv_results, annotated_image_bytes = detect_objects_yolo(image_bytes)
     if not cv_results:
         raise HTTPException(status_code=500, detail="Invalid YOLO output")
+
+    annotated_image = (
+        base64.standard_b64encode(annotated_image_bytes).decode("ascii")
+        if annotated_image_bytes
+        else None
+    )
 
     # Sort by confidence (highest first)
     cv_results_sorted = sorted(
@@ -172,7 +179,11 @@ async def detect_item_from_image(
         item = Item(cv_result=primary_result, estimated_volume_cm3=volume)
         items_store[item.item_id] = item
 
-    return DetectResponse(item=item, cv_candidates=cv_candidates)
+    return DetectResponse(
+        item=item,
+        cv_candidates=cv_candidates,
+        annotated_image=annotated_image,
+    )
 
 
 @router.get("/{item_id}/price", response_model=List[ItemPriceResult])
@@ -190,7 +201,7 @@ def get_item_price(
             status_code=404,
             detail="Item has no CV result and name cannot be retrieved",
         )
-    class_name = item.cv_result.class_name
+    item_name = item.cv_result.item_name
 
     try:
         country_entry = country_info[country.title()]
@@ -207,7 +218,7 @@ def get_item_price(
 
     params = {
         "engine": "google_shopping",
-        "q": class_name,
+        "q": item_name,
         "gl": country_code,
         "hl": "en",
         "api_key": SERPAPI_API_KEY,

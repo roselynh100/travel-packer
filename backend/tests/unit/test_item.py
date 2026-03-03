@@ -16,7 +16,7 @@ from constants import SERPAPI_SEARCH_URL
 
 def _item_with_cv(item_id: str) -> Item:
     cv = CVResult(
-        class_name="bag",
+        item_name="bag",
         confidence_score=0.9,
         bounding_boxes=[BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4)],
         dimensions=Dimensions(length=10.0, width=5.0, height=2.0),
@@ -156,16 +156,19 @@ class TestDetectEndpoint(unittest.TestCase):
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_creates_new_item(self, mock_yolo):
         """Test creating a new item via image detection."""
-        mock_yolo.return_value = [
-            CVResult(
-                item_name="Shoes",
-                confidence_score=0.85,
-                bounding_boxes=[
-                    BoundingBox(x_min=10.1, y_min=20.2, x_max=50.5, y_max=80.8)
-                ],
-                dimensions=Dimensions(length=1, width=1),
-            )
-        ]
+        mock_yolo.return_value = (
+            [
+                CVResult(
+                    item_name="Shoes",
+                    confidence_score=0.85,
+                    bounding_boxes=[
+                        BoundingBox(x_min=10.1, y_min=20.2, x_max=50.5, y_max=80.8)
+                    ],
+                    dimensions=Dimensions(length=1, width=1),
+                )
+            ],
+            b"fake_annotated_jpeg_bytes",
+        )
 
         test_image = ("img.jpg", b"fake", "image/jpeg")
 
@@ -177,19 +180,26 @@ class TestDetectEndpoint(unittest.TestCase):
         self.assertEqual(data["cv_result"]["item_name"], "Shoes")
         self.assertEqual(data["cv_result"]["confidence_score"], 0.85)
         self.assertEqual(data["cv_result"]["bounding_boxes"][0]["x_min"], 10.1)
+        self.assertIn("annotated_image", data)
+        self.assertIsNotNone(data["annotated_image"])
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_updates_existing_item(self, mock_yolo):
         items_store["abc"] = Item(item_id="abc")
 
-        mock_yolo.return_value = [
-            CVResult(
-                item_name="Backpack",
-                confidence_score=0.95,
-                bounding_boxes=[BoundingBox(x_min=0, y_min=0, x_max=100, y_max=100)],
-                dimensions=Dimensions(length=1, width=1),
-            )
-        ]
+        mock_yolo.return_value = (
+            [
+                CVResult(
+                    item_name="Backpack",
+                    confidence_score=0.95,
+                    bounding_boxes=[
+                        BoundingBox(x_min=0, y_min=0, x_max=100, y_max=100)
+                    ],
+                    dimensions=Dimensions(length=1, width=1),
+                )
+            ],
+            b"fake_annotated",
+        )
 
         test_image = ("img.jpg", b"fake", "image/jpeg")
         response = self.client.post(
@@ -197,11 +207,11 @@ class TestDetectEndpoint(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(items_store["abc"].cv_result.class_name, "backpack")
+        self.assertEqual(items_store["abc"].cv_result.item_name, "Backpack")
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_invalid_yolo_output(self, mock_yolo):
-        mock_yolo.return_value = None
+        mock_yolo.return_value = (None, b"")
 
         test_image = ("img.png", b"fake", "image/png")
         response = self.client.post("/items/detect", files={"image": test_image})
@@ -211,7 +221,7 @@ class TestDetectEndpoint(unittest.TestCase):
 
     @patch("app.routes.item.detect_objects_yolo")
     def test_detect_empty_yolo_output(self, mock_yolo):
-        mock_yolo.return_value = []
+        mock_yolo.return_value = ([], b"")
 
         test_image = ("img.png", b"fake", "image/png")
         response = self.client.post("/items/detect", files={"image": test_image})

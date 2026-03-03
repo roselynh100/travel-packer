@@ -1,28 +1,20 @@
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { Alert, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
-import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedDropdown } from "@/components/ThemedDropdown";
 import { apiFetch } from "@/constants/api";
 import { BagType, LocationResult, Trip } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { useAppContext } from "@/helpers/AppContext";
-import { ThemedLoading } from "@/components/ThemedLoading";
 import { ThemedMultiSelect } from "@/components/ThemedMultiSelect";
 import { DateSelect } from "@/components/DateSelect";
 import { LocationInput } from "@/components/LocationInput";
 import { RequiredLabel } from "@/components/RequiredLabel";
+import { FormScreenLayout } from "@/components/FormScreenLayout";
+import { ThemedButton } from "@/components/ThemedButton";
 
 export default function TripInfo() {
   const router = useRouter();
@@ -102,6 +94,19 @@ export default function TripInfo() {
     fetchActivities();
   }, []);
 
+  // DEV MODE ONLY TODO: REMOVE FOR PROD
+  const fillDemoData = () => {
+    onChangeDestination({
+      city: "Toronto",
+      state: "Ontario",
+      country: "Canada",
+    });
+    setStartDate("2026-06-01");
+    setEndDate("2026-06-06");
+    onChangeAirline("Air Canada");
+    onChangeBagType(BagType.checked);
+  };
+
   const getDateRangeDisplay = () => {
     if (!startDate && !endDate) {
       return "Select dates";
@@ -111,6 +116,13 @@ export default function TripInfo() {
     }
     return `${startDate} - ${endDate}`;
   };
+
+  const canSave =
+    destination.country.trim() !== "" &&
+    startDate !== "" &&
+    endDate !== "" &&
+    airline !== "" &&
+    bagType !== "";
 
   async function handleSave() {
     try {
@@ -181,104 +193,86 @@ export default function TripInfo() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1"
+    <FormScreenLayout
+      title="Input your trip details 🌴"
+      onSave={handleSave}
+      saveDisabled={!canSave}
+      isLoading={isLoading}
+      loadingMessage="Saving your trip..."
     >
-      <Pressable
-        onPress={Platform.OS === "web" ? undefined : Keyboard.dismiss}
-        className="flex-1"
-      >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: "space-between",
-          }}
-          className={Platform.OS === "web" ? "p-12" : "p-6"}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View className="flex-col gap-6">
-            <ThemedText type="title">Input your trip details 🌴</ThemedText>
-            <View className="gap-2">
-              <RequiredLabel>Destination</RequiredLabel>
-              <LocationInput onSelect={onChangeDestination} />
-            </View>
+      <ThemedButton
+        onPress={fillDemoData}
+        title="Fill demo data"
+        className="self-start"
+        variant="outline"
+      />
+      <View className="gap-2">
+        <RequiredLabel>Destination</RequiredLabel>
+        <LocationInput onSelect={onChangeDestination} />
+      </View>
 
-            <View className="gap-2">
-              <RequiredLabel>Trip Dates</RequiredLabel>
-              <Pressable
-                onPress={() => setIsCalendarVisible(!isCalendarVisible)}
-              >
-                <ThemedTextInput
-                  value={getDateRangeDisplay()}
-                  editable={false}
-                  pointerEvents="none"
-                />
-              </Pressable>
-              {isCalendarVisible && (
-                <View className="gap-2">
-                  <DateSelect
-                    startDate={startDate}
-                    endDate={endDate}
-                    setStartDate={setStartDate}
-                    setEndDate={setEndDate}
-                  />
-                </View>
-              )}
-            </View>
-
-            <View className="gap-2">
-              <RequiredLabel>Airline</RequiredLabel>
-              <ThemedDropdown
-                value={airline}
-                onChange={(value: string) => onChangeAirline(value)}
-                data={airlineOptions}
-                placeholder="Select airline"
-              />
-            </View>
-
-            <View className="gap-2">
-              <RequiredLabel>Bag Type</RequiredLabel>
-              <ThemedDropdown
-                value={bagType}
-                onChange={(value: string) => onChangeBagType(value)}
-                data={Object.values(BagType).map((value) => ({
-                  label: value,
-                  value: value,
-                }))}
-                placeholder="Select bag type"
-              />
-            </View>
-
-            <View className="gap-2">
-              <ThemedText type="subtitle">
-                Activities Planned (Optional)
-              </ThemedText>
-              <ThemedMultiSelect
-                data={activityOptions}
-                value={activities}
-                onChange={onChangeActivities}
-                placeholder="Search and select activities"
-                searchPlaceholder="Search activities..."
-              />
-            </View>
-
-            <ThemedCheckbox
-              label="I am planning to do laundry"
-              value={laundry}
-              onValueChange={onChangeLaundry}
-              size="medium"
+      <View className="gap-2">
+        <RequiredLabel>Trip Dates</RequiredLabel>
+        <Pressable onPress={() => setIsCalendarVisible(!isCalendarVisible)}>
+          <ThemedTextInput
+            value={getDateRangeDisplay()}
+            editable={false}
+            pointerEvents="none"
+          />
+        </Pressable>
+        {isCalendarVisible && (
+          <View className="gap-2">
+            <DateSelect
+              startDate={startDate}
+              endDate={endDate}
+              setStartDate={setStartDate}
+              setEndDate={setEndDate}
+              onRangeComplete={() => setIsCalendarVisible(false)}
             />
           </View>
-        </ScrollView>
-        <ThemedButton
-          title="Save"
-          onPress={handleSave}
-          className={Platform.OS === "web" ? "mx-12 mb-12" : "mx-6 my-6"}
+        )}
+      </View>
+
+      <View className="gap-2">
+        <RequiredLabel>Airline</RequiredLabel>
+        <ThemedDropdown
+          value={airline}
+          onChange={(value: string) => onChangeAirline(value)}
+          data={airlineOptions}
+          placeholder="Select airline"
         />
-        <ThemedLoading isLoading={isLoading} message="Saving your trip..." />
-      </Pressable>
-    </KeyboardAvoidingView>
+      </View>
+
+      <View className="gap-2">
+        <RequiredLabel>Bag Type</RequiredLabel>
+        <ThemedDropdown
+          value={bagType}
+          onChange={(value: string) => onChangeBagType(value)}
+          data={Object.values(BagType).map((value) => ({
+            label: value,
+            value: value,
+          }))}
+          placeholder="Select bag type"
+        />
+      </View>
+
+      <View className="gap-2">
+        <ThemedText type="subtitle">Activities Planned (Optional)</ThemedText>
+        <ThemedMultiSelect
+          data={activityOptions}
+          value={activities}
+          onChange={onChangeActivities}
+          placeholder="Search and select activities"
+          searchPlaceholder="Search activities..."
+        />
+      </View>
+
+      <ThemedCheckbox
+        label="I am planning to do laundry"
+        value={laundry}
+        onValueChange={onChangeLaundry}
+        size="medium"
+      />
+    </FormScreenLayout>
   );
 }

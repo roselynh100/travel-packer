@@ -28,7 +28,6 @@ def create_mock_item(name: str) -> Item:
     return Item(
         cv_result=CVResult(
             item_name=name,
-            class_name="object",
             confidence_score=0.99,
             bounding_boxes=[BoundingBox(x_min=0, y_min=0, x_max=1, y_max=1)],
             dimensions=Dimensions(length=10, width=10, height=10),
