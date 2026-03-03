@@ -18,5 +18,6 @@ __pycache__/
 *.pt
 debug_images/
 /backend/computer_vision/model_train/
+/backend/computer_vision/models/
 
 /backend/constants.py
