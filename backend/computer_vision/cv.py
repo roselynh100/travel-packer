@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -51,10 +51,7 @@ def _debug_save_cv_images(image_bytes: bytes, annotated_bytes: bytes) -> None:
 
 
 def annotate_image_with_yolo_plot(yolo_result) -> bytes:
-    """
-    Annotate an image using YOLO's built-in plot() (bounding boxes, labels, confidence).
-    Standalone so it can be reused from /detect and from any future re-annotation (e.g. CV correction).
-    """
+    """Annotate an image using YOLO's built-in plot() (bounding boxes, labels, confidence)."""
     annotated_img = yolo_result.plot()
     _, jpeg_buffer = cv2.imencode(".jpg", annotated_img)
     return jpeg_buffer.tobytes()
@@ -80,12 +77,18 @@ def detect_objects_yolo(image_bytes: bytes) -> Tuple[List[CVResult], bytes]:
         "tops",
     }
 
-    detections_list = []
+    detections_list: List[CVResult] = []
 
     # YOLO returns a list, but we only pass one image, so we'll only get one result
     result = results[0]
 
-    # Loop through detections in the image
+    # Sort detections by confidence (highest first)
+    boxes = result.boxes
+    if boxes is not None and len(boxes) > 0:
+        conf = boxes.conf
+        sorted_indices = conf.argsort(descending=True)
+        result.boxes = boxes[sorted_indices]
+
     for box in result.boxes:
         # Extract the necessary data
         confidence = box.conf.item()
@@ -119,6 +122,10 @@ def detect_objects_yolo(image_bytes: bytes) -> Tuple[List[CVResult], bytes]:
 
             detections_list.append(cv_result)
         # If the class name is not in TARGET_CLASSES, we just skip it
+
+    # For annotation, keep only the highest-confidence box
+    if len(result.boxes) > 0:
+        result.boxes = result.boxes[:1]
 
     annotated_bytes = annotate_image_with_yolo_plot(result)
 
