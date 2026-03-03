@@ -57,7 +57,7 @@ def debug_test_image(image_bytes: bytes):
 
 
 def detect_objects_yolo(image_bytes: bytes) -> List[CVResult]:
-    model = YOLO("backend/computer_vision/model_train/runs/detect/weights/best.pt")
+    model = YOLO("backend/computer_vision/models/post-albumentations.pt")
     img = bytes_to_numpy(image_bytes)
     results = model(
         img,
