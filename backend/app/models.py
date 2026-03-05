@@ -89,6 +89,8 @@ class ItemUpdate(BaseModel):
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_result: Optional[CVResult] = None
+    price_at_origin: Optional[float] = None
+    price_at_destination: Optional[float] = None
 
 
 class DetectResponse(BaseModel):
