@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Platform, ScrollView, View } from "react-native";
+import { Platform, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -13,6 +13,7 @@ import { useAppContext } from "@/helpers/AppContext";
 import { ThemedButton } from "@/components/ThemedButton";
 import { PackingListItem } from "@/components/PackingListItem";
 import { PackingListPill } from "@/components/PackingListPill";
+import { ScreenScroll } from "@/components/ScreenScroll";
 
 export default function PackingList() {
   const { tripId, currentItem } = useAppContext();
@@ -212,15 +213,7 @@ export default function PackingList() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={{
-        flexGrow: 1,
-        justifyContent: "space-between",
-      }}
-      className={Platform.OS === "web" ? "p-12" : "p-6"}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenScroll variant="spaceBetween">
       <View className="flex-col">
         <ThemedText type="title" className="mb-6">
           Packing List 📜
@@ -272,6 +265,6 @@ export default function PackingList() {
           onPress={() => router.push("/TripInfo")}
         />
       )}
-    </ScrollView>
+    </ScreenScroll>
   );
 }

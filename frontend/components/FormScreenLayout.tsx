@@ -4,16 +4,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedLoading } from "@/components/ThemedLoading";
 import { cn } from "@/helpers/cn";
 import { useTheme } from "@/theme/useTheme";
+import { ScreenScroll } from "@/components/ScreenScroll";
 
 type FormScreenLayoutProps = {
   title: string;
@@ -47,31 +46,12 @@ export function FormScreenLayout({
     >
       <Wrapper {...wrapperProps}>
         <View className="flex-1" style={{ backgroundColor: theme.bg }}>
-          <ScrollView
-            contentContainerStyle={{
-              flexGrow: 1,
-              justifyContent: "space-between",
-            }}
-            className={Platform.OS === "web" ? "p-12" : "p-6"}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
+          <ScreenScroll variant="spaceBetween">
             <View className="flex-col gap-6">
               <ThemedText type="title">{title}</ThemedText>
               {children}
             </View>
-          </ScrollView>
-          <LinearGradient
-            colors={["transparent", theme.bg] as const}
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 80,
-              pointerEvents: "none",
-            }}
-          />
+          </ScreenScroll>
         </View>
         <ThemedButton
           title="Save"
