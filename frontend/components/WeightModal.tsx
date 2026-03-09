@@ -5,6 +5,7 @@ import { apiFetch } from "@/constants/api";
 import { Item } from "@/constants/types";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
+import { useTheme } from "@/theme/useTheme";
 
 type WeightModalStatus = "intro" | "pending" | "success";
 
@@ -90,6 +91,8 @@ export function WeightModal({
     onClose();
   };
 
+  const theme = useTheme();
+
   return (
     <Modal
       visible={visible}
@@ -98,7 +101,10 @@ export function WeightModal({
       onRequestClose={() => status === "success" && handleNext()}
     >
       <View className="flex-1 justify-center items-center bg-black/70 px-6">
-        <View className="bg-[var(--color-bg-nav)] rounded-2xl p-12 items-center">
+        <View
+          className="rounded-2xl p-12 items-center"
+          style={{ backgroundColor: theme.bgNav }}
+        >
           {status === "intro" && (
             <>
               <ThemedText type="subtitle" className="text-center mb-4">

@@ -15,9 +15,11 @@ import { LocationInput } from "@/components/LocationInput";
 import { RequiredLabel } from "@/components/RequiredLabel";
 import { FormScreenLayout } from "@/components/FormScreenLayout";
 import { ThemedButton } from "@/components/ThemedButton";
+import { useTheme } from "@/theme/useTheme";
 
 export default function TripInfo() {
   const router = useRouter();
+  const theme = useTheme();
 
   const [destination, onChangeDestination] = useState<LocationResult>({
     city: "",
@@ -218,6 +220,12 @@ export default function TripInfo() {
             value={getDateRangeDisplay()}
             editable={false}
             pointerEvents="none"
+            style={{
+              color:
+                getDateRangeDisplay() === "Select dates"
+                  ? theme.textPlaceholder
+                  : theme.text,
+            }}
           />
         </Pressable>
         {isCalendarVisible && (

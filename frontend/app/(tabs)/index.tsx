@@ -1,6 +1,8 @@
 import { ScrollView, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ThemedButton } from "@/components/ThemedButton";
+import { useTheme } from "@/theme/useTheme";
 
 const steps = [
   {
@@ -33,21 +35,20 @@ const steps = [
 ];
 
 export default function Welcome() {
+  const theme = useTheme();
+
   return (
     <ScrollView
       className="flex-1"
-      contentContainerStyle={{ flexGrow: 1, paddingBottom: 32 }}
+      contentContainerStyle={{ flexGrow: 1 }}
+      style={{ backgroundColor: theme.bg }}
       showsVerticalScrollIndicator={false}
     >
       <View className="px-6 pt-8 pb-6">
         {/* Hero */}
-        <View className="items-center mb-10">
-          <View className="w-20 h-20 bg-[var(--color-primary)]/20 items-center justify-center mb-4">
-            <IconSymbol
-              name="cube.box.fill"
-              size={44}
-              color="var(--color-primary)"
-            />
+        <View className="items-center mb-8">
+          <View className="pt-6 pb-4">
+            <IconSymbol name="cube.box.fill" size={44} color={theme.primary} />
           </View>
           <ThemedText type="title" className="text-center">
             Welcome to Packulus.
@@ -65,7 +66,8 @@ export default function Welcome() {
           {steps.map((step) => (
             <View
               key={step.number}
-              className="flex-row gap-4 p-4 rounded-2xl bg-[var(--color-bg-nav)]"
+              className="p-4 rounded-2xl"
+              style={{ backgroundColor: theme.bgNav }}
             >
               <View className="w-10 h-10 rounded-full bg-[var(--color-primary)] items-center justify-center">
                 <ThemedText className="text-white font-bold text-lg">
@@ -77,7 +79,7 @@ export default function Welcome() {
                   <IconSymbol
                     name={step.icon}
                     size={22}
-                    color="var(--color-primary)"
+                    color={theme.primary}
                   />
                   <ThemedText type="defaultSemiBold" className="mb-1">
                     {step.title}

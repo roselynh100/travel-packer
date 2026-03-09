@@ -5,15 +5,20 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppContext } from "@/helpers/AppContext";
 import { View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
+import { useTheme } from "@/theme/useTheme";
 
 export default function TabLayout() {
   const { userId } = useAppContext();
+  const theme = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         header: () => (
-          <View className="bg-[var(--color-bg-nav)] w-full p-4 flex-row items-center justify-between gap-4">
+          <View
+            style={{ backgroundColor: theme.bgNav }}
+            className="w-full p-4 flex-row items-center justify-between gap-4"
+          >
             <ThemedText type="subtitle" className="flex-shrink-0">
               Packulus 🧳
             </ThemedText>
@@ -25,12 +30,12 @@ export default function TabLayout() {
             )}
           </View>
         ),
-        tabBarActiveTintColor: "var(--color-tab-selected)",
+        tabBarActiveTintColor: theme.tabSelected,
         tabBarStyle: {
-          backgroundColor: "var(--color-bg-nav)",
+          backgroundColor: theme.bgNav,
           borderTopWidth: 0,
         },
-        sceneStyle: { backgroundColor: "var(--color-bg)" },
+        sceneStyle: { backgroundColor: theme.bg },
       }}
     >
       <Tabs.Screen
