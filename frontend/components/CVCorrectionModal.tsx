@@ -3,6 +3,7 @@ import { Modal, View } from "react-native";
 import { CVResult } from "@/constants/types";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
+import { useTheme } from "@/theme/useTheme";
 
 type CVCorrectionModalProps = {
   visible: boolean;
@@ -17,6 +18,8 @@ export function CVCorrectionModal({
   onSelect,
   onDismiss,
 }: CVCorrectionModalProps) {
+  const theme = useTheme();
+
   if (!cvResults || cvResults.length === 0) {
     return null;
   }
@@ -29,7 +32,10 @@ export function CVCorrectionModal({
       onRequestClose={onDismiss}
     >
       <View className="flex-1 justify-center items-center bg-black/70 px-6">
-        <View className="bg-[var(--color-bg-nav)] rounded-2xl p-12 items-center">
+        <View
+          className="rounded-2xl p-12 items-center"
+          style={{ backgroundColor: theme.bgNav }}
+        >
           <ThemedText type="subtitle" className="text-center mb-4">
             What did you just scan?
           </ThemedText>

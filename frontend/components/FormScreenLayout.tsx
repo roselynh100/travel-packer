@@ -5,7 +5,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  useColorScheme,
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,6 +13,7 @@ import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedLoading } from "@/components/ThemedLoading";
 import { cn } from "@/helpers/cn";
+import { useTheme } from "@/theme/useTheme";
 
 type FormScreenLayoutProps = {
   title: string;
@@ -32,14 +32,13 @@ export function FormScreenLayout({
   isLoading = false,
   loadingMessage = "Saving...",
 }: FormScreenLayoutProps) {
+  const theme = useTheme();
+
   const Wrapper = Platform.OS === "web" ? View : Pressable;
   const wrapperProps =
     Platform.OS === "web"
       ? { className: "flex-1" }
       : { className: "flex-1", onPress: Keyboard.dismiss };
-
-  const colorScheme = useColorScheme();
-  const fadeColor = colorScheme === "dark" ? "#141414" : "#ffffff";
 
   return (
     <KeyboardAvoidingView
@@ -47,7 +46,7 @@ export function FormScreenLayout({
       className="flex-1"
     >
       <Wrapper {...wrapperProps}>
-        <View className="flex-1">
+        <View className="flex-1" style={{ backgroundColor: theme.bg }}>
           <ScrollView
             contentContainerStyle={{
               flexGrow: 1,
@@ -63,7 +62,7 @@ export function FormScreenLayout({
             </View>
           </ScrollView>
           <LinearGradient
-            colors={["transparent", fadeColor] as const}
+            colors={["transparent", theme.bg] as const}
             style={{
               position: "absolute",
               bottom: 0,

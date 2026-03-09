@@ -1,14 +1,17 @@
-import { useEffect, useState, useRef } from "react";
-import { View, Text, Pressable, ScrollView } from "react-native";
+import { INPUT_BORDER_RADIUS, INPUT_PADDING } from "@/theme/inputStyles";
 import { LocationResult } from "@/constants/types";
-import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { ThemedText } from "@/components/ThemedText";
+import { ThemedTextInput } from "@/components/ThemedTextInput";
+import { useTheme } from "@/theme/useTheme";
+import { useEffect, useRef, useState } from "react";
+import { View, Pressable, ScrollView } from "react-native";
 
 export function LocationInput({
   onSelect,
 }: {
   onSelect: (location: LocationResult) => void;
 }) {
+  const theme = useTheme();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -130,7 +133,7 @@ export function LocationInput({
   }
 
   return (
-    <View>
+    <View style={{ overflow: "hidden" }}>
       <ThemedTextInput
         value={query}
         onChangeText={setQuery}
@@ -138,15 +141,28 @@ export function LocationInput({
       />
 
       {results.length > 0 && (
-        <View className="border border-gray-200 rounded mt-1 bg-white max-h-64">
-          <ScrollView>
+        <View
+          className="max-h-64 border"
+          style={{
+            backgroundColor: theme.bgNav,
+            borderColor: theme.textPlaceholder,
+            borderWidth: 1,
+            borderRadius: INPUT_BORDER_RADIUS,
+            overflow: "hidden",
+          }}
+        >
+          <ScrollView keyboardShouldPersistTaps="handled">
             {results.map((item) => (
               <Pressable
                 key={item.place_id.toString()}
                 onPress={() => handleSelect(item)}
-                className="p-3 border-b border-gray-100"
+                className="border-b"
+                style={{
+                  padding: INPUT_PADDING,
+                  borderBottomColor: theme.textPlaceholder,
+                }}
               >
-                <Text>{formatLocationDisplay(item)}</Text>
+                <ThemedText>{formatLocationDisplay(item)}</ThemedText>
               </Pressable>
             ))}
           </ScrollView>
@@ -154,7 +170,10 @@ export function LocationInput({
       )}
 
       {loading && (
-        <ThemedText className="text-sm mt-2 text-gray-500">
+        <ThemedText
+          className="text-sm mt-2"
+          style={{ color: theme.textPlaceholder }}
+        >
           Searching...
         </ThemedText>
       )}
