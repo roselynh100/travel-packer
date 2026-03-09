@@ -49,9 +49,9 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="TripInfo"
+        name="Trips"
         options={{
-          title: "Trip Info",
+          title: "Trips",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="sun.max" color={color} />
           ),
