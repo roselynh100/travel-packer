@@ -9,6 +9,7 @@ import {
   Platform,
   type LayoutChangeEvent,
 } from "react-native";
+import { useRouter } from "expo-router";
 
 import { apiFetch } from "@/constants/api";
 import {
@@ -24,11 +25,9 @@ import { ThemedButton } from "@/components/ThemedButton";
 import { WeightModal } from "@/components/WeightModal";
 import { CVCorrectionModal } from "@/components/CVCorrectionModal";
 import { CameraCaptureView } from "@/components/CameraCaptureView";
-import { cn } from "@/helpers/cn";
+import { ThemedBanner, ThemedBannerProps } from "@/components/ThemedBanner";
 
 const CAMERA_CAPTURE_DELAY = 1500;
-
-type InfoBanner = { type: "error" | "info"; message: string } | null;
 
 type ScanResult = {
   photoUri: string;
@@ -38,7 +37,7 @@ type ScanResult = {
 
 function setBannerFromApiError(
   error: unknown,
-  setInfoBanner: (b: InfoBanner) => void,
+  setInfoBanner: (b: ThemedBannerProps | null) => void,
 ) {
   const apiError = error as { status?: number };
   if (apiError.status === 500) {
@@ -65,11 +64,12 @@ export default function ScanningScreen() {
   const [weightItem, setWeightItem] = useState<Item | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
-  const [infoBanner, setInfoBanner] = useState<InfoBanner>(null);
+  const [infoBanner, setInfoBanner] = useState<ThemedBannerProps | null>(null);
   const [correctionModalVisible, setCorrectionModalVisible] = useState(false);
   const [resultImageSize, setResultImageSize] = useState<number | null>(null);
 
   const isFocused = useIsFocused();
+  const router = useRouter();
 
   const onResultImageLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -203,7 +203,7 @@ export default function ScanningScreen() {
     if (shouldDelayPacking) {
       setCorrectionModalVisible(true);
       setInfoBanner({
-        type: "info",
+        type: "warning",
         message: "We’re not fully sure what this is—please confirm below.",
       });
     }
@@ -244,18 +244,30 @@ export default function ScanningScreen() {
 
     if (result.status === "pack") {
       setInfoBanner({
-        type: "info",
+        type: "success",
         message: "This item should be packed!",
+        actionLabel: "View",
+        onActionPress: () => {
+          router.push("/PackingList");
+        },
       });
     } else if (result.status === "remove") {
       setInfoBanner({
-        type: "info",
-        message: `Do not pack this item. ${result.reason}`,
+        type: "error",
+        message: "This item should be left behind!", // TODO: show the reason in the modal
+        actionLabel: "View",
+        onActionPress: () => {
+          // OPEN A MODAL
+        },
       });
     } else if (result.status === "swap") {
       setInfoBanner({
-        type: "info",
-        message: "You must remove an item to pack this one!",
+        type: "warning",
+        message: "This item should be swapped!",
+        actionLabel: "Details",
+        onActionPress: () => {
+          // OPEN A MODAL
+        },
       });
     }
   }
@@ -323,16 +335,12 @@ export default function ScanningScreen() {
       {scanResult && (
         <>
           {infoBanner && (
-            <View
-              className={cn(
-                "w-full py-3 px-4 items-center",
-                infoBanner.type === "error" ? "bg-red-600" : "bg-blue-600",
-              )}
-            >
-              <ThemedText type="subtitle" className="text-white text-center">
-                {infoBanner.message}
-              </ThemedText>
-            </View>
+            <ThemedBanner
+              type={infoBanner.type}
+              message={infoBanner.message}
+              actionLabel={infoBanner.actionLabel}
+              onActionPress={infoBanner.onActionPress}
+            />
           )}
           <View
             className="flex-1 items-center justify-center"
