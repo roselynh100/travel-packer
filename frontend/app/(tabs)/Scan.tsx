@@ -5,7 +5,6 @@ import {
   Button,
   View,
   Image,
-  ActivityIndicator,
   Platform,
   type LayoutChangeEvent,
 } from "react-native";
@@ -26,6 +25,7 @@ import { WeightModal } from "@/components/WeightModal";
 import { CVCorrectionModal } from "@/components/CVCorrectionModal";
 import { CameraCaptureView } from "@/components/CameraCaptureView";
 import { ThemedBanner, ThemedBannerProps } from "@/components/ThemedBanner";
+import { ThemedLoading } from "@/components/ThemedLoading";
 
 const CAMERA_CAPTURE_DELAY = 1500;
 
@@ -248,7 +248,7 @@ export default function ScanningScreen() {
         message: "This item should be packed!",
         actionLabel: "View",
         onActionPress: () => {
-          router.push("/PackingList");
+          router.push("/Trips");
         },
       });
     } else if (result.status === "remove") {
@@ -369,14 +369,7 @@ export default function ScanningScreen() {
         onSelect={handleCorrectionSelect}
         onDismiss={() => setCorrectionModalVisible(false)}
       />
-      {isProcessing && (
-        <View className="w-full h-full absolute bg-black/50 justify-center items-center">
-          <ActivityIndicator size="large" color="#fff" />
-          <ThemedText type="subtitle" className="text-white mt-8">
-            Processing...
-          </ThemedText>
-        </View>
-      )}
+      <ThemedLoading isLoading={isProcessing} message="Processing..." />
       {scanResult && !isProcessing && (
         <View className="w-full absolute bottom-8 items-center">
           <ThemedButton title="Scan Again" onPress={clearScanResult} />

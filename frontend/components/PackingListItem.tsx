@@ -1,9 +1,10 @@
-import { Pressable, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import { useState } from "react";
 import { ThemedText } from "@/components/ThemedText";
 import { PackingListItem as PackingListItemType } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { PackingRecommendationStatus } from "@/components/PackingRecommendationStatus";
+import { cn } from "@/helpers/cn";
 import { useTheme } from "@/theme/useTheme";
 
 type PackingListItemProps = {
@@ -48,20 +49,21 @@ export function PackingListItem({
         </View>
 
         {expanded && (
-          <View className="mt-2 pl-6 gap-1">
-            {"reason" in item && (
-              <ThemedText className="text-gray-500">{item.reason}</ThemedText>
+          <View
+            className={cn(
+              "mt-2 flex-col gap-1",
+              Platform.OS === "web" ? "pl-6" : "pl-8",
             )}
+          >
+            {"reason" in item && <ThemedText>{item.reason}</ThemedText>}
 
             {"weight_kg" in item && item.weight_kg !== null && (
-              <ThemedText className="text-gray-500">
-                Weight: {item.weight_kg.toFixed(2)} kg
-              </ThemedText>
+              <ThemedText>Weight: {item.weight_kg.toFixed(2)} kg</ThemedText>
             )}
 
             {"estimated_volume_cm3" in item &&
               item.estimated_volume_cm3 !== null && (
-                <ThemedText className="text-gray-500">
+                <ThemedText>
                   Volume: {item.estimated_volume_cm3.toFixed(2)} cm³
                 </ThemedText>
               )}

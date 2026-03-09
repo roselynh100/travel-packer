@@ -58,15 +58,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="PackingList"
-        options={{
-          title: "Packing List",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="list.bullet" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="Scan"
         options={{
           title: "Pack Items",
