@@ -25,7 +25,6 @@ const MAPPING = {
   "camera.fill": "camera-alt",
   gauge: "monitor-weight",
   "cube.box.fill": "archive",
-  "person.fill": "person",
 } as IconMapping;
 
 /**
