@@ -1,5 +1,6 @@
 import { ThemedText } from "@/components/ThemedText";
 import { cn } from "@/helpers/cn";
+import { useTheme } from "@/theme/useTheme";
 import { Pressable, type PressableProps } from "react-native";
 
 export type ThemedButtonProps = PressableProps & {
@@ -13,28 +14,25 @@ export function ThemedButton({
   className,
   ...rest
 }: ThemedButtonProps) {
-  const backgroundColor =
-    variant === "solid" ? "bg-[var(--color-primary)]" : "bg-transparent";
-
-  const textColor =
-    variant === "solid" ? "text-white" : "text-[var(--color-primary)]"; // TODO: fix bg colour and then fix this to black?
-
-  const border =
-    variant === "outline"
-      ? "border-[var(--color-primary)]"
-      : "border-transparent";
+  const theme = useTheme();
+  const isSolid = variant === "solid";
 
   return (
     <Pressable
       className={cn(
-        "rounded-full items-center justify-center py-3 px-5 active:opacity-80 border-2",
-        backgroundColor,
-        border,
-        className
+        "rounded-2xl items-center justify-center py-3 px-5 active:opacity-80 border-2",
+        className,
       )}
+      style={
+        isSolid
+          ? { backgroundColor: theme.primary, borderColor: theme.primary }
+          : { backgroundColor: "transparent", borderColor: theme.primary }
+      }
       {...rest}
     >
-      <ThemedText className={textColor}>{title}</ThemedText>
+      <ThemedText style={{ color: isSolid ? "#ffffff" : theme.primary }}>
+        {title}
+      </ThemedText>
     </Pressable>
   );
 }

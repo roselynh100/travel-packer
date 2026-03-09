@@ -1,5 +1,5 @@
 import { Platform, StyleSheet, Text, type TextProps } from "react-native";
-import { cn } from "@/helpers/cn";
+import { useTheme } from "@/theme/useTheme";
 
 export type ThemedTextProps = TextProps & {
   type?: "default" | "title" | "defaultSemiBold" | "subtitle" | "link";
@@ -12,17 +12,18 @@ export function ThemedText({
   className,
   ...rest
 }: ThemedTextProps) {
+  const theme = useTheme();
   return (
     <Text
-      className={cn("text-[var(--color-text)]", className)}
+      className={className}
       style={[
         type === "default" ? styles.default : undefined,
         type === "title" ? styles.title : undefined,
         type === "defaultSemiBold" ? styles.defaultSemiBold : undefined,
         type === "subtitle" ? styles.subtitle : undefined,
         type === "link" ? styles.link : undefined,
+        { fontFamily: "StackSansText_400Regular", color: theme.text },
         style,
-        { fontFamily: "StackSansText_400Regular" },
       ]}
       {...rest}
     />
