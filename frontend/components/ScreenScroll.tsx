@@ -5,6 +5,7 @@ import {
   type ScrollViewProps,
   type ViewStyle,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/useTheme";
 import { cn } from "@/helpers/cn";
 
@@ -28,9 +29,15 @@ export function ScreenScroll({
   ...rest
 }: ScreenScrollProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+
+  const padding = Platform.OS === "web" ? 48 : 24;
+  const bottomInset = Platform.OS === "web" ? 0 : insets.bottom;
 
   const baseContent: ViewStyle = {
     flexGrow: 1,
+    padding,
+    paddingBottom: padding + bottomInset,
     ...(variant === "spaceBetween"
       ? { justifyContent: "space-between" }
       : null),
@@ -38,11 +45,7 @@ export function ScreenScroll({
 
   return (
     <ScrollView
-      className={cn(
-        "flex-1",
-        Platform.OS === "web" ? "p-12" : "p-6",
-        className,
-      )}
+      className={cn("flex-1", className)}
       style={[{ backgroundColor: theme.bg }, style]}
       contentContainerStyle={[baseContent, contentContainerStyle]}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps}
