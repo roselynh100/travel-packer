@@ -1,20 +1,34 @@
 import { Platform, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScreenScroll } from "@/components/ScreenScroll";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
 import { useAppContext } from "@/helpers/AppContext";
 import { useTheme } from "@/theme/useTheme";
-import { PackingListItem as PackingListItemType } from "@/constants/types";
-import { PackingListItem } from "@/components/PackingListItem";
+import {
+  ItemWithPackingRecommendation,
+  PackingListItem as PackingListItemType,
+} from "@/constants/types";
+import {
+  PackingListItem,
+  PackingListPill,
+  PackingRecommendationModal,
+} from "@/components/packing";
 import { averageTemp } from "@/helpers/averageTemp";
 import { useTripInfo } from "@/hooks/useTripInfo";
 import { usePackingList } from "@/hooks/usePackingList";
-import { PackingListPill } from "@/components/PackingListPill";
 
 export default function Trips() {
   const router = useRouter();
   const theme = useTheme();
+  const { packingDecision } = useLocalSearchParams<{
+    packingDecision?: string;
+  }>();
+  const [packingModalVariant, setPackingModalVariant] = useState<
+    "remove" | "swap" | null
+  >(null);
+
   const { tripId, currentItem } = useAppContext();
 
   const { tripInfo, refetch: refetchTripInfo } = useTripInfo(tripId);
@@ -27,12 +41,30 @@ export default function Trips() {
     onTripChanged: refetchTripInfo,
   });
 
+  useEffect(() => {
+    if (packingDecision === "remove" || packingDecision === "swap") {
+      setPackingModalVariant(packingDecision as "remove" | "swap");
+
+      // Remove the packing decision from the URL
+      router.setParams({ packingDecision: undefined });
+    }
+  }, [packingDecision, router]);
+
   return (
     <ScreenScroll>
       <ThemedText type="title">Your trip</ThemedText>
 
       {tripId ? (
         <View className="mt-6 gap-6">
+          <PackingRecommendationModal
+            visible={packingModalVariant !== null}
+            variant={packingModalVariant}
+            itemName={
+              (currentItem as ItemWithPackingRecommendation | null)?.item_name
+            }
+            onIgnore={() => setPackingModalVariant(null)}
+            onPrimary={() => setPackingModalVariant(null)}
+          />
           <View className="flex-row gap-2">
             <PackingListPill
               type="weight"

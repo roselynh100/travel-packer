@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ThemedText } from "@/components/ThemedText";
 import { PackingListItem as PackingListItemType } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
-import { PackingRecommendationStatus } from "@/components/PackingRecommendationStatus";
+import { PackingRecommendationStatus } from "@/components/packing";
 import { cn } from "@/helpers/cn";
 import { useTheme } from "@/theme/useTheme";
 
@@ -29,6 +29,8 @@ export function PackingListItem({
       style={({ pressed }) => ({
         padding: 8,
         backgroundColor: pressed ? theme.bgNav : "transparent",
+        borderBottomWidth: 1,
+        borderBottomColor: theme.textPlaceholder,
       })}
     >
       <View className="flex-col">

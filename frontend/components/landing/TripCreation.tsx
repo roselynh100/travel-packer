@@ -15,6 +15,7 @@ import { RequiredLabel } from "@/components/RequiredLabel";
 import { ThemedButton } from "@/components/ThemedButton";
 import { useTheme } from "@/theme/useTheme";
 import { ThemedLoading } from "@/components/ThemedLoading";
+import { delay } from "@/helpers/delay";
 import { ScreenScroll } from "@/components/ScreenScroll";
 
 export function TripCreation({ onContinue }: { onContinue: () => void }) {
@@ -143,7 +144,7 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
       if (savedTrip.trip_id) {
         await fetchWeather(savedTrip.trip_id);
       }
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await delay(3000);
 
       onContinue();
     } catch (error) {
