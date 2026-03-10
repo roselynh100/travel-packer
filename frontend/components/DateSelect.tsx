@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { View, Pressable } from "react-native";
 
 import {
@@ -8,6 +8,7 @@ import {
   type CalendarTheme,
 } from "@marceloterreiro/flash-calendar";
 import { ThemedText } from "@/components/ThemedText";
+import { useTheme } from "@/theme/useTheme";
 
 type DateSelectProps = {
   startDate: string;
@@ -24,19 +25,37 @@ export const DateSelect = ({
   setEndDate,
   onRangeComplete,
 }: DateSelectProps) => {
+  const theme = useTheme();
   const [currentMonth, setCurrentMonth] = useState(toDateId(new Date()));
 
   const today = toDateId(new Date());
 
-  // Custom theme to hide the built-in month header
-  const calendarTheme: CalendarTheme = {
-    rowMonth: {
-      container: {
-        height: 0,
-        overflow: "hidden",
+  const calendarTheme: CalendarTheme = useMemo(
+    () => ({
+      rowMonth: {
+        container: {
+          height: 0,
+          overflow: "hidden",
+        },
       },
-    },
-  };
+      itemDayContainer: {
+        activeDayFiller: {
+          backgroundColor: theme.primary,
+        },
+      },
+      itemDay: {
+        active: () => ({
+          container: {
+            backgroundColor: theme.primary,
+          },
+          content: {
+            color: "#ffffff",
+          },
+        }),
+      },
+    }),
+    [theme.primary],
+  );
 
   // Limit: 2 years from today
   const MAX_DATE = toDateId(

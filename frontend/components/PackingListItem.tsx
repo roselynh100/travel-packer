@@ -4,6 +4,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { PackingListItem as PackingListItemType } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { PackingRecommendationStatus } from "@/components/PackingRecommendationStatus";
+import { useTheme } from "@/theme/useTheme";
 
 type PackingListItemProps = {
   item: PackingListItemType;
@@ -16,6 +17,7 @@ export function PackingListItem({
   checked,
   onToggle,
 }: PackingListItemProps) {
+  const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
 
   // ASSUMPTION: Priority is an internal value (should not be shown to user)
@@ -25,7 +27,7 @@ export function PackingListItem({
       onPress={() => setExpanded((prev) => !prev)}
       style={({ pressed }) => ({
         padding: 8,
-        backgroundColor: pressed ? "var(--color-bg-nav)" : "transparent",
+        backgroundColor: pressed ? theme.bgNav : "transparent",
       })}
     >
       <View className="flex-col">

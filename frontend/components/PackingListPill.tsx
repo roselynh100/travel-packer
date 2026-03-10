@@ -1,6 +1,7 @@
 import { View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useTheme } from "@/theme/useTheme";
 
 type PackingListPillProps = {
   type: "weight" | "volume";
@@ -9,6 +10,7 @@ type PackingListPillProps = {
 
 // TODO: Convert to percentage of limit
 export function PackingListPill({ type, value }: PackingListPillProps) {
+  const theme = useTheme();
   // TODO: Fix this logic
   const borderColor = value > 0 ? "border-yellow-500" : "border-green-500";
 
@@ -24,7 +26,7 @@ export function PackingListPill({ type, value }: PackingListPillProps) {
       <IconSymbol
         name={type === "weight" ? "gauge" : "cube.box.fill"}
         size={24}
-        color="var(--color-text)"
+        color={theme.text}
       />
       <ThemedText className="text-sm">{text}</ThemedText>
     </View>

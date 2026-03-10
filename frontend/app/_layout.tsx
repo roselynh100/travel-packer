@@ -6,7 +6,8 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { useColorScheme, View } from "react-native";
+import { View } from "react-native";
+import { useTheme } from "@/theme/useTheme";
 import {
   StackSansText_400Regular,
   useFonts,
@@ -18,13 +19,13 @@ import { useEffect } from "react";
 SplashScreen.preventAutoHideAsync();
 
 function RootContainer({ children }: { children: React.ReactNode }) {
-  const colorScheme = useColorScheme();
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
 
-  const backgroundColor = colorScheme === "dark" ? "#141414" : "#ffffff";
-
   return (
-    <View style={{ flex: 1, paddingTop: insets.top, backgroundColor }}>
+    <View
+      style={{ flex: 1, paddingTop: insets.top, backgroundColor: theme.bg }}
+    >
       {children}
     </View>
   );

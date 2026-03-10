@@ -1,27 +1,45 @@
-import { cn } from "@/helpers/cn";
+import {
+  INPUT_BORDER_RADIUS,
+  INPUT_FONT_FAMILY,
+  INPUT_FONT_SIZE,
+  INPUT_MIN_HEIGHT,
+  INPUT_PADDING,
+} from "@/theme/inputStyles";
+import { useTheme } from "@/theme/useTheme";
 import { useState } from "react";
 import { TextInput, View, type TextInputProps } from "react-native";
 
 export function ThemedTextInput({ style, ...otherProps }: TextInputProps) {
+  const theme = useTheme();
   const [focused, setFocused] = useState(false);
 
-  const ringColor = focused
-    ? "border-[var(--color-primary)]"
-    : "border-transparent";
-
-  const backgroundColor = "bg-[var(--color-bg-nav)]";
-
-  const text = "text-[var(--color-text)]";
-
-  const border = "border-2 border-[var(--color-text-placeholder)]";
-
   return (
-    <View className={cn("rounded-2xl border-2", ringColor)}>
+    <View
+      className="rounded-2xl border-2"
+      style={{
+        borderColor: focused ? theme.primary : "transparent",
+        overflow: "hidden",
+      }}
+    >
       <TextInput
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className={cn("p-3 rounded-xl", backgroundColor, text, border)}
-        placeholderTextColor="var(--color-text-placeholder)"
+        className="rounded-xl border-2"
+        style={[
+          {
+            backgroundColor: theme.bgNav,
+            color: theme.text,
+            borderColor: theme.textPlaceholder,
+            paddingHorizontal: INPUT_PADDING,
+            paddingVertical: INPUT_PADDING,
+            minHeight: INPUT_MIN_HEIGHT,
+            fontSize: INPUT_FONT_SIZE,
+            fontFamily: INPUT_FONT_FAMILY,
+            borderRadius: INPUT_BORDER_RADIUS,
+          },
+          style,
+        ]}
+        placeholderTextColor={theme.textPlaceholder}
         {...otherProps}
       />
     </View>
