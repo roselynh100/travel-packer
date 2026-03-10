@@ -52,14 +52,8 @@ export function useTripInfo(tripId: string | null): UseTripInfoResult {
     }
   }, [tripId]);
 
+  // tripId changed -> clear stale data and fetch the new trip
   useEffect(() => {
-    // No active trip -> clear any previous info
-    if (!tripId) {
-      setTripInfo(null);
-      return;
-    }
-
-    // tripId changed -> clear stale data and fetch the new trip
     setTripInfo(null);
     void fetchTripInfo();
   }, [tripId, fetchTripInfo]);

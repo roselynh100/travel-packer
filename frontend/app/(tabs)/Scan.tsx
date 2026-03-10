@@ -7,6 +7,7 @@ import { Item } from "@/constants/types";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { WeightModal } from "@/components/WeightModal";
+import { RetakeModal } from "@/components/RetakeModal";
 import { CVCorrectionModal } from "@/components/CVCorrectionModal";
 import { CameraCaptureView } from "@/components/CameraCaptureView";
 import { ThemedBanner } from "@/components/ThemedBanner";
@@ -27,8 +28,11 @@ export default function ScanningScreen() {
     scanResult,
     isProcessing,
     infoBanner,
+    retakeModalVisible,
     correctionModalVisible,
     handleCaptured,
+    handleRetakeConfirm,
+    openCorrectionModal,
     handleCorrectionSelect,
     dismissCorrectionModal,
     clearScanResult,
@@ -101,16 +105,20 @@ export default function ScanningScreen() {
           </View>
         </>
       )}
+      <RetakeModal
+        visible={retakeModalVisible}
+        onConfirm={handleRetakeConfirm}
+      />
       <CVCorrectionModal
-        visible={correctionModalVisible && !!scanResult && !isProcessing}
-        cvResults={scanResult?.cvResults ?? null}
+        visible={correctionModalVisible}
+        currentCvResult={scanResult?.cvResult ?? null}
         onSelect={handleCorrectionSelect}
         onDismiss={dismissCorrectionModal}
       />
       <ThemedLoading isLoading={isProcessing} message="Processing..." />
       {scanResult && !isProcessing && (
         <View className="w-full absolute bottom-8 items-center">
-          <ThemedButton title="Scan Again" onPress={clearScanResult} />
+          <ThemedButton title="Wrong item?" onPress={openCorrectionModal} />
         </View>
       )}
     </View>

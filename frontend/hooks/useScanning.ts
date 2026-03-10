@@ -13,14 +13,19 @@ import {
 import { useAppContext } from "@/helpers/AppContext";
 import { ThemedBannerProps } from "@/components/ThemedBanner";
 import { delay } from "@/helpers/delay";
-
-const CAMERA_CAPTURE_DELAY = 1500;
+import { CAMERA_CAPTURE_DELAY, CONFIDENCE_THRESHOLD } from "@/constants/cv";
 
 type ScanResult = {
   photoUri: string;
   annotatedUri: string | null;
-  cvResults: CVResult[];
+  cvResult: CVResult | null;
 } | null;
+
+type DetectRun = {
+  cvResult: CVResult;
+  annotatedUri: string | null;
+  itemId: string;
+};
 
 function setBannerFromApiError(
   error: unknown,
@@ -42,37 +47,29 @@ function setBannerFromApiError(
   }
 }
 
-type UseScanningResult = {
-  scanResult: ScanResult;
-  isProcessing: boolean;
-  infoBanner: ThemedBannerProps | null;
-  correctionModalVisible: boolean;
-  handleCaptured: (squareUri: string) => Promise<void>;
-  handleCorrectionSelect: (choice: CVResult) => Promise<void>;
-  dismissCorrectionModal: () => void;
-  clearScanResult: () => void;
-};
-
-export function useScanning(weightItem: Item | null): UseScanningResult {
+export function useScanning(weightItem: Item | null) {
   const { tripId, currentItem, setCurrentItem } = useAppContext();
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [infoBanner, setInfoBanner] = useState<ThemedBannerProps | null>(null);
+  const [originalDetect, setOriginalDetect] = useState<DetectRun | null>(null);
+  const [retakeModalVisible, setRetakeModalVisible] = useState(false);
   const [correctionModalVisible, setCorrectionModalVisible] = useState(false);
 
   const clearScanResult = useCallback(() => {
     setIsProcessing(false);
     setScanResult(null);
     setInfoBanner(null);
+    setOriginalDetect(null);
+    setRetakeModalVisible(false);
     setCorrectionModalVisible(false);
   }, []);
 
   // Reset when a new trip starts
   useEffect(() => {
-    if (!tripId) return;
-    clearScanResult();
+    if (tripId) clearScanResult();
   }, [tripId, clearScanResult]);
 
   const uploadPhotoToAPI = useCallback(
@@ -80,8 +77,9 @@ export function useScanning(weightItem: Item | null): UseScanningResult {
       uri: string,
       itemId?: string,
     ): Promise<{
-      item: ItemWithPackingRecommendation | null;
-      shouldDelayPacking: boolean;
+      item: Item;
+      cvResult: CVResult;
+      annotatedUri: string | null;
     }> => {
       const formData = new FormData();
 
@@ -121,47 +119,20 @@ export function useScanning(weightItem: Item | null): UseScanningResult {
       }
 
       const result: DetectResponse = await response.json();
-      console.log("Upload success:", result);
+      const { item, annotated_image } = result;
+      const cvResult = item.cv_result!;
+      const annotatedUri = annotated_image
+        ? `data:image/jpeg;base64,${annotated_image}`
+        : null;
 
-      const { item, cv_candidates, annotated_image } = result;
-      setScanResult({
-        photoUri: uri,
-        cvResults: cv_candidates,
-        annotatedUri: annotated_image
-          ? `data:image/jpeg;base64,${annotated_image}`
-          : null,
-      });
-
-      const updatedItem: ItemWithPackingRecommendation = {
-        ...item,
-        item_name: item.cv_result.item_name,
-        packing_recommendation: null,
-        packing_recommendation_details: null,
-      };
-      setCurrentItem(updatedItem);
-
-      const shouldDelayPacking = cv_candidates.length > 1;
-
-      if (shouldDelayPacking) {
-        setCorrectionModalVisible(true);
-        setInfoBanner({
-          type: "warning",
-          message: "We’re not fully sure what this is—please confirm below.",
-        });
-      }
-
-      await delay(CAMERA_CAPTURE_DELAY);
-
-      return { item: updatedItem, shouldDelayPacking };
+      return { item, cvResult, annotatedUri };
     },
-    [setCurrentItem],
+    [],
   );
 
   const getPackingRecommendation = useCallback(
     async (itemId: string) => {
-      if (!tripId) {
-        return;
-      }
+      if (!tripId) return;
 
       const response = await apiFetch(
         `/trips/${tripId}/item/${itemId}/packing-decision`,
@@ -187,7 +158,6 @@ export function useScanning(weightItem: Item | null): UseScanningResult {
         return {
           ...typedPrev,
           packing_recommendation: result.status,
-          packing_recommendation_details: result,
         };
       });
 
@@ -235,78 +205,209 @@ export function useScanning(weightItem: Item | null): UseScanningResult {
       setScanResult({
         photoUri: squareUri,
         annotatedUri: null,
-        cvResults: [],
+        cvResult: null,
       });
       setIsProcessing(true);
 
       try {
         await delay(CAMERA_CAPTURE_DELAY);
 
-        const { item: uploadedItem, shouldDelayPacking } =
-          await uploadPhotoToAPI(squareUri, weightItem?.item_id);
+        const { item, cvResult, annotatedUri } = await uploadPhotoToAPI(
+          squareUri,
+          weightItem?.item_id,
+        );
 
-        if (uploadedItem?.item_id && !shouldDelayPacking) {
-          await getPackingRecommendation(uploadedItem.item_id);
+        if (originalDetect) {
+          const secondRun: DetectRun = {
+            cvResult,
+            annotatedUri,
+            itemId: item.item_id,
+          };
+          const best =
+            originalDetect.cvResult.confidence_score >=
+            cvResult.confidence_score
+              ? originalDetect
+              : secondRun;
+
+          // Use the higher confidence score
+          setScanResult({
+            photoUri: squareUri,
+            annotatedUri: best.annotatedUri,
+            cvResult: best.cvResult,
+          });
+          setOriginalDetect(null);
+
+          if (best === originalDetect) {
+            // We've just overwritten the original detection, so update it back
+            await apiFetch(`/items/${encodeURIComponent(item.item_id)}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ cv_result: originalDetect.cvResult }),
+            });
+
+            setCurrentItem((prev) =>
+              prev?.item_id === item.item_id
+                ? {
+                    ...(prev as ItemWithPackingRecommendation),
+                    item_name: originalDetect.cvResult.item_name,
+                    cv_result: originalDetect.cvResult,
+                    packing_recommendation: null,
+                  }
+                : prev,
+            );
+          } else {
+            const bestItem: ItemWithPackingRecommendation = {
+              ...item,
+              item_name: best.cvResult.item_name,
+              cv_result: best.cvResult,
+              packing_recommendation: null,
+            };
+            setCurrentItem(bestItem);
+          }
+          await getPackingRecommendation(item.item_id);
+        } else {
+          // This is the first capture
+          if (cvResult.confidence_score < CONFIDENCE_THRESHOLD) {
+            // Low confidence: remember this run but do NOT update currentItem/packing list yet
+            setOriginalDetect({
+              cvResult,
+              annotatedUri,
+              itemId: item.item_id,
+            });
+            setRetakeModalVisible(true);
+
+            // Clear result and show camera again
+            setScanResult(null);
+          } else {
+            setScanResult({ photoUri: squareUri, annotatedUri, cvResult });
+
+            const updatedItem: ItemWithPackingRecommendation = {
+              ...item,
+              item_name: item.cv_result!.item_name,
+              packing_recommendation: null,
+            };
+            setCurrentItem(updatedItem);
+
+            await getPackingRecommendation(item.item_id);
+          }
         }
+        await delay(CAMERA_CAPTURE_DELAY);
       } catch (error) {
-        console.error("Error after capture:", error);
-        setBannerFromApiError(error, setInfoBanner);
+        const apiErr = error as { status?: number };
+        // If retake failed (e.g. no detections) but we have a low-confidence original,
+        // fall back to the original detection and treat it as final.
+        if (originalDetect && apiErr.status === 500) {
+          try {
+            // Show the original annotated image / result
+            setScanResult({
+              photoUri: squareUri,
+              annotatedUri: originalDetect.annotatedUri,
+              cvResult: originalDetect.cvResult,
+            });
+            setOriginalDetect(null);
+
+            // Patch backend item to use the original cv_result, then get packing rec
+            const response = await apiFetch(
+              `/items/${encodeURIComponent(originalDetect.itemId)}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cv_result: originalDetect.cvResult }),
+              },
+            );
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(
+                `API error (${response.status}): ${errorText || response.statusText}`,
+              );
+            }
+
+            const updatedItem: Item = await response.json();
+            const updatedCv = updatedItem.cv_result!;
+            setCurrentItem({
+              ...(updatedItem as ItemWithPackingRecommendation),
+              item_name: updatedCv.item_name,
+              cv_result: updatedCv,
+              packing_recommendation: null,
+            });
+
+            await getPackingRecommendation(updatedItem.item_id);
+          } catch (fallbackError) {
+            setBannerFromApiError(fallbackError, setInfoBanner);
+          }
+        } else {
+          // First detect failed: keep last photo and show error
+          setBannerFromApiError(error, setInfoBanner);
+        }
       } finally {
         setIsProcessing(false);
       }
     },
-    [getPackingRecommendation, uploadPhotoToAPI, weightItem],
+    [
+      getPackingRecommendation,
+      uploadPhotoToAPI,
+      weightItem?.item_id,
+      originalDetect,
+      setCurrentItem,
+    ],
+  );
+
+  const handleRetakeConfirm = useCallback(() => {
+    setRetakeModalVisible(false);
+    setScanResult(null);
+  }, []);
+
+  const openCorrectionModal = useCallback(
+    () => setCorrectionModalVisible(true),
+    [],
+  );
+  const dismissCorrectionModal = useCallback(
+    () => setCorrectionModalVisible(false),
+    [],
   );
 
   const handleCorrectionSelect = useCallback(
-    async (choice: CVResult) => {
-      if (!currentItem) {
+    async (selectedItemName: string) => {
+      if (!currentItem || !scanResult?.cvResult) {
         setCorrectionModalVisible(false);
         return;
       }
+
+      const newCvResult: CVResult = {
+        ...scanResult.cvResult,
+        item_name: selectedItemName,
+      };
 
       try {
         const response = await apiFetch(
           `/items/${encodeURIComponent(currentItem.item_id)}`,
           {
             method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ cv_result: choice }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cv_result: newCvResult }),
           },
         );
-
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(
-            `API error (${response.status}): ${
-              errorText || response.statusText
-            }`,
+            `API error (${response.status}): ${errorText || response.statusText}`,
           );
         }
 
         const updatedServerItem: Item = await response.json();
-
-        const updatedItem: ItemWithPackingRecommendation = {
-          ...(currentItem as ItemWithPackingRecommendation),
-          item_name: choice.item_name,
-          cv_result: choice,
-          // Reset details; they will be re-populated by getPackingRecommendation call
-          packing_recommendation: null,
-          packing_recommendation_details: null,
-        };
-
+        const updatedCv = updatedServerItem.cv_result!;
         setScanResult((prev) =>
-          prev ? { ...prev, cvResults: [choice] } : null,
+          prev ? { ...prev, cvResult: updatedCv } : null,
         );
-        setCurrentItem(updatedItem);
-
-        if (updatedServerItem.item_id) {
-          await getPackingRecommendation(updatedServerItem.item_id);
-        }
-      } catch (error) {
-        console.error("Error correcting item classification:", error);
+        setCurrentItem({
+          ...(currentItem as ItemWithPackingRecommendation),
+          item_name: selectedItemName,
+          cv_result: updatedCv,
+          packing_recommendation: null,
+        });
+        await getPackingRecommendation(currentItem.item_id);
+        router.push("/Trips");
+      } catch {
         setInfoBanner({
           type: "error",
           message: "Failed to update item classification. Please try again.",
@@ -315,19 +416,24 @@ export function useScanning(weightItem: Item | null): UseScanningResult {
         setCorrectionModalVisible(false);
       }
     },
-    [currentItem, getPackingRecommendation, setCurrentItem],
+    [
+      currentItem,
+      scanResult?.cvResult,
+      getPackingRecommendation,
+      setCurrentItem,
+      router,
+    ],
   );
-
-  const dismissCorrectionModal = useCallback(() => {
-    setCorrectionModalVisible(false);
-  }, []);
 
   return {
     scanResult,
     isProcessing,
     infoBanner,
+    retakeModalVisible,
     correctionModalVisible,
     handleCaptured,
+    handleRetakeConfirm,
+    openCorrectionModal,
     handleCorrectionSelect,
     dismissCorrectionModal,
     clearScanResult,
