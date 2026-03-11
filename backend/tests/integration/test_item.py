@@ -42,11 +42,15 @@ class TestRealScaleIntegration(unittest.TestCase):
 
         trips_store.clear()
 
-        from app.models import Trip
+        from app.models import Location, Trip
 
         trips_store["realtrip"] = Trip(
             trip_id="realtrip",
             destination="TestCity",
+            origin_details=Location(city="Home", country="US", airport_code="JFK"),
+            destination_details=Location(
+                city="TestCity", country="US", airport_code="JFK"
+            ),
             duration_days=1,
             doing_laundry=False,
             items=[],
@@ -54,6 +58,10 @@ class TestRealScaleIntegration(unittest.TestCase):
         trips_store["t1"] = Trip(
             trip_id="t1",
             destination="TestCity",
+            origin_details=Location(city="Home", country="US", airport_code="JFK"),
+            destination_details=Location(
+                city="TestCity", country="US", airport_code="JFK"
+            ),
             duration_days=1,
             doing_laundry=False,
             items=[],
