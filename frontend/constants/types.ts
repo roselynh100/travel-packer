@@ -91,7 +91,7 @@ export type PackingRecommendation = {
 
 export type ItemWithPackingRecommendation = Item & {
   item_name: string;
-  packing_recommendation: PackingRecommendationStatus | null;
+  packing_recommendation: PackingRecommendation | null;
 };
 
 // Union type for packing list items

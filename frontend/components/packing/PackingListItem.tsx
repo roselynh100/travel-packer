@@ -1,7 +1,10 @@
 import { Platform, Pressable, View } from "react-native";
 import { useState } from "react";
 import { ThemedText } from "@/components/ThemedText";
-import { PackingListItem as PackingListItemType } from "@/constants/types";
+import {
+  ItemWithPackingRecommendation,
+  PackingListItem as PackingListItemType,
+} from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { PackingRecommendationStatus } from "@/components/packing";
 import { cn } from "@/helpers/cn";
@@ -11,15 +14,24 @@ type PackingListItemProps = {
   item: PackingListItemType;
   checked: boolean;
   onToggle: () => void;
+  onPressRecommendation?: (item: ItemWithPackingRecommendation) => void;
 };
 
 export function PackingListItem({
   item,
   checked,
   onToggle,
+  onPressRecommendation,
 }: PackingListItemProps) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
+
+  const recommendation =
+    "packing_recommendation" in item ? item.packing_recommendation : null;
+
+  const canOpenRecommendation =
+    recommendation &&
+    (recommendation.status === "remove" || recommendation.status === "swap");
 
   // ASSUMPTION: Priority is an internal value (should not be shown to user)
   // Disabled checkbox if packing recommendation is not available ("item" is not an Item in backend)
@@ -42,10 +54,12 @@ export function PackingListItem({
             disabled={!("packing_recommendation" in item)}
           />
           <PackingRecommendationStatus
-            status={
-              "packing_recommendation" in item
-                ? item.packing_recommendation
-                : null
+            status={recommendation?.status ?? null}
+            onPress={
+              canOpenRecommendation && onPressRecommendation
+                ? () =>
+                    onPressRecommendation(item as ItemWithPackingRecommendation)
+                : undefined
             }
           />
         </View>

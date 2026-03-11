@@ -1,36 +1,39 @@
 import { Modal, View } from "react-native";
+
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/theme/useTheme";
-
-type PackingRecommendationVariant = "remove" | "swap" | null;
+import type { ItemWithPackingRecommendation } from "@/constants/types";
 
 type PackingRecommendationModalProps = {
   visible: boolean;
-  variant: PackingRecommendationVariant;
-  itemName?: string;
+  item: ItemWithPackingRecommendation | null;
   onIgnore: () => void;
   onPrimary: () => void;
 };
 
 export function PackingRecommendationModal({
   visible,
-  variant,
-  itemName,
+  item,
   onIgnore,
   onPrimary,
 }: PackingRecommendationModalProps) {
   const theme = useTheme();
 
-  if (!variant) {
-    return null;
-  }
+  const recommendation = item?.packing_recommendation ?? null;
+  const variant =
+    recommendation?.status === "remove" || recommendation?.status === "swap"
+      ? recommendation.status
+      : null;
+
+  // Don't show modal for "pack" recommendation
+  if (!variant) return null;
 
   const isRemove = variant === "remove";
 
   const title = isRemove
-    ? "Your item should be left behind"
-    : "Your item should be swapped";
+    ? `Your ${item?.item_name} should be left behind`
+    : `Your ${item?.item_name} should be swapped`;
 
   const primaryLabel = isRemove ? "Remove" : "Swap";
 
@@ -43,18 +46,18 @@ export function PackingRecommendationModal({
     >
       <View className="flex-1 justify-center items-center bg-black/70 px-6">
         <View
-          className="rounded-2xl pt-18 pb-12 px-8 w-full max-w-md"
+          className="rounded-2xl pt-16 pb-12 px-8 w-full max-w-md"
           style={{ backgroundColor: theme.bgNav }}
         >
           <ThemedText type="subtitle" className="text-center mb-3">
             {title}
           </ThemedText>
-          {itemName && (
+          {recommendation?.reason && (
             <ThemedText className="text-center mb-2">
-              Item: {itemName}
+              {recommendation.reason}
             </ThemedText>
           )}
-          <View className="w-full gap-3">
+          <View className="w-full gap-3 mt-4">
             <ThemedButton
               title="Ignore"
               variant="outline"
@@ -62,7 +65,7 @@ export function PackingRecommendationModal({
               className="w-full"
             />
             <ThemedButton
-              title={primaryLabel}
+              title={variant === "remove" ? "Remove" : "Swap"}
               onPress={onPrimary}
               className="w-full"
             />

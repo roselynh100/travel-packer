@@ -157,7 +157,7 @@ export function useScanning(weightItem: Item | null) {
         const typedPrev = prevItem as ItemWithPackingRecommendation;
         return {
           ...typedPrev,
-          packing_recommendation: result.status,
+          packing_recommendation: result,
         };
       });
 

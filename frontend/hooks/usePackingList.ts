@@ -84,9 +84,6 @@ export function usePackingList(
           );
         }
 
-        const result = await response.json();
-        console.log("Item packed:", result);
-
         setCheckedItems((prev) => new Set(prev).add(itemId));
 
         if (onTripChanged) {
@@ -118,9 +115,6 @@ export function usePackingList(
             `API error (${response.status}): ${errorText || response.statusText}`,
           );
         }
-
-        const result = await response.json();
-        console.log("Item unpacked:", result);
 
         setCheckedItems((prev) => {
           const next = new Set(prev);
@@ -171,7 +165,7 @@ export function usePackingList(
       return [...prev, currentItem];
     });
 
-    if (currentItem.packing_recommendation === "pack") {
+    if (currentItem.packing_recommendation?.status === "pack") {
       void packItem(currentItem.item_id);
     }
   }, [currentItem, packItem]);
