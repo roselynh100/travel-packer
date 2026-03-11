@@ -41,7 +41,13 @@ def packing_decision_algorithm(
         additional=new_item.weight_kg,
         limit=WEIGHT_LIMIT_KG,
     ):
-        if new_item.item_importance > min_item_importance:
+        if not current_items:
+            return RemovalRecommendation(
+                status=RemovalRecommendationStatus.remove,
+                reason=RemovalRecommendationReason.overweight,
+                swap_candidates=None,
+            )
+        elif new_item.item_importance > min_item_importance:
 
             # Order by importance ASC and add items to list until overflow is fixed
             weight_overflow = (
@@ -75,7 +81,13 @@ def packing_decision_algorithm(
         additional=new_item.estimated_volume_cm3,
         limit=VOLUME_LIMIT_CM3,
     ):
-        if new_item.item_importance > min_item_importance:
+        if not current_items:
+            return RemovalRecommendation(
+                status=RemovalRecommendationStatus.remove,
+                reason=RemovalRecommendationReason.over_volume,
+                swap_candidates=None,
+            )
+        elif new_item.item_importance > min_item_importance:
 
             # Order by importance ASC and add items to list until overflow is fixed
             volume_overflow = (

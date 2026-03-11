@@ -6,6 +6,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.models import (
     Activity,
+    Airline,
+    BagType,
     BoundingBox,
     CVResult,
     Destination,
@@ -22,9 +24,14 @@ from machine_learning.optimizer import packing_decision_algorithm
 class TestPackingAlgorithm(unittest.TestCase):
 
     def create_dummy_item(
-        self, name: str, weight: float = 0.5, volume: float = 100.0
+        self,
+        name: str,
+        weight: float = 0.5,
+        volume: float = 100.0,
+        # origin_price: float = 10.0,
+        # dest_price: float = 10.0,
     ) -> Item:
-        """Helper to create a complex Pydantic Item with valid CVResults."""
+        """Helper to create a complex Pydantic Item with valid CVResults and Pricing."""
 
         # Create valid BoundingBox
         bbox = BoundingBox(x_min=0.0, y_min=0.0, x_max=10.0, y_max=10.0)
@@ -40,10 +47,16 @@ class TestPackingAlgorithm(unittest.TestCase):
             dimensions=dims,
         )
 
-        return Item(weight_kg=weight, estimated_volume_cm3=volume, cv_result=cv)
+        return Item(
+            weight_kg=weight,
+            estimated_volume_cm3=volume,
+            cv_result=cv,
+            # price_at_origin=origin_price,
+            # price_at_destination=dest_price,
+        )
 
     def test_laptop_context_logic(self):
-        """Test that Laptop is 0 importance for leisure, 100 for work."""
+        """Test that Laptop is 5 importance for leisure, 100 for work."""
         item = self.create_dummy_item("electronics")
 
         # Case 1: Leisure
@@ -53,8 +66,14 @@ class TestPackingAlgorithm(unittest.TestCase):
             duration_days=3,
             start_date="2026-02-14",
             end_date="2026-02-21",
+            bag_type=BagType.checked,
+            airline=Airline.air_canada,
             doing_laundry=False,
             activities=[Activity.beach],
+            lowest_temp=25.0,
+            highest_temp=30.0,
+            precipitation_percentage=0.1,
+            items=[],  # <-- Added missing items list
         )
         self.assertEqual(get_item_importance(item, trip_leisure, []), 0)
 
@@ -65,8 +84,14 @@ class TestPackingAlgorithm(unittest.TestCase):
             duration_days=3,
             start_date="2026-02-14",
             end_date="2026-02-21",
+            bag_type=BagType.checked,
+            airline=Airline.air_canada,
             doing_laundry=False,
             activities=[Activity.work],
+            lowest_temp=-5.0,
+            highest_temp=2.0,
+            precipitation_percentage=0.5,
+            items=[],  # <-- Added missing items list
         )
         self.assertEqual(get_item_importance(item, trip_work, []), 100)
 
@@ -77,8 +102,14 @@ class TestPackingAlgorithm(unittest.TestCase):
             destination_details=Destination(city="Paris", country="France"),
             start_date="2026-02-14",
             end_date="2026-02-21",
+            bag_type=BagType.checked,
+            airline=Airline.air_canada,
             duration_days=5,
             doing_laundry=False,
+            lowest_temp=10.0,
+            highest_temp=18.0,
+            precipitation_percentage=0.2,
+            items=[],  # <-- Added missing items list
         )
         current_items = []
         new_item = self.create_dummy_item("socks", weight=0.1)
@@ -94,21 +125,26 @@ class TestPackingAlgorithm(unittest.TestCase):
         Existing Item is 'jackets'.
         Expect: REMOVE (New item isn't important enough to displace existing).
         """
+        # 2. Setup Existing High Value Item first so we can reference its ID
+        existing_jacket = self.create_dummy_item("jackets", weight=0.1)
+        current_items = [existing_jacket]
+
         # 1. Setup Trip nearing limit
         trip = Trip(
             destination="Space",
             destination_details=Destination(city="Banff", country="Canada"),
             start_date="2026-02-14",
             end_date="2026-02-21",
+            bag_type=BagType.checked,
+            airline=Airline.air_canada,
             duration_days=7,
             lowest_temp=-10.0,
+            highest_temp=0.0,
+            precipitation_percentage=0.1,
             doing_laundry=False,
             total_items_weight=19.9,
+            items=[existing_jacket.item_id],  # <-- Linked existing item
         )
-
-        # 2. Setup Existing High Value Item
-        existing_jacket = self.create_dummy_item("jackets", weight=0.1)
-        current_items = [existing_jacket]
 
         # 3. Setup New Low Value Item
         new_item = self.create_dummy_item("tops", weight=0.5)
@@ -127,20 +163,26 @@ class TestPackingAlgorithm(unittest.TestCase):
         New Item is 'Laptop' (Importance 80 - Work), Weight 1.0kg.
         Expect: SWAP (Remove Snack to fit Laptop).
         """
+        # Existing heavy, unimportant item
+        tops = self.create_dummy_item("tops", weight=2.0)
+        current_items = [tops]
+
         trip = Trip(
             destination="Office",
             destination_details=Destination(city="Banff", country="Canada"),
             start_date="2026-02-14",
             end_date="2026-02-21",
+            bag_type=BagType.checked,
+            airline=Airline.air_canada,
             duration_days=1,
             doing_laundry=False,
             activities=[Activity.work],
+            lowest_temp=5.0,
+            highest_temp=15.0,
+            precipitation_percentage=0.0,
             total_items_weight=19.5,
+            items=[tops.item_id],  # <-- Linked existing item
         )
-
-        # Existing heavy, unimportant item
-        tops = self.create_dummy_item("tops", weight=2.0)
-        current_items = [tops]
 
         # New important item
         laptop = self.create_dummy_item("electronics", weight=1.0)
@@ -164,7 +206,13 @@ class TestPackingAlgorithm(unittest.TestCase):
             destination_details=Destination(city="Banff", country="Canada"),
             start_date="2026-02-14",
             end_date="2026-02-21",
+            bag_type=BagType.checked,
+            airline=Airline.air_canada,
             doing_laundry=False,
+            lowest_temp=10.0,
+            highest_temp=20.0,
+            precipitation_percentage=0.0,
+            items=[],  # <-- Added missing items list
         )
         current_items = []
         item = self.create_dummy_item("coat")
@@ -174,6 +222,78 @@ class TestPackingAlgorithm(unittest.TestCase):
             self.assertEqual(result.status, RemovalRecommendationStatus.pack)
         except ValueError:
             self.fail("Algorithm crashed on empty list check!")
+
+    def test_overlimit_with_empty_items(self):
+        """
+        Trip is empty (0.0kg).
+        New Item is 'anvil', Weight 25.0kg (Exceeds WEIGHT_LIMIT_KG of 20.0kg).
+        Expect: REMOVE (Cannot pack the item, and no items exist to swap).
+        """
+        # 1. Setup Trip with an empty bag
+        trip = Trip(
+            destination="Heavyville",
+            destination_details=Destination(city="Banff", country="Canada"),
+            start_date="2026-02-14",
+            end_date="2026-02-21",
+            bag_type=BagType.checked,
+            airline=Airline.air_canada,
+            duration_days=5,
+            doing_laundry=False,
+            lowest_temp=10.0,
+            highest_temp=18.0,
+            precipitation_percentage=0.2,
+            total_items_weight=0.0,
+            total_items_volume=0.0,
+            items=[],
+        )
+        current_items = []
+
+        # 2. Setup New Item that exceeds the 20.0kg limit by itself
+        massive_item = self.create_dummy_item("anvil", weight=25.0, volume=100.0)
+
+        # 3. Run the algorithm
+        result = packing_decision_algorithm(massive_item, trip, current_items)
+
+        # 4. Assert it returns a remove recommendation due to weight
+        self.assertEqual(result.status, RemovalRecommendationStatus.remove)
+        self.assertEqual(result.reason, RemovalRecommendationReason.overweight)
+        self.assertIsNone(result.swap_candidates)
+
+    def test_overvolume_with_empty_items(self):
+        """
+        Trip is empty (0.0cm3).
+        New Item is 'beanbag', Volume 60000.0cm3 (Exceeds VOLUME_LIMIT_CM3 of 50000.0cm3).
+        Expect: REMOVE (Cannot pack the item, and no items exist to swap).
+        """
+        trip = Trip(
+            destination="Pillow Town",
+            destination_details=Destination(city="Banff", country="Canada"),
+            start_date="2026-02-14",
+            end_date="2026-02-21",
+            bag_type=BagType.checked,
+            airline=Airline.air_canada,
+            duration_days=5,
+            doing_laundry=False,
+            lowest_temp=10.0,
+            highest_temp=18.0,
+            precipitation_percentage=0.2,
+            total_items_weight=0.0,
+            total_items_volume=0.0,
+            items=[],
+        )
+        current_items = []
+
+        # Setup New Item that exceeds the 50000.0cm3 volume limit by itself
+        # Make sure weight is low so it doesn't fail the weight check first
+        massive_volume_item = self.create_dummy_item(
+            "beanbag", weight=1.0, volume=60000.0
+        )
+
+        result = packing_decision_algorithm(massive_volume_item, trip, current_items)
+
+        self.assertEqual(result.status, RemovalRecommendationStatus.remove)
+        self.assertEqual(result.reason, RemovalRecommendationReason.over_volume)
+        self.assertIsNone(result.swap_candidates)
 
 
 if __name__ == "__main__":
