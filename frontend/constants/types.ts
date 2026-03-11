@@ -24,9 +24,11 @@ export type LocationResult = {
   city: string;
   state?: string;
   country: string;
+  airport_code: string;
 };
 
 export type Trip = {
+  origin_details: LocationResult;
   destination_details: LocationResult;
   start_date: string;
   end_date: string;

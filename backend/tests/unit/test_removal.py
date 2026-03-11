@@ -6,11 +6,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.models import (
     Activity,
+    Airline,
+    BagType,
     BoundingBox,
     CVResult,
-    Destination,
     Dimensions,
     Item,
+    Location,
     RemovalRecommendationReason,
     RemovalRecommendationStatus,
     Trip,
@@ -48,24 +50,36 @@ class TestPackingAlgorithm(unittest.TestCase):
 
         # Case 1: Leisure
         trip_leisure = Trip(
-            destination="Beach",
-            destination_details=Destination(city="Bali", country="Indonesia"),
+            origin_details=Location(
+                city="Toronto", country="Canada", airport_code="YYZ"
+            ),
+            destination_details=Location(
+                city="Bali", country="Indonesia", airport_code="DPS"
+            ),
             duration_days=3,
             start_date="2026-02-14",
             end_date="2026-02-21",
             doing_laundry=False,
+            bag_type=BagType.carry_on,
+            airline=Airline.air_canada,
             activities=[Activity.beach],
         )
         self.assertEqual(get_item_importance(item, trip_leisure, []), 0)
 
         # Case 2: Work
         trip_work = Trip(
-            destination="Conf",
-            destination_details=Destination(city="Banff", country="Canada"),
+            origin_details=Location(
+                city="Toronto", country="Canada", airport_code="YYZ"
+            ),
+            destination_details=Location(
+                city="Banff", country="Canada", airport_code="YYC"
+            ),
             duration_days=3,
             start_date="2026-02-14",
             end_date="2026-02-21",
             doing_laundry=False,
+            bag_type=BagType.carry_on,
+            airline=Airline.air_canada,
             activities=[Activity.work],
         )
         self.assertEqual(get_item_importance(item, trip_work, []), 100)
@@ -73,12 +87,18 @@ class TestPackingAlgorithm(unittest.TestCase):
     def test_pack_happy_path(self):
         """Test simple successful packing."""
         trip = Trip(
-            destination="Paris",
-            destination_details=Destination(city="Paris", country="France"),
+            origin_details=Location(
+                city="Toronto", country="Canada", airport_code="YYZ"
+            ),
+            destination_details=Location(
+                city="Paris", country="France", airport_code="CDG"
+            ),
             start_date="2026-02-14",
             end_date="2026-02-21",
             duration_days=5,
             doing_laundry=False,
+            bag_type=BagType.carry_on,
+            airline=Airline.air_canada,
         )
         current_items = []
         new_item = self.create_dummy_item("socks", weight=0.1)
@@ -96,13 +116,19 @@ class TestPackingAlgorithm(unittest.TestCase):
         """
         # 1. Setup Trip nearing limit
         trip = Trip(
-            destination="Space",
-            destination_details=Destination(city="Banff", country="Canada"),
+            origin_details=Location(
+                city="Toronto", country="Canada", airport_code="YYZ"
+            ),
+            destination_details=Location(
+                city="Banff", country="Canada", airport_code="YYC"
+            ),
             start_date="2026-02-14",
             end_date="2026-02-21",
             duration_days=7,
             lowest_temp=-10.0,
             doing_laundry=False,
+            bag_type=BagType.carry_on,
+            airline=Airline.air_canada,
             total_items_weight=19.9,
         )
 
@@ -128,12 +154,18 @@ class TestPackingAlgorithm(unittest.TestCase):
         Expect: SWAP (Remove Snack to fit Laptop).
         """
         trip = Trip(
-            destination="Office",
-            destination_details=Destination(city="Banff", country="Canada"),
+            origin_details=Location(
+                city="Toronto", country="Canada", airport_code="YYZ"
+            ),
+            destination_details=Location(
+                city="Banff", country="Canada", airport_code="YYC"
+            ),
             start_date="2026-02-14",
             end_date="2026-02-21",
             duration_days=1,
             doing_laundry=False,
+            bag_type=BagType.carry_on,
+            airline=Airline.air_canada,
             activities=[Activity.work],
             total_items_weight=19.5,
         )
@@ -159,12 +191,18 @@ class TestPackingAlgorithm(unittest.TestCase):
     def test_empty_list_edge_case(self):
         """Ensure algorithm handles the very first item (empty current_items)."""
         trip = Trip(
-            destination="Void",
             duration_days=1,
-            destination_details=Destination(city="Banff", country="Canada"),
+            origin_details=Location(
+                city="Toronto", country="Canada", airport_code="YYZ"
+            ),
+            destination_details=Location(
+                city="Banff", country="Canada", airport_code="YYC"
+            ),
             start_date="2026-02-14",
             end_date="2026-02-21",
             doing_laundry=False,
+            bag_type=BagType.carry_on,
+            airline=Airline.air_canada,
         )
         current_items = []
         item = self.create_dummy_item("coat")

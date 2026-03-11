@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.models import Activity, Destination, Item, RecommendedItem, Trip
+from app.models import Activity, Airline, BagType, Item, Location, RecommendedItem, Trip
 from app.state.db import items_store, trips_store
 
 
@@ -26,12 +26,16 @@ def _minimal_trip(
     end_dt = start_dt + datetime.timedelta(days=duration_days - 1)
     return Trip(
         trip_id=trip_id,
-        destination=destination,
-        destination_details=Destination(city=destination, country="US"),
+        origin_details=Location(city="Home", country="US", airport_code="JFK"),
+        destination_details=Location(
+            city=destination, country="US", airport_code="JFK"
+        ),
         duration_days=duration_days,
         start_date=start_dt,
         end_date=end_dt,
         doing_laundry=doing_laundry,
+        bag_type=BagType.carry_on,
+        airline=Airline.air_canada,
         items=list(items or []),
         activities=list(activities or []),
     )
@@ -193,7 +197,7 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
 
         mock_gen.assert_called_once()
         t = mock_gen.call_args[0][0]
-        self.assertEqual(t.destination, "Banff")
+        self.assertEqual(t.destination_details.city, "Banff")
         self.assertEqual(t.duration_days, 4)
         self.assertEqual(t.doing_laundry, False)
         self.assertEqual(t.activities, [Activity.hiking])
@@ -220,7 +224,15 @@ class TestUpdatingTrip(unittest.TestCase):
     def test_update_trip_omits_items_keeps_existing(self):
         """If `items` is omitted, existing list should be preserved."""
 
-        payload = {"destination": "Kyoto", "duration_days": 7, "doing_laundry": True}
+        payload = {
+            "destination_details": {
+                "city": "Kyoto",
+                "country": "US",
+                "airport_code": "JFK",
+            },
+            "duration_days": 7,
+            "doing_laundry": True,
+        }
 
         response = self.client.put(f"/trips/{self.trip_id}", json=payload)
         self.assertEqual(response.status_code, 200)
@@ -229,7 +241,7 @@ class TestUpdatingTrip(unittest.TestCase):
 
         self.assertEqual(updated["items"], ["item1", "item2"])
 
-        self.assertEqual(updated["destination"], "Kyoto")
+        self.assertEqual(updated["destination_details"]["city"], "Kyoto")
         self.assertEqual(updated["duration_days"], 7)
         self.assertEqual(updated["doing_laundry"], True)
 
@@ -241,7 +253,11 @@ class TestUpdatingTrip(unittest.TestCase):
         trips_store[self.trip_id].items = ["itemA"]
 
         payload = {
-            "destination": "Osaka",
+            "destination_details": {
+                "city": "Osaka",
+                "country": "US",
+                "airport_code": "JFK",
+            },
             "duration_days": 3,
             "doing_laundry": False,
             "items": [],  # Explicit empty
@@ -254,7 +270,7 @@ class TestUpdatingTrip(unittest.TestCase):
 
         self.assertEqual(updated["items"], [])
 
-        self.assertEqual(updated["destination"], "Osaka")
+        self.assertEqual(updated["destination_details"]["city"], "Osaka")
         self.assertEqual(updated["duration_days"], 3)
 
 
@@ -304,12 +320,16 @@ def _make_trip(trip_id: str, start: datetime.date, end: datetime.date) -> Trip:
     duration_days = (end - start).days + 1
     return Trip(
         trip_id=trip_id,
-        destination="Test City",
-        destination_details=Destination(city="Test City", country="US"),
+        origin_details=Location(city="Home", country="US", airport_code="JFK"),
+        destination_details=Location(
+            city="Test City", country="US", airport_code="JFK"
+        ),
         duration_days=duration_days,
         start_date=start_dt,
         end_date=end_dt,
         doing_laundry=False,
+        bag_type=BagType.carry_on,
+        airline=Airline.air_canada,
         items=[],
         activities=[],
     )

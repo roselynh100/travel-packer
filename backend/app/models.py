@@ -131,15 +131,25 @@ class RemovalRecommendation(BaseModel):
         use_enum_values = True
 
 
-class Destination(BaseModel):
+class Location(BaseModel):
     city: str
     state: Optional[str] = None
     country: str
+    airport_code: str = Field(..., min_length=3, max_length=3)
+
+    @field_validator("airport_code")
+    @classmethod
+    def validate_airport_code(cls, value: str) -> str:
+        airport_code = value.strip().upper()
+        if not airport_code.isalpha() or len(airport_code) != 3:
+            raise ValueError("airport_code must be exactly 3 letters")
+        return airport_code
 
 
 class Trip(BaseModel):
     trip_id: str = Field(default_factory=lambda: str(uuid4()))
-    destination_details: Destination
+    origin_details: Location
+    destination_details: Location
     start_date: datetime.datetime
     end_date: datetime.datetime
     highest_temp: Optional[float] = None
@@ -165,7 +175,8 @@ class Trip(BaseModel):
 
 
 class TripUpdate(BaseModel):
-    destination: Optional[str] = None
+    origin_details: Optional[Location] = None
+    destination_details: Optional[Location] = None
     duration_days: Optional[int] = None
     start_date: Optional[datetime.datetime] = None
     end_date: Optional[datetime.datetime] = None

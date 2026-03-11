@@ -10,9 +10,9 @@ from app.models import (
     Activity,
     BoundingBox,
     CVResult,
-    Destination,
     Dimensions,
     Item,
+    Location,
     Trip,
 )
 from machine_learning.importance import get_item_importance
@@ -35,8 +35,15 @@ def create_mock_item(name: str) -> Item:
     )
 
 
-def create_mock_destination(city: str, country: str) -> Destination:
-    return Destination(city=city, country=country)
+def create_mock_destination(city: str, country: str) -> Location:
+    airport_codes = {
+        "Bali": "DPS",
+        "New York City": "JFK",
+        "Banff": "YYC",
+    }
+    return Location(
+        city=city, country=country, airport_code=airport_codes.get(city, "AAA")
+    )
 
 
 def run_tests():
@@ -59,7 +66,7 @@ def run_tests():
     mock_banff = create_mock_destination("Banff", "Canada")
 
     beach_trip = Trip(
-        destination="Bali",
+        origin_details=mock_nyc,
         destination_details=mock_bali,
         duration_days=10,
         start_date="2026-02-14",
@@ -74,7 +81,7 @@ def run_tests():
 
     laptop = create_mock_item("electronics")
     biz_trip = Trip(
-        destination="NYC",
+        origin_details=mock_bali,
         destination_details=mock_nyc,
         duration_days=3,
         start_date="2026-02-14",
@@ -89,7 +96,7 @@ def run_tests():
 
     jacket = create_mock_item("jackets")
     ski_trip = Trip(
-        destination="Banff",
+        origin_details=mock_nyc,
         destination_details=mock_banff,
         duration_days=3,
         start_date="2026-02-14",

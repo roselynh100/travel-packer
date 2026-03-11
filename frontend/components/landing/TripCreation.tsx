@@ -21,10 +21,17 @@ import { ScreenScroll } from "@/components/ScreenScroll";
 export function TripCreation({ onContinue }: { onContinue: () => void }) {
   const theme = useTheme();
 
+  const [origin, onChangeOrigin] = useState<LocationResult>({
+    city: "",
+    state: undefined,
+    country: "",
+    airport_code: "",
+  });
   const [destination, onChangeDestination] = useState<LocationResult>({
     city: "",
     state: undefined,
     country: "",
+    airport_code: "",
   });
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -98,10 +105,17 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
 
   // DEV MODE ONLY TODO: REMOVE FOR PROD
   const fillDemoData = () => {
+    onChangeOrigin({
+      city: "New York",
+      state: "New York",
+      country: "United States",
+      airport_code: "JFK",
+    });
     onChangeDestination({
       city: "Toronto",
       state: "Ontario",
       country: "Canada",
+      airport_code: "YYZ",
     });
     setStartDate("2026-06-01");
     setEndDate("2026-06-06");
@@ -120,7 +134,10 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
   };
 
   const canSave =
+    origin.country.trim() !== "" &&
+    origin.airport_code.trim().length === 3 &&
     destination.country.trim() !== "" &&
+    destination.airport_code.trim().length === 3 &&
     startDate !== "" &&
     endDate !== "" &&
     airline !== "" &&
@@ -131,6 +148,7 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
       setIsLoading(true);
 
       const trip: Trip = {
+        origin_details: origin,
         destination_details: destination,
         airline,
         start_date: startDate,
@@ -199,8 +217,51 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
       <View className="gap-6">
         <ThemedText type="title">Create your trip</ThemedText>
         <View className="gap-2">
+          <RequiredLabel>Origin</RequiredLabel>
+          <LocationInput onSelect={onChangeOrigin} />
+        </View>
+
+        <View className="gap-2">
+          <RequiredLabel>Origin Airport Code</RequiredLabel>
+          <ThemedTextInput
+            value={origin.airport_code}
+            onChangeText={(value) =>
+              onChangeOrigin({
+                ...origin,
+                airport_code: value
+                  .toUpperCase()
+                  .replace(/[^A-Z]/g, "")
+                  .slice(0, 3),
+              })
+            }
+            placeholder="e.g. JFK"
+            autoCapitalize="characters"
+            maxLength={3}
+          />
+        </View>
+
+        <View className="gap-2">
           <RequiredLabel>Destination</RequiredLabel>
           <LocationInput onSelect={onChangeDestination} />
+        </View>
+
+        <View className="gap-2">
+          <RequiredLabel>Destination Airport Code</RequiredLabel>
+          <ThemedTextInput
+            value={destination.airport_code}
+            onChangeText={(value) =>
+              onChangeDestination({
+                ...destination,
+                airport_code: value
+                  .toUpperCase()
+                  .replace(/[^A-Z]/g, "")
+                  .slice(0, 3),
+              })
+            }
+            placeholder="e.g. YYZ"
+            autoCapitalize="characters"
+            maxLength={3}
+          />
         </View>
 
         <View className="gap-2">
