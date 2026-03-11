@@ -25,6 +25,7 @@ export default function TripInfo() {
     city: "",
     state: undefined,
     country: "",
+    airport_code: "",
   });
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -102,6 +103,7 @@ export default function TripInfo() {
       city: "Toronto",
       state: "Ontario",
       country: "Canada",
+      airport_code: "YYZ",
     });
     setStartDate("2026-06-01");
     setEndDate("2026-06-06");
@@ -121,6 +123,7 @@ export default function TripInfo() {
 
   const canSave =
     destination.country.trim() !== "" &&
+    destination.airport_code.trim().length === 3 &&
     startDate !== "" &&
     endDate !== "" &&
     airline !== "" &&
@@ -211,6 +214,22 @@ export default function TripInfo() {
       <View className="gap-2">
         <RequiredLabel>Destination</RequiredLabel>
         <LocationInput onSelect={onChangeDestination} />
+      </View>
+
+      <View className="gap-2">
+        <RequiredLabel>Airport Code</RequiredLabel>
+        <ThemedTextInput
+          value={destination.airport_code}
+          onChangeText={(value) =>
+            onChangeDestination({
+              ...destination,
+              airport_code: value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3),
+            })
+          }
+          placeholder="e.g. JFK"
+          autoCapitalize="characters"
+          maxLength={3}
+        />
       </View>
 
       <View className="gap-2">
