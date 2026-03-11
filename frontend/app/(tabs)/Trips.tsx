@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Platform, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { ScreenScroll } from "@/components/ScreenScroll";
@@ -32,6 +32,7 @@ export default function Trips() {
     items: packingListItems,
     checkedItems,
     toggleItem: handleToggleItem,
+    packItem,
     unpackItem,
   } = usePackingList(tripId, currentItem as PackingListItemType | null, {
     onTripChanged: refetchTripInfo,
@@ -54,6 +55,13 @@ export default function Trips() {
 
     router.setParams({ packingDecision: undefined });
   }, [packingDecision, currentItem, router]);
+
+  const secondaryAction = () => {
+    if (!selectedPackingItem?.item_id) return;
+
+    void packItem(selectedPackingItem.item_id);
+    setSelectedPackingItem(null);
+  };
 
   const primaryAction = () => {
     if (selectedPackingItem?.packing_recommendation?.status === "remove") {
@@ -109,7 +117,18 @@ export default function Trips() {
               className="rounded-2xl p-4"
               style={{ backgroundColor: theme.bgNav }}
             >
-              <ThemedText type="defaultSemiBold">Packing list</ThemedText>
+              <View className="flex-row items-center justify-between">
+                <ThemedText type="defaultSemiBold">Packing list</ThemedText>
+                <Pressable
+                  className="py-3 px-4 rounded-2xl"
+                  style={{ backgroundColor: theme.primary }}
+                  onPress={() => alert("(display packing optimization score)")}
+                >
+                  <ThemedText className="text-sm" style={{ color: "white" }}>
+                    I&apos;m done packing!
+                  </ThemedText>
+                </Pressable>
+              </View>
               <View
                 className={Platform.OS === "web" ? "" : "flex-col gap-2 mt-2"}
               >
@@ -127,16 +146,11 @@ export default function Trips() {
                 })}
               </View>
             </View>
-            <ThemedButton
-              title="I'm done packing!"
-              variant="outline"
-              onPress={() => alert("(display packing optimization score)")}
-            />
           </View>
           <PackingRecommendationModal
             visible={selectedPackingItem !== null}
             item={selectedPackingItem}
-            onIgnore={() => setSelectedPackingItem(null)}
+            onSecondary={secondaryAction}
             onPrimary={primaryAction}
           />
         </>

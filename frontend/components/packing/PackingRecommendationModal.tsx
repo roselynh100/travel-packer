@@ -8,14 +8,14 @@ import type { ItemWithPackingRecommendation } from "@/constants/types";
 type PackingRecommendationModalProps = {
   visible: boolean;
   item: ItemWithPackingRecommendation | null;
-  onIgnore: () => void;
+  onSecondary: () => void;
   onPrimary: () => void;
 };
 
 export function PackingRecommendationModal({
   visible,
   item,
-  onIgnore,
+  onSecondary,
   onPrimary,
 }: PackingRecommendationModalProps) {
   const theme = useTheme();
@@ -35,14 +35,12 @@ export function PackingRecommendationModal({
     ? `Your ${item?.item_name} should be left behind`
     : `Your ${item?.item_name} should be swapped`;
 
-  const primaryLabel = isRemove ? "Remove" : "Swap";
-
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onIgnore}
+      onRequestClose={onSecondary}
     >
       <View className="flex-1 justify-center items-center bg-black/70 px-6">
         <View
@@ -59,9 +57,9 @@ export function PackingRecommendationModal({
           )}
           <View className="w-full gap-3 mt-4">
             <ThemedButton
-              title="Ignore"
+              title="Pack anyway"
               variant="outline"
-              onPress={onIgnore}
+              onPress={onSecondary}
               className="w-full"
             />
             <ThemedButton
