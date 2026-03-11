@@ -17,6 +17,8 @@ type UsePackingListResult = {
   items: PackingListItemType[];
   checkedItems: Set<string>;
   toggleItem: (id: string) => Promise<void>;
+  packItem: (itemId: string) => Promise<void>;
+  unpackItem: (itemId: string) => Promise<void>;
 };
 
 /**
@@ -182,5 +184,5 @@ export function usePackingList(
     [checkedItems, packItem, unpackItem],
   );
 
-  return { items, checkedItems, toggleItem };
+  return { items, checkedItems, toggleItem, packItem, unpackItem };
 }

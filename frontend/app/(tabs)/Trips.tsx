@@ -32,6 +32,7 @@ export default function Trips() {
     items: packingListItems,
     checkedItems,
     toggleItem: handleToggleItem,
+    unpackItem,
   } = usePackingList(tripId, currentItem as PackingListItemType | null, {
     onTripChanged: refetchTripInfo,
   });
@@ -53,6 +54,15 @@ export default function Trips() {
 
     router.setParams({ packingDecision: undefined });
   }, [packingDecision, currentItem, router]);
+
+  const primaryAction = () => {
+    if (selectedPackingItem?.packing_recommendation?.status === "remove") {
+      void unpackItem(selectedPackingItem.item_id);
+    } else if (selectedPackingItem?.packing_recommendation?.status === "swap") {
+      // TODO: implement swap logic --> unpack swap candidates, pack selected item
+    }
+    setSelectedPackingItem(null);
+  };
 
   return (
     <ScreenScroll>
@@ -127,7 +137,7 @@ export default function Trips() {
             visible={selectedPackingItem !== null}
             item={selectedPackingItem}
             onIgnore={() => setSelectedPackingItem(null)}
-            onPrimary={() => setSelectedPackingItem(null)}
+            onPrimary={primaryAction}
           />
         </>
       ) : (
