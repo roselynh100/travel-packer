@@ -176,6 +176,7 @@ class Trip(BaseModel):
 
 
 class TripUpdate(BaseModel):
+    origin_details: Optional[Location] = None
     destination_details: Optional[Location] = None
     duration_days: Optional[int] = None
     start_date: Optional[datetime.datetime] = None
