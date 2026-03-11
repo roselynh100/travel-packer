@@ -9,6 +9,7 @@ from app.models import (
     Activity,
     Airline,
     Item,
+    Location,
     RecommendedItem,
     RemovalRecommendation,
     Trip,
@@ -304,6 +305,18 @@ def update_trip(trip_id: str, update: TripUpdate):
 
     existing = trips_store[trip_id]
     patch_data = update.model_dump(exclude_unset=True)
+    duration_days = patch_data.pop("duration_days", None)
+
+    if "destination_details" in patch_data:
+        patch_data["destination_details"] = Location.model_validate(
+            patch_data["destination_details"]
+        )
+
+    if duration_days is not None:
+        patch_data["end_date"] = existing.start_date + datetime.timedelta(
+            days=duration_days - 1
+        )
+
     updated = existing.model_copy(update=patch_data)
 
     trips_store[trip_id] = updated

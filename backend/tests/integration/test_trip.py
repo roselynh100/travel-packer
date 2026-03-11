@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.models import Item, Trip
+from app.models import Item, Location, Trip
 from app.state.db import items_store, trips_store
 
 # TO-DO: currently, im using just the weight to recommend what to remove, so when the actual
@@ -30,7 +30,14 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
         """Algorithm returns items recommended to be removed"""
 
         trip = Trip(
-            trip_id="tripX", destination="Tokyo", duration_days=6, doing_laundry=False
+            trip_id="tripX",
+            destination="Tokyo",
+            origin_details=Location(city="Home", country="US", airport_code="JFK"),
+            destination_details=Location(
+                city="Tokyo", country="Japan", airport_code="HND"
+            ),
+            duration_days=6,
+            doing_laundry=False,
         )
         trips_store["tripX"] = trip
 
@@ -50,7 +57,14 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
         """Algorithm returns empty when nothing needs to be removed"""
 
         trip = Trip(
-            trip_id="tripY", destination="Paris", duration_days=5, doing_laundry=True
+            trip_id="tripY",
+            destination="Paris",
+            origin_details=Location(city="Home", country="US", airport_code="JFK"),
+            destination_details=Location(
+                city="Paris", country="France", airport_code="CDG"
+            ),
+            duration_days=5,
+            doing_laundry=True,
         )
         trips_store["tripY"] = trip
 

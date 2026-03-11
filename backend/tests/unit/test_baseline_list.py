@@ -6,7 +6,7 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.models import Activity, Airline, BagType, Destination, RecommendedItem, Trip
+from app.models import Activity, Airline, BagType, Location, RecommendedItem, Trip
 from machine_learning.generator import (
     CATEGORIES,
     baseline_list_algorithm,
@@ -19,7 +19,7 @@ class TestBaselineAlgorithm(unittest.TestCase):
 
     def setUp(self):
         """Set up common data for tests."""
-        self.default_dest = Destination(city="London", country="UK")
+        self.default_dest = Location(city="London", country="UK", airport_code="LHR")
         # Ensure dates are datetime objects as required by the Trip Pydantic model
         self.start_date = "2027-02-14"
         self.end_date = "2027-02-20"
@@ -30,6 +30,7 @@ class TestBaselineAlgorithm(unittest.TestCase):
         """Helper method to generate a Trip object for testing."""
         return Trip(
             destination="Test City",
+            origin_details=self.default_dest,
             destination_details=self.default_dest,
             duration_days=4,
             start_date=self.start_date,
@@ -134,6 +135,7 @@ class TestBaselineAlgorithm(unittest.TestCase):
         """Full integration: Base (4) + Work (1) + Warm (1) + Swimming (2) + Umbrella (1) = 9 total."""
         trip = Trip(
             destination="Miami",
+            origin_details=self.default_dest,
             destination_details=self.default_dest,
             duration_days=4,
             start_date=self.start_date,
