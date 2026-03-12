@@ -57,8 +57,10 @@ def run_tests():
         print(f"FATAL: Model not found at {MODEL_PATH}. Check your file structure!")
         return
 
-    print(f"\n{'ITEM SCANNED':<15} | {'TEST CONTEXT':<28} | {'SCORE'}")
-    print("-" * 65)
+    print(
+        f"\n{'ITEM SCANNED':<15} | {'TEST CONTEXT':<28} | {'EXPECTED SCORE':<25} | {'ACTUAL SCORE'}"
+    )
+    print("-" * 90)
 
     # 1. Mock Items
     new_top_cheaper_dest = create_mock_item("tops", 20, 10)  # price_less_at_dest = 1
@@ -129,29 +131,50 @@ def run_tests():
     # 4. Comprehensive Test Cases Mapping
     test_cases = [
         # Explicit Rule Tests
-        (mock_laptop, biz_trip, [], "Rule 1a: Work Laptop (1st)"),
-        (mock_laptop, biz_trip, [mock_laptop], "Rule 1b: Work Laptop (2nd)"),
-        (mock_laptop, beach_trip, [], "Rule 2: Beach Laptop"),
-        (mock_jacket, ski_trip, [], "Rule 3a: Ski Jacket (1st)"),
-        (mock_jacket, ski_trip, [mock_jacket], "Rule 3b: Ski Jacket (2nd)"),
-        (mock_jacket, beach_trip, [], "Rule 3c: Beach Jacket"),
+        (mock_laptop, biz_trip, [], "Work Laptop (1st)", 100),
+        (
+            mock_laptop,
+            biz_trip,
+            [mock_laptop],
+            "Work Laptop (2nd)",
+            "ML - Lower than 1st",
+        ),
+        (mock_laptop, beach_trip, [], "Beach Laptop", 5),
+        (mock_jacket, ski_trip, [], "Ski Jacket (1st)", 100),
+        (
+            mock_jacket,
+            ski_trip,
+            [mock_jacket],
+            "Ski Jacket (2nd)",
+            "ML - Lower than 1st",
+        ),
+        (mock_jacket, beach_trip, [], "Beach Jacket", "ML - Very Low"),
         # General ML Feature Tests
         (
             new_top_cheaper_dest,
             beach_trip,
             existing_tops_in_suitcase,
-            "ML: High Cat Count",
+            "High Cat Count",
+            "ML - Low",
         ),
-        (unknown_item, beach_trip, [], "ML: Unknown Item (Cat 0)"),
-        (new_top_cheaper_dest, ski_trip, [], "ML: Cheaper at Dest"),
-        (new_top_expensive_dest, ski_trip, [], "ML: Expensive at Dest"),
+        (unknown_item, beach_trip, [], "Unknown Item (Cat 0)", 0),
+        (new_top_expensive_dest, ski_trip, [], "Expensive at Dest", "ML - Any"),
+        (
+            new_top_cheaper_dest,
+            ski_trip,
+            [],
+            "Cheaper at Dest",
+            "ML - Lower than above",
+        ),
     ]
 
-    for item, trip, item_list, context in test_cases:
+    for item, trip, item_list, context, expected in test_cases:
         try:
             score = get_item_importance(item, trip, item_list)
             # work = "Yes" if Activity.work in trip.activities else "No"
-            print(f"{item.cv_result.item_name:<15} | {context:<28} | {score}")
+            print(
+                f"{item.cv_result.item_name:<15} | {context:<28} | {expected:<25} | {score}"
+            )
         except Exception as e:
             print(f"Error testing {item.cv_result.item_name}: {str(e)}")
 
