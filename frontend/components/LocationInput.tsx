@@ -113,7 +113,7 @@ export function LocationInput({
     const state = address.state || address.province || undefined;
     const country = address.country || "";
 
-    return { city, state, country } as LocationResult;
+    return { city, state, country, airport_code: "" } as LocationResult;
   }
 
   function formatLocationDisplay(item: any): string {
