@@ -64,25 +64,22 @@ export function PackingListItem({
           />
         </View>
 
-        {expanded && (
+        {expanded && "packing_recommendation" in item && (
           <View
             className={cn(
               "mt-2 flex-col gap-1",
               Platform.OS === "web" ? "pl-6" : "pl-8",
             )}
           >
-            {"reason" in item && <ThemedText>{item.reason}</ThemedText>}
-
-            {"weight_kg" in item && item.weight_kg !== null && (
+            {item.weight_kg && (
               <ThemedText>Weight: {item.weight_kg.toFixed(2)} kg</ThemedText>
             )}
 
-            {"estimated_volume_cm3" in item &&
-              item.estimated_volume_cm3 !== null && (
-                <ThemedText>
-                  Volume: {item.estimated_volume_cm3.toFixed(2)} cm³
-                </ThemedText>
-              )}
+            {item.estimated_volume_cm3 && (
+              <ThemedText>
+                Volume: {item.estimated_volume_cm3.toFixed(2)} cm³
+              </ThemedText>
+            )}
           </View>
         )}
       </View>

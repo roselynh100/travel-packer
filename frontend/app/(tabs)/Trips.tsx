@@ -156,7 +156,7 @@ export default function Trips() {
         </>
       ) : (
         <>
-          <View className="mt-[30%] mb-8">
+          <View className="mt-[25vh] mb-8">
             <ThemedText type="title" className="text-center">
               No trips right now
             </ThemedText>

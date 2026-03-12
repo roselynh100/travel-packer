@@ -6,7 +6,7 @@ import { ScreenScroll } from "@/components/ScreenScroll";
 export function Success({ onContinue }: { onContinue: () => void }) {
   return (
     <ScreenScroll>
-      <View className="mt-[40%] mb-8">
+      <View className="mt-[25vh] mb-8">
         <ThemedText type="title" className="text-center">
           Trip generated ✅
         </ThemedText>
