@@ -35,6 +35,8 @@ export function PackingRecommendationModal({
     ? `Your ${item?.item_name} should be left behind`
     : `Your ${item?.item_name} should be swapped`;
 
+  const swapCandidates = recommendation?.swap_candidates ?? [];
+
   return (
     <Modal
       visible={visible}
@@ -54,6 +56,18 @@ export function PackingRecommendationModal({
             <ThemedText className="text-center mb-2">
               {recommendation.reason}
             </ThemedText>
+          )}
+          {swapCandidates.length > 0 && (
+            <View className="my-2">
+              <ThemedText type="defaultSemiBold" className="mb-1">
+                To bring your {item?.item_name}, you should remove:
+              </ThemedText>
+              {swapCandidates.map((c) => (
+                <ThemedText key={c.item_id}>
+                  • {c.cv_result?.item_name ?? "—"}
+                </ThemedText>
+              ))}
+            </View>
           )}
           <View className="w-full gap-3 mt-4">
             <ThemedButton

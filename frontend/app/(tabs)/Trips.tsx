@@ -67,7 +67,15 @@ export default function Trips() {
     if (selectedPackingItem?.packing_recommendation?.status === "remove") {
       void unpackItem(selectedPackingItem.item_id);
     } else if (selectedPackingItem?.packing_recommendation?.status === "swap") {
-      // TODO: implement swap logic --> unpack swap candidates, pack selected item
+      const swapCandidates =
+        selectedPackingItem.packing_recommendation.swap_candidates;
+
+      // Unpack swap candidates
+      for (const candidate of swapCandidates ?? []) {
+        void unpackItem(candidate.item_id);
+      }
+      // Pack selected item
+      void packItem(selectedPackingItem.item_id);
     }
     setSelectedPackingItem(null);
   };
