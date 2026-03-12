@@ -177,9 +177,10 @@ class TestDetectEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
-        self.assertEqual(data["cv_result"]["item_name"], "Shoes")
-        self.assertEqual(data["cv_result"]["confidence_score"], 0.85)
-        self.assertEqual(data["cv_result"]["bounding_boxes"][0]["x_min"], 10.1)
+        self.assertEqual(data["item"]["cv_result"]["item_name"], "Shoes")
+        self.assertEqual(data["item"]["cv_result"]["confidence_score"], 0.85)
+        self.assertEqual(data["item"]["cv_result"]["bounding_boxes"][0]["x_min"], 10.1)
+        self.assertEqual(data["cv_candidates"][0]["item_name"], "Shoes")
         self.assertIn("annotated_image", data)
         self.assertIsNotNone(data["annotated_image"])
 

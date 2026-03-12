@@ -24,6 +24,7 @@ export type LocationResult = {
   city: string;
   state?: string;
   country: string;
+  airport_code: string;
 };
 
 export type Trip = {
