@@ -30,6 +30,18 @@ class Airline(str, Enum):
     westjet = "Westjet"
 
 
+class AirlineType(str, Enum):
+    budget = "budget"
+    regular = "regular"
+
+
+AIRLINE_TYPES = {
+    Airline.air_canada.value: AirlineType.regular,
+    Airline.porter.value: AirlineType.budget,
+    Airline.westjet.value: AirlineType.regular,
+}
+
+
 class BagType(str, Enum):
     carry_on = "Carry-on"
     checked = "Checked"
@@ -158,12 +170,43 @@ class Trip(BaseModel):
     doing_laundry: bool
     bag_type: BagType
     airline: Airline
-    # probably going to create a map for this internal field?
-    # airline_type: Optional[AirlineType] = AirlineType.budget
     activities: List[Activity] = Field(default_factory=list)
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
+
+    def _airline_type(self) -> AirlineType:
+        airline_value = (
+            self.airline.value if isinstance(self.airline, Airline) else self.airline
+        )
+        return AIRLINE_TYPES[airline_value]
+
+    def _bag_type(self) -> BagType:
+        return (
+            self.bag_type
+            if isinstance(self.bag_type, BagType)
+            else BagType(self.bag_type)
+        )
+
+    @computed_field
+    @property
+    def limit_kg(self) -> float:
+        if (
+            self._airline_type() == AirlineType.budget
+            and self._bag_type() == BagType.carry_on
+        ):
+            return 8.0
+        elif (
+            self._airline_type() == AirlineType.regular
+            and self._bag_type() == BagType.carry_on
+        ):
+            return 10.0
+        elif (
+            self._airline_type() == AirlineType.budget
+            and self._bag_type() == BagType.checked
+        ):
+            return 20.0
+        return 23.0
 
     @computed_field
     @property
