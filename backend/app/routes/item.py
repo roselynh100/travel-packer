@@ -79,6 +79,11 @@ def patch_item(item_id: str, patch: ItemUpdate):
     updated = existing.model_copy(update=patch_data)
     items_store[item_id] = updated
 
+    if {"weight_kg", "estimated_volume_cm3", "quantity"} & set(patch_data.keys()):
+        for trip_id in updated.trips:
+            if trip_id in trips_store:
+                recalculate_trip_totals(trip_id)
+
     return updated
 
 

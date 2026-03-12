@@ -81,6 +81,7 @@ class Item(BaseModel):
     cv_result: Optional[CVResult] = None
     price_at_origin: Optional[float] = None
     price_at_destination: Optional[float] = None
+    quantity: int = 1
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 
@@ -89,6 +90,7 @@ class ItemUpdate(BaseModel):
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_result: Optional[CVResult] = None
+    quantity: Optional[int] = None
     price_at_origin: Optional[float] = None
     price_at_destination: Optional[float] = None
 

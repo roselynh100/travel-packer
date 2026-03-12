@@ -408,10 +408,15 @@ def recalculate_trip_totals(trip_id: str):
     trip = trips_store[trip_id]
 
     trip.total_items_weight = sum(
-        (items_store[item_id].weight_kg or 0.0) for item_id in trip.items
+        ((items_store[item_id].weight_kg or 0.0) * items_store[item_id].quantity)
+        for item_id in trip.items
     )
     trip.total_items_volume = sum(
-        (items_store[item_id].estimated_volume_cm3 or 0.0) for item_id in trip.items
+        (
+            (items_store[item_id].estimated_volume_cm3 or 0.0)
+            * items_store[item_id].quantity
+        )
+        for item_id in trip.items
     )
 
     # TO-DO: can remove the return if not useful

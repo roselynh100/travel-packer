@@ -1,24 +1,46 @@
-import { Pressable, View } from "react-native";
 import { useState } from "react";
+import { Pressable, View } from "react-native";
+
 import { ThemedText } from "@/components/ThemedText";
 import { PackingListItem as PackingListItemType } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { PackingRecommendationStatus } from "@/components/PackingRecommendationStatus";
 import { useTheme } from "@/theme/useTheme";
+import { QuantityModal } from "@/components/QuantityModal";
+import { patchItemQuantity } from "@/api/items";
 
 type PackingListItemProps = {
   item: PackingListItemType;
   checked: boolean;
   onToggle: () => void;
+  onQuantityUpdated?: (itemId: string, quantity: number) => void;
 };
 
 export function PackingListItem({
   item,
   checked,
   onToggle,
+  onQuantityUpdated,
 }: PackingListItemProps) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
+  const [quantityModalVisible, setQuantityModalVisible] = useState(false);
+  const [isSavingQuantity, setIsSavingQuantity] = useState(false);
+
+  const itemId = "item_id" in item ? item.item_id : null;
+  const quantity = "quantity" in item ? (item.quantity ?? 1) : 1;
+
+  const handleConfirmQuantity = async (nextQuantity: number) => {
+    if (!itemId) return;
+    setIsSavingQuantity(true);
+    try {
+      await patchItemQuantity(itemId, nextQuantity);
+      onQuantityUpdated?.(itemId, nextQuantity);
+      setQuantityModalVisible(false);
+    } finally {
+      setIsSavingQuantity(false);
+    }
+  };
 
   // ASSUMPTION: Priority is an internal value (should not be shown to user)
   // Disabled checkbox if packing recommendation is not available ("item" is not an Item in backend)
@@ -38,6 +60,26 @@ export function PackingListItem({
             onValueChange={onToggle}
             disabled={!("packing_recommendation" in item)}
           />
+
+          {itemId && (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                if (!isSavingQuantity) setQuantityModalVisible(true);
+              }}
+              style={({ pressed }) => ({
+                opacity: isSavingQuantity ? 0.5 : pressed ? 0.7 : 1,
+              })}
+            >
+              <View
+                className="px-3 py-1 rounded-full"
+                style={{ backgroundColor: theme.bgNav }}
+              >
+                <ThemedText className="text-gray-500">x{quantity}</ThemedText>
+              </View>
+            </Pressable>
+          )}
+
           <PackingRecommendationStatus
             status={
               "packing_recommendation" in item
@@ -68,6 +110,16 @@ export function PackingListItem({
           </View>
         )}
       </View>
+
+      {itemId && (
+        <QuantityModal
+          visible={quantityModalVisible}
+          itemName={item.item_name}
+          initialQuantity={quantity}
+          onCancel={() => setQuantityModalVisible(false)}
+          onConfirm={handleConfirmQuantity}
+        />
+      )}
     </Pressable>
   );
 }
