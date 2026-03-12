@@ -1,7 +1,8 @@
+import { Pressable, View } from "react-native";
+import { Checkbox, CheckboxProps } from "expo-checkbox";
 import { ThemedText } from "@/components/ThemedText";
 import { cn } from "@/helpers/cn";
-import { Checkbox, CheckboxProps } from "expo-checkbox";
-import { Pressable, View } from "react-native";
+import { useTheme } from "@/theme/useTheme";
 
 export type ThemedCheckboxProps = CheckboxProps & {
   size?: "small" | "medium";
@@ -16,13 +17,12 @@ export function ThemedCheckbox({
   className,
   ...rest
 }: ThemedCheckboxProps) {
+  const theme = useTheme();
+
   const gap = size === "small" ? "gap-2" : "gap-4";
-
   const boxSize = size === "small" ? "w-4 h-4" : "w-6 h-6";
-
   const text = size === "small" ? "default" : "subtitle";
 
-  // TODO: fix hardcoded colour (for mobile)
   return (
     <View className={cn("flex-row items-center", gap)}>
       <Pressable
@@ -33,7 +33,7 @@ export function ThemedCheckbox({
         <Checkbox
           value={value}
           onValueChange={onValueChange}
-          color="#2eb2bb"
+          color={theme.primary}
           className={cn(boxSize, className)}
           {...rest}
         />

@@ -46,7 +46,6 @@ class TestRealScaleIntegration(unittest.TestCase):
 
         trips_store["realtrip"] = Trip(
             trip_id="realtrip",
-            destination="TestCity",
             origin_details=Location(city="Home", country="US", airport_code="JFK"),
             destination_details=Location(
                 city="TestCity", country="US", airport_code="JFK"
@@ -57,7 +56,6 @@ class TestRealScaleIntegration(unittest.TestCase):
         )
         trips_store["t1"] = Trip(
             trip_id="t1",
-            destination="TestCity",
             origin_details=Location(city="Home", country="US", airport_code="JFK"),
             destination_details=Location(
                 city="TestCity", country="US", airport_code="JFK"

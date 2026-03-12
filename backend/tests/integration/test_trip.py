@@ -31,7 +31,6 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
 
         trip = Trip(
             trip_id="tripX",
-            destination="Tokyo",
             origin_details=Location(city="Home", country="US", airport_code="JFK"),
             destination_details=Location(
                 city="Tokyo", country="Japan", airport_code="HND"
@@ -58,7 +57,6 @@ class TestPackingRecommendationIntegration(unittest.TestCase):
 
         trip = Trip(
             trip_id="tripY",
-            destination="Paris",
             origin_details=Location(city="Home", country="US", airport_code="JFK"),
             destination_details=Location(
                 city="Paris", country="France", airport_code="CDG"

@@ -26,7 +26,6 @@ def _minimal_trip(
     end_dt = start_dt + datetime.timedelta(days=duration_days - 1)
     return Trip(
         trip_id=trip_id,
-        destination=destination,
         origin_details=Location(city="Home", country="US", airport_code="JFK"),
         destination_details=Location(
             city=destination, country="US", airport_code="JFK"
@@ -321,7 +320,6 @@ def _make_trip(trip_id: str, start: datetime.date, end: datetime.date) -> Trip:
     duration_days = (end - start).days + 1
     return Trip(
         trip_id=trip_id,
-        destination="Test City",
         origin_details=Location(city="Home", country="US", airport_code="JFK"),
         destination_details=Location(
             city="Test City", country="US", airport_code="JFK"

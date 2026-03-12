@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Alert, Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
@@ -13,14 +12,21 @@ import { ThemedMultiSelect } from "@/components/ThemedMultiSelect";
 import { DateSelect } from "@/components/DateSelect";
 import { LocationInput } from "@/components/LocationInput";
 import { RequiredLabel } from "@/components/RequiredLabel";
-import { FormScreenLayout } from "@/components/FormScreenLayout";
 import { ThemedButton } from "@/components/ThemedButton";
 import { useTheme } from "@/theme/useTheme";
+import { ThemedLoading } from "@/components/ThemedLoading";
+import { delay } from "@/helpers/delay";
+import { ScreenScroll } from "@/components/ScreenScroll";
 
-export default function TripInfo() {
-  const router = useRouter();
+export function TripCreation({ onContinue }: { onContinue: () => void }) {
   const theme = useTheme();
 
+  const [origin, onChangeOrigin] = useState<LocationResult>({
+    city: "",
+    state: undefined,
+    country: "",
+    airport_code: "",
+  });
   const [destination, onChangeDestination] = useState<LocationResult>({
     city: "",
     state: undefined,
@@ -99,6 +105,12 @@ export default function TripInfo() {
 
   // DEV MODE ONLY TODO: REMOVE FOR PROD
   const fillDemoData = () => {
+    onChangeOrigin({
+      city: "New York",
+      state: "New York",
+      country: "United States",
+      airport_code: "JFK",
+    });
     onChangeDestination({
       city: "Toronto",
       state: "Ontario",
@@ -122,6 +134,8 @@ export default function TripInfo() {
   };
 
   const canSave =
+    origin.country.trim() !== "" &&
+    origin.airport_code.trim().length === 3 &&
     destination.country.trim() !== "" &&
     destination.airport_code.trim().length === 3 &&
     startDate !== "" &&
@@ -129,11 +143,12 @@ export default function TripInfo() {
     airline !== "" &&
     bagType !== "";
 
-  async function handleSave() {
+  async function handleGenerate() {
     try {
       setIsLoading(true);
 
       const trip: Trip = {
+        origin_details: origin,
         destination_details: destination,
         airline,
         start_date: startDate,
@@ -147,9 +162,9 @@ export default function TripInfo() {
       if (savedTrip.trip_id) {
         await fetchWeather(savedTrip.trip_id);
       }
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await delay(3000);
 
-      router.push("/PackingList");
+      onContinue();
     } catch (error) {
       console.error("Error saving trip details:", error);
       Alert.alert(
@@ -198,108 +213,139 @@ export default function TripInfo() {
   }
 
   return (
-    <FormScreenLayout
-      title="Input your trip details 🌴"
-      onSave={handleSave}
-      saveDisabled={!canSave}
-      isLoading={isLoading}
-      loadingMessage="Saving your trip..."
-    >
-      <ThemedButton
-        onPress={fillDemoData}
-        title="Fill demo data"
-        className="self-start"
-        variant="outline"
-      />
-      <View className="gap-2">
-        <RequiredLabel>Destination</RequiredLabel>
-        <LocationInput onSelect={onChangeDestination} />
-      </View>
+    <ScreenScroll>
+      <View className="gap-6">
+        <ThemedText type="title">Create your trip</ThemedText>
+        <View className="gap-2">
+          <RequiredLabel>Origin</RequiredLabel>
+          <LocationInput onSelect={onChangeOrigin} />
+        </View>
 
-      <View className="gap-2">
-        <RequiredLabel>Airport Code</RequiredLabel>
-        <ThemedTextInput
-          value={destination.airport_code}
-          onChangeText={(value) =>
-            onChangeDestination({
-              ...destination,
-              airport_code: value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3),
-            })
-          }
-          placeholder="e.g. JFK"
-          autoCapitalize="characters"
-          maxLength={3}
-        />
-      </View>
-
-      <View className="gap-2">
-        <RequiredLabel>Trip Dates</RequiredLabel>
-        <Pressable onPress={() => setIsCalendarVisible(!isCalendarVisible)}>
+        <View className="gap-2">
+          <RequiredLabel>Origin Airport Code</RequiredLabel>
           <ThemedTextInput
-            value={getDateRangeDisplay()}
-            editable={false}
-            pointerEvents="none"
-            style={{
-              color:
-                getDateRangeDisplay() === "Select dates"
-                  ? theme.textPlaceholder
-                  : theme.text,
-            }}
+            value={origin.airport_code}
+            onChangeText={(value) =>
+              onChangeOrigin({
+                ...origin,
+                airport_code: value
+                  .toUpperCase()
+                  .replace(/[^A-Z]/g, "")
+                  .slice(0, 3),
+              })
+            }
+            placeholder="e.g. JFK"
+            autoCapitalize="characters"
+            maxLength={3}
           />
-        </Pressable>
-        {isCalendarVisible && (
-          <View className="gap-2">
-            <DateSelect
-              startDate={startDate}
-              endDate={endDate}
-              setStartDate={setStartDate}
-              setEndDate={setEndDate}
-              onRangeComplete={() => setIsCalendarVisible(false)}
+        </View>
+
+        <View className="gap-2">
+          <RequiredLabel>Destination</RequiredLabel>
+          <LocationInput onSelect={onChangeDestination} />
+        </View>
+
+        <View className="gap-2">
+          <RequiredLabel>Destination Airport Code</RequiredLabel>
+          <ThemedTextInput
+            value={destination.airport_code}
+            onChangeText={(value) =>
+              onChangeDestination({
+                ...destination,
+                airport_code: value
+                  .toUpperCase()
+                  .replace(/[^A-Z]/g, "")
+                  .slice(0, 3),
+              })
+            }
+            placeholder="e.g. YYZ"
+            autoCapitalize="characters"
+            maxLength={3}
+          />
+        </View>
+
+        <View className="gap-2">
+          <RequiredLabel>Trip Dates</RequiredLabel>
+          <Pressable onPress={() => setIsCalendarVisible(!isCalendarVisible)}>
+            <ThemedTextInput
+              value={getDateRangeDisplay()}
+              editable={false}
+              pointerEvents="none"
+              style={{
+                color:
+                  getDateRangeDisplay() === "Select dates"
+                    ? theme.textPlaceholder
+                    : theme.text,
+              }}
             />
-          </View>
-        )}
-      </View>
+          </Pressable>
+          {isCalendarVisible && (
+            <View className="gap-2">
+              <DateSelect
+                startDate={startDate}
+                endDate={endDate}
+                setStartDate={setStartDate}
+                setEndDate={setEndDate}
+                onRangeComplete={() => setIsCalendarVisible(false)}
+              />
+            </View>
+          )}
+        </View>
 
-      <View className="gap-2">
-        <RequiredLabel>Airline</RequiredLabel>
-        <ThemedDropdown
-          value={airline}
-          onChange={(value: string) => onChangeAirline(value)}
-          data={airlineOptions}
-          placeholder="Select airline"
+        <View className="gap-2">
+          <RequiredLabel>Airline</RequiredLabel>
+          <ThemedDropdown
+            value={airline}
+            onChange={(value: string) => onChangeAirline(value)}
+            data={airlineOptions}
+            placeholder="Select airline"
+          />
+        </View>
+
+        <View className="gap-2">
+          <RequiredLabel>Bag Type</RequiredLabel>
+          <ThemedDropdown
+            value={bagType}
+            onChange={(value: string) => onChangeBagType(value)}
+            data={Object.values(BagType).map((value) => ({
+              label: value,
+              value: value,
+            }))}
+            placeholder="Select bag type"
+          />
+        </View>
+
+        <View className="gap-2">
+          <ThemedText type="subtitle">Activities Planned (Optional)</ThemedText>
+          <ThemedMultiSelect
+            data={activityOptions}
+            value={activities}
+            onChange={onChangeActivities}
+            placeholder="Search and select activities"
+            searchPlaceholder="Search activities..."
+          />
+        </View>
+
+        <ThemedCheckbox
+          label="I am planning to do laundry"
+          value={laundry}
+          onValueChange={onChangeLaundry}
+          size="medium"
         />
-      </View>
 
-      <View className="gap-2">
-        <RequiredLabel>Bag Type</RequiredLabel>
-        <ThemedDropdown
-          value={bagType}
-          onChange={(value: string) => onChangeBagType(value)}
-          data={Object.values(BagType).map((value) => ({
-            label: value,
-            value: value,
-          }))}
-          placeholder="Select bag type"
+        <ThemedButton
+          onPress={fillDemoData}
+          title="Fill demo data"
+          variant="outline"
         />
-      </View>
-
-      <View className="gap-2">
-        <ThemedText type="subtitle">Activities Planned (Optional)</ThemedText>
-        <ThemedMultiSelect
-          data={activityOptions}
-          value={activities}
-          onChange={onChangeActivities}
-          placeholder="Search and select activities"
-          searchPlaceholder="Search activities..."
+        <ThemedButton
+          title="Generate"
+          onPress={() => void handleGenerate()}
+          disabled={!canSave || isLoading}
+          className={canSave && !isLoading ? "opacity-100" : "opacity-50"}
         />
+        <ThemedLoading isLoading={isLoading} message="Saving your trip..." />
       </View>
-
-      <ThemedCheckbox
-        label="I am planning to do laundry"
-        value={laundry}
-        onValueChange={onChangeLaundry}
-        size="medium"
-      />
-    </FormScreenLayout>
+    </ScreenScroll>
   );
 }

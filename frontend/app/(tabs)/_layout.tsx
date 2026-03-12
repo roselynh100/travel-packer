@@ -47,31 +47,13 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="UserInfo"
-        options={{
-          title: "User Info",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
-          ),
-        }}
-      />
 
       <Tabs.Screen
-        name="TripInfo"
+        name="Trips"
         options={{
-          title: "Trip Info",
+          title: "Trips",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="sun.max" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="PackingList"
-        options={{
-          title: "Packing List",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="list.bullet" color={color} />
           ),
         }}
       />
