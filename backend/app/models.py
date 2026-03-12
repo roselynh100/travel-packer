@@ -97,7 +97,6 @@ class ItemUpdate(BaseModel):
 
 class DetectResponse(BaseModel):
     item: Item
-    cv_candidates: List[CVResult]
     annotated_image: Optional[str] = None
 
 

@@ -66,7 +66,6 @@ def run_tests():
     mock_banff = create_mock_destination("Banff", "Canada")
 
     beach_trip = Trip(
-        destination="Bali",
         origin_details=mock_nyc,
         destination_details=mock_bali,
         duration_days=10,
@@ -82,7 +81,6 @@ def run_tests():
 
     laptop = create_mock_item("electronics")
     biz_trip = Trip(
-        destination="NYC",
         origin_details=mock_bali,
         destination_details=mock_nyc,
         duration_days=3,
@@ -98,7 +96,6 @@ def run_tests():
 
     jacket = create_mock_item("jackets")
     ski_trip = Trip(
-        destination="Banff",
         origin_details=mock_nyc,
         destination_details=mock_banff,
         duration_days=3,
