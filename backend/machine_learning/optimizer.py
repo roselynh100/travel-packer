@@ -17,12 +17,6 @@ from machine_learning.importance import get_item_importance
 VOLUME_LIMIT_CM3 = 50000.0
 
 
-def _trip_weight_limit_kg(trip: Trip) -> float:
-    if trip.bag_type in (BagType.carry_on, BagType.carry_on.value):
-        return trip.carry_on_limit_kg
-    return trip.checked_limit_kg
-
-
 def packing_decision_algorithm(
     new_item: Item, trip: Trip, current_items: List[Item]
 ) -> RemovalRecommendation:
@@ -40,13 +34,13 @@ def packing_decision_algorithm(
             )
         min_item_importance = min(i.item_importance for i in current_items)
 
-    weight_limit_kg = _trip_weight_limit_kg(trip)
+    weight_limit_kg = trip.limit_kg
 
     # Check Weight
     if over_limit(
         current=trip.total_items_weight,
         additional=new_item.weight_kg,
-        limit=WEIGHT_LIMIT_KG,
+        limit=weight_limit_kg,
     ):
         if not current_items:
             return RemovalRecommendation(

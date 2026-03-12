@@ -132,7 +132,7 @@ class TestPackingAlgorithm(unittest.TestCase):
 
     def test_overweight_remove(self):
         """
-        Trip is full (19.9kg).
+        Trip is full (22.9kg).
         New Item is 'tops', Weight 0.5kg.
         Existing Item is 'jackets'.
         Expect: REMOVE (New item isn't important enough to displace existing).
@@ -158,7 +158,7 @@ class TestPackingAlgorithm(unittest.TestCase):
             highest_temp=0.0,
             precipitation_percentage=0.1,
             doing_laundry=False,
-            total_items_weight=19.9,
+            total_items_weight=22.9,
             items=[existing_jacket.item_id],  # <-- Linked existing item
         )
 
@@ -174,7 +174,7 @@ class TestPackingAlgorithm(unittest.TestCase):
 
     def test_overweight_swap(self):
         """
-        Trip is full (19.5kg).
+        Trip is full (22.5kg).
         Existing Item is 'Snack' (Importance 20), Weight 2.0kg.
         New Item is 'Laptop' (Importance 80 - Work), Weight 1.0kg.
         Expect: SWAP (Remove Snack to fit Laptop).
@@ -200,7 +200,7 @@ class TestPackingAlgorithm(unittest.TestCase):
             lowest_temp=5.0,
             highest_temp=15.0,
             precipitation_percentage=0.0,
-            total_items_weight=19.5,
+            total_items_weight=22.5,
             items=[tops.item_id],
         )
 

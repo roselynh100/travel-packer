@@ -181,17 +181,30 @@ class Trip(BaseModel):
         )
         return AIRLINE_TYPES[airline_value]
 
-    @computed_field
-    @property
-    def carry_on_limit_kg(self) -> float:
-        if self._airline_type() == AirlineType.budget:
-            return 8.0
-        return 10.0
+    def _bag_type(self) -> BagType:
+        return (
+            self.bag_type
+            if isinstance(self.bag_type, BagType)
+            else BagType(self.bag_type)
+        )
 
     @computed_field
     @property
-    def checked_limit_kg(self) -> float:
-        if self._airline_type() == AirlineType.budget:
+    def limit_kg(self) -> float:
+        if (
+            self._airline_type() == AirlineType.budget
+            and self._bag_type() == BagType.carry_on
+        ):
+            return 8.0
+        elif (
+            self._airline_type() == AirlineType.regular
+            and self._bag_type() == BagType.carry_on
+        ):
+            return 10.0
+        elif (
+            self._airline_type() == AirlineType.budget
+            and self._bag_type() == BagType.checked
+        ):
             return 20.0
         return 23.0
 

@@ -323,7 +323,6 @@ def _make_trip(trip_id: str, start: datetime.date, end: datetime.date) -> Trip:
         destination_details=Location(
             city="Test City", country="US", airport_code="JFK"
         ),
-        duration_days=duration_days,
         start_date=start_dt,
         end_date=end_dt,
         doing_laundry=False,
@@ -554,7 +553,16 @@ class TestAirlineWeightLimits(unittest.TestCase):
         start = datetime.datetime(2026, 6, 1, 9, 0, 0)
         end = datetime.datetime(2026, 6, 5, 9, 0, 0)
         return {
-            "destination_details": {"city": "Toronto", "country": "Canada"},
+            "origin_details": {
+                "city": "New York",
+                "country": "United States",
+                "airport_code": "JFK",
+            },
+            "destination_details": {
+                "city": "Toronto",
+                "country": "Canada",
+                "airport_code": "YYZ",
+            },
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
             "doing_laundry": False,
@@ -569,16 +577,14 @@ class TestAirlineWeightLimits(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertEqual(data["carry_on_limit_kg"], 10.0)
-        self.assertEqual(data["checked_limit_kg"], 23.0)
+        self.assertEqual(data["limit_kg"], 10.0)
 
     def test_create_trip_sets_budget_limits(self):
         response = self.client.post("/trips/", json=self._trip_payload("Porter"))
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertEqual(data["carry_on_limit_kg"], 8.0)
-        self.assertEqual(data["checked_limit_kg"], 20.0)
+        self.assertEqual(data["limit_kg"], 8.0)
 
     def test_update_airline_recomputes_limits(self):
         create_response = self.client.post(
@@ -593,8 +599,7 @@ class TestAirlineWeightLimits(unittest.TestCase):
         )
         self.assertEqual(update_response.status_code, 200)
         data = update_response.json()
-        self.assertEqual(data["carry_on_limit_kg"], 8.0)
-        self.assertEqual(data["checked_limit_kg"], 20.0)
+        self.assertEqual(data["limit_kg"], 8.0)
 
 
 if __name__ == "__main__":
