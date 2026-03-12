@@ -11,14 +11,13 @@ import { PackingRecommendationStatus } from "@/components/packing";
 import { cn } from "@/helpers/cn";
 import { useTheme } from "@/theme/useTheme";
 import { QuantityModal } from "@/components/QuantityModal";
-import { patchItemQuantity } from "@/api/items";
 
 type PackingListItemProps = {
   item: PackingListItemType;
   checked: boolean;
   onToggle: () => void;
-  onPressRecommendation?: (item: ItemWithPackingRecommendation) => void;
-  onQuantityUpdated?: (itemId: string, quantity: number) => void;
+  onPressRecommendation: (item: ItemWithPackingRecommendation) => void;
+  onQuantityUpdated: (itemId: string, quantity: number) => void;
 };
 
 export function PackingListItem({
@@ -39,9 +38,9 @@ export function PackingListItem({
   const handleConfirmQuantity = async (nextQuantity: number) => {
     if (!itemId) return;
     setIsSavingQuantity(true);
+
     try {
-      await patchItemQuantity(itemId, nextQuantity);
-      onQuantityUpdated?.(itemId, nextQuantity);
+      onQuantityUpdated(itemId, nextQuantity);
       setQuantityModalVisible(false);
     } finally {
       setIsSavingQuantity(false);
@@ -88,7 +87,7 @@ export function PackingListItem({
             >
               <View
                 className="px-3 py-1 rounded-full"
-                style={{ backgroundColor: theme.bgNav }}
+                style={{ backgroundColor: theme.bg }}
               >
                 <ThemedText className="text-gray-500">x{quantity}</ThemedText>
               </View>
@@ -98,7 +97,7 @@ export function PackingListItem({
           <PackingRecommendationStatus
             status={recommendation?.status ?? null}
             onPress={
-              canOpenRecommendation && onPressRecommendation
+              canOpenRecommendation
                 ? () =>
                     onPressRecommendation(item as ItemWithPackingRecommendation)
                 : undefined

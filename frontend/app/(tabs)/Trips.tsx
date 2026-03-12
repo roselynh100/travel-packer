@@ -34,6 +34,7 @@ export default function Trips() {
     toggleItem: handleToggleItem,
     packItem,
     unpackItem,
+    updateItemQuantity,
   } = usePackingList(tripId, currentItem as PackingListItemType | null, {
     onTripChanged: refetchTripInfo,
   });
@@ -56,25 +57,11 @@ export default function Trips() {
     router.setParams({ packingDecision: undefined });
   }, [packingDecision, currentItem, router]);
 
-  // TODO: move a lot of this (in the ux revamp pr)
-  const updateItemQuantityInList = useCallback(
-    (itemId: string, quantity: number) => {
-      // setPackingListItems((prev) =>
-      //   prev.map((it) =>
-      //     "item_id" in it && it.item_id === itemId ? { ...it, quantity } : it,
-      //   ),
-      // );
-    },
-    [],
-  );
-
   const handleQuantityUpdated = useCallback(
     async (itemId: string, quantity: number) => {
-      // updateItemQuantityInList(itemId, quantity);
-      // await fetchTripInfo();
+      await updateItemQuantity(itemId, quantity);
     },
-    [],
-    // [fetchTripInfo, updateItemQuantityInList],
+    [updateItemQuantity],
   );
 
   const secondaryAction = () => {
