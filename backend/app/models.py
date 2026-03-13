@@ -93,6 +93,7 @@ class Item(BaseModel):
     cv_result: Optional[CVResult] = None
     price_at_origin: Optional[float] = None
     price_at_destination: Optional[float] = None
+    is_liquid: Optional[bool] = None
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 
@@ -174,6 +175,7 @@ class Trip(BaseModel):
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
+    total_liquids_volume: float = 0.0
 
     def _airline_type(self) -> AirlineType:
         airline_value = (

@@ -346,7 +346,7 @@ class TestTripWeatherEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertIn("Trip not found", response.text)
 
-    @patch("app.routes.trip.requests.get")
+    @patch("helpers.trip_helpers.requests.get")
     def test_weather_within_forecast_window(self, mock_get):
         today = datetime.date.today()
         start = today + datetime.timedelta(days=1)
@@ -396,7 +396,7 @@ class TestTripWeatherEndpoint(unittest.TestCase):
             data["precipitation_percentage"], (2 / 3) * 100.0, places=2
         )
 
-    @patch("app.routes.trip.requests.get")
+    @patch("helpers.trip_helpers.requests.get")
     def test_weather_outside_forecast_window_uses_history(self, mock_get):
         today = datetime.date.today()
         start = today + datetime.timedelta(days=25)
@@ -539,6 +539,41 @@ class TestRecalculateTripTotals(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["total_weight"], 5.0)
         self.assertEqual(data["total_volume"], 15.0)
+
+    def test_recalculate_totals_includes_only_liquid_item_volume_in_liquid_total(self):
+        trips_store["t1"] = _minimal_trip(
+            trip_id="t1",
+            destination="Test",
+            duration_days=2,
+            doing_laundry=False,
+            items=["i1", "i2", "i3"],
+        )
+
+        items_store["i1"] = Item(
+            item_id="i1",
+            weight_kg=2.0,
+            estimated_volume_cm3=10,
+            is_liquid=True,
+        )
+        items_store["i2"] = Item(
+            item_id="i2",
+            weight_kg=3.0,
+            estimated_volume_cm3=5,
+            is_liquid=False,
+        )
+        items_store["i3"] = Item(
+            item_id="i3",
+            weight_kg=1.0,
+            estimated_volume_cm3=7,
+            is_liquid=True,
+        )
+
+        response = self.client.post("/trips/t1/recalculate-totals")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["total_liquids_volume"], 17.0)
+        self.assertEqual(trips_store["t1"].total_liquids_volume, 17.0)
 
 
 class TestAirlineWeightLimits(unittest.TestCase):
