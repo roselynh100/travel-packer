@@ -29,7 +29,6 @@ class TestBaselineAlgorithm(unittest.TestCase):
     ):
         """Helper method to generate a Trip object for testing."""
         return Trip(
-            destination="Test City",
             origin_details=self.default_dest,
             destination_details=self.default_dest,
             duration_days=4,
@@ -134,7 +133,6 @@ class TestBaselineAlgorithm(unittest.TestCase):
     def test_baseline_list_algorithm_integration(self):
         """Full integration: Base (4) + Work (1) + Warm (1) + Swimming (2) + Umbrella (1) = 9 total."""
         trip = Trip(
-            destination="Miami",
             origin_details=self.default_dest,
             destination_details=self.default_dest,
             duration_days=4,

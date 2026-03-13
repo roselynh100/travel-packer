@@ -9,7 +9,7 @@ export function RequiredLabel({ children }: RequiredLabelProps) {
   return (
     <ThemedText type="subtitle">
       {children}
-      <ThemedText type="subtitle" className="text-red-500">
+      <ThemedText type="subtitle" style={{ color: "red" }}>
         {" "}
         *
       </ThemedText>

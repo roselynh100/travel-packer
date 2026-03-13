@@ -28,6 +28,7 @@ export type LocationResult = {
 };
 
 export type Trip = {
+  origin_details: LocationResult;
   destination_details: LocationResult;
   start_date: string;
   end_date: string;
@@ -36,6 +37,8 @@ export type Trip = {
   bag_type: string;
   activities?: string[];
   trip_id?: string;
+  lowest_temp?: number;
+  highest_temp?: number;
   total_items_weight?: number;
   total_items_volume?: number;
 };
@@ -57,7 +60,6 @@ export type Item = {
 
 export type DetectResponse = {
   item: Item;
-  cv_candidates: CVResult[];
   annotated_image?: string | null;
 };
 
@@ -91,7 +93,7 @@ export type PackingRecommendation = {
 
 export type ItemWithPackingRecommendation = Item & {
   item_name: string;
-  packing_recommendation: PackingRecommendationStatus | null;
+  packing_recommendation: PackingRecommendation | null;
 };
 
 // Union type for packing list items

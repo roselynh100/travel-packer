@@ -76,6 +76,10 @@ def patch_item(item_id: str, patch: ItemUpdate):
     existing = items_store[item_id]
     patch_data = patch.model_dump(exclude_unset=True)
 
+    # Turn json into CVResult object
+    if "cv_result" in patch_data and patch_data["cv_result"] is not None:
+        patch_data["cv_result"] = CVResult.model_validate(patch_data["cv_result"])
+
     updated = existing.model_copy(update=patch_data)
     items_store[item_id] = updated
 
@@ -136,7 +140,7 @@ def read_weight(item_id: Optional[str] = Query(None)):
 async def detect_item_from_image(
     image: UploadFile = File(...), item_id: Optional[str] = Query(None)
 ):
-    """Run YOLO detection. Then create/update an item (if single cv_result), or return item + cv_candidates for correction modal."""
+    """Run YOLO detection. Then create or update an item with the highest-confidence result."""
 
     image_bytes = await image.read()
     cv_results, annotated_image_bytes = detect_objects_yolo(image_bytes)
@@ -153,16 +157,7 @@ async def detect_item_from_image(
     cv_results_sorted = sorted(
         cv_results, key=lambda r: r.confidence_score, reverse=True
     )
-
     primary_result = cv_results_sorted[0]
-
-    # Only include a second candidate when confidence is low (so frontend can show correction modal)
-    cv_candidates: List[CVResult] = [primary_result]
-    if (
-        primary_result.confidence_score < CONFIDENCE_THRESHOLD
-        and len(cv_results_sorted) > 1
-    ):
-        cv_candidates.append(cv_results_sorted[1])
 
     volume = 0
     if primary_result.dimensions:
@@ -181,7 +176,6 @@ async def detect_item_from_image(
 
     return DetectResponse(
         item=item,
-        cv_candidates=cv_candidates,
         annotated_image=annotated_image,
     )
 

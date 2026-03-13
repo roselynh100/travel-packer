@@ -257,7 +257,6 @@ def _trip_within_forecast_window(start: datetime.date, end: datetime.date) -> bo
 
 @router.post("/", response_model=Trip)
 def create_trip(trip: Trip, user_id: Optional[str] = None):
-    # TODO: do the airline name to airline type mapping
     trips_store[trip.trip_id] = trip
 
     # associate user if provided
@@ -318,6 +317,7 @@ def update_trip(trip_id: str, update: TripUpdate):
         )
 
     updated = existing.model_copy(update=patch_data)
+    updated = Trip.model_validate(updated.model_dump())
 
     trips_store[trip_id] = updated
     return updated

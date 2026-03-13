@@ -3,8 +3,8 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 type AppContextType = {
   userId: string;
-  tripId: string;
-  setTripId: (v: string) => void;
+  tripId: string | null;
+  setTripId: (v: string | null) => void;
   currentItem: ItemWithPackingRecommendation | null;
   setCurrentItem: (
     v:
@@ -21,7 +21,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [userId, setUserId] = useState("");
-  const [tripId, setTripId] = useState("");
+  const [tripId, setTripId] = useState<string | null>(null);
   const [currentItem, setCurrentItem] =
     useState<ItemWithPackingRecommendation | null>(null);
 

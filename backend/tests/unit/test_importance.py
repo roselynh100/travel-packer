@@ -78,7 +78,6 @@ def run_tests():
 
     # 3. Mock Trips
     beach_trip = Trip(
-        destination="Bali",
         origin_details=mock_nyc,
         destination_details=mock_bali,
         duration_days=10,
@@ -95,7 +94,6 @@ def run_tests():
     )
 
     biz_trip = Trip(
-        destination="NYC",
         origin_details=mock_bali,
         destination_details=mock_nyc,
         duration_days=3,
@@ -112,7 +110,6 @@ def run_tests():
     )
 
     ski_trip = Trip(
-        destination="Banff",
         origin_details=mock_nyc,
         destination_details=mock_banff,
         duration_days=3,
