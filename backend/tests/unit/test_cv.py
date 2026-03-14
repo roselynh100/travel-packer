@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.models import BoundingBox, Dimensions
-from computer_vision.constants import HEIGHT_LOOKUP_TABLE, TARGET_CLASSES
+from computer_vision.constants import AVERAGE_HEIGHT_CM, TARGET_CLASSES
 
 
 class TestBoundingBoxValidation(unittest.TestCase):
@@ -90,11 +90,11 @@ class TestHeightLookupTable(unittest.TestCase):
 
     def test_every_target_class_has_height(self):
         for class_name in TARGET_CLASSES:
-            self.assertIn(class_name, HEIGHT_LOOKUP_TABLE)
+            self.assertIn(class_name, AVERAGE_HEIGHT_CM)
 
     def test_volume_is_calculated_correctly(self):
         length, width = 10.0, 5.0
-        height = HEIGHT_LOOKUP_TABLE["tops"]
+        height = AVERAGE_HEIGHT_CM["tops"]
         dimensions = Dimensions(length=length, width=width, height=height)
         volume = dimensions.length * dimensions.width * dimensions.height
         self.assertEqual(volume, 50.0)

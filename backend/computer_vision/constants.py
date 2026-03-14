@@ -8,7 +8,7 @@ TARGET_CLASSES = {
     "tops",
 }
 
-HEIGHT_LOOKUP_TABLE = {
+AVERAGE_HEIGHT_CM = {
     "container": 5.0,
     "electronics": 2.0,
     "jackets": 8.0,

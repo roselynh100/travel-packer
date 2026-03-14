@@ -8,7 +8,7 @@ from cv2 import aruco
 from ultralytics import YOLO
 
 from app.models import BoundingBox, CVResult, Dimensions
-from computer_vision.constants import HEIGHT_LOOKUP_TABLE, TARGET_CLASSES
+from computer_vision.constants import AVERAGE_HEIGHT_CM, TARGET_CLASSES
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 YOLO_MODEL_PATH = os.path.join(BASE_DIR, "model_train", "best.pt")
@@ -101,7 +101,7 @@ def detect_objects_yolo(image_bytes: bytes) -> Tuple[List[CVResult], bytes]:
             )
 
             length, width = detect_object_dimensions(image_bytes, bounding_box)
-            height = HEIGHT_LOOKUP_TABLE[class_name]
+            height = AVERAGE_HEIGHT_CM[class_name]
 
             # Create CVResult object
             cv_result = CVResult(
