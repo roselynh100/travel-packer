@@ -41,7 +41,6 @@ export type Trip = {
   highest_temp?: number;
   total_items_weight?: number;
   total_items_volume?: number;
-  total_liquids_volume?: number;
   limit_kg?: number;
 };
 

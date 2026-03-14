@@ -158,10 +158,7 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
         doing_laundry: laundry,
       };
 
-      const savedTrip = await saveToAPI(trip);
-      if (savedTrip.trip_id) {
-        await fetchWeather(savedTrip.trip_id);
-      }
+      await saveToAPI(trip);
       await delay(3000);
 
       onContinue();
@@ -196,20 +193,6 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
     console.log("Save success:", result);
     setTripId(result.trip_id ?? "No trip id saved");
     return result;
-  }
-
-  async function fetchWeather(tripId: string) {
-    const response = await apiFetch(`/trips/${tripId}/weather`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `API error (${response.status}): ${errorText || response.statusText}`,
-      );
-    }
-
-    const result: Trip = await response.json();
-    console.log("Fetched weather:", result);
   }
 
   return (

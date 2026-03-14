@@ -26,7 +26,7 @@ export default function Trips() {
 
   const { tripId, currentItem } = useAppContext();
 
-  const { tripInfo, refetch: refetchTripInfo } = useTripInfo(tripId);
+  const { tripInfo, refreshTotals } = useTripInfo(tripId);
 
   const {
     recommendedItems,
@@ -36,7 +36,7 @@ export default function Trips() {
     packItem,
     unpackItem,
   } = usePackingList(tripId, currentItem, {
-    onTripChanged: refetchTripInfo,
+    onTripChanged: refreshTotals,
   });
 
   const [selectedPackingItem, setSelectedPackingItem] =
