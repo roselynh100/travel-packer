@@ -33,7 +33,7 @@ class TestGetItemPrice(unittest.TestCase):
         items_store.clear()
 
     @patch("app.routes.item.SERPAPI_API_KEY", "test_key")
-    @patch("app.routes.item.requests.get")
+    @patch("helpers.trip_helpers.requests.get")
     def test_get_item_price_success(self, mock_get):
         items_store["i1"] = _item_with_cv("i1")
 
@@ -98,7 +98,7 @@ class TestGetItemPrice(unittest.TestCase):
         self.assertIn("currency", response.text.lower())
 
     @patch("app.routes.item.SERPAPI_API_KEY", "test_key")
-    @patch("app.routes.item.requests.get")
+    @patch("helpers.trip_helpers.requests.get")
     def test_get_item_price_no_results(self, mock_get):
         items_store["i1"] = _item_with_cv("i1")
 
@@ -112,6 +112,77 @@ class TestGetItemPrice(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 404)
         self.assertIn("no price results", response.text.lower())
+
+    @patch("app.routes.item.SERPAPI_API_KEY", "test_key")
+    @patch("helpers.trip_helpers.requests.get")
+    def test_get_item_price_v2_success(self, mock_get):
+        items_store["i1"] = _item_with_cv("i1")
+
+        origin_response = Mock()
+        origin_response.ok = True
+        origin_response.json.return_value = {
+            "shopping_results": [
+                {
+                    "title": "Travel Backpack US",
+                    "source": "Target",
+                    "extracted_price": 50.0,
+                }
+            ]
+        }
+
+        destination_response = Mock()
+        destination_response.ok = True
+        destination_response.json.return_value = {
+            "shopping_results": [
+                {
+                    "title": "Travel Backpack CA",
+                    "source": "Canadian Tire",
+                    "extracted_price": 80.0,
+                }
+            ]
+        }
+
+        exchange_response = Mock()
+        exchange_response.ok = True
+        exchange_response.json.return_value = {
+            "cad": {
+                "usd": 0.75,
+            }
+        }
+
+        mock_get.side_effect = [
+            origin_response,
+            destination_response,
+            exchange_response,
+        ]
+
+        response = self.client.get(
+            "/items/i1/price/v2",
+            params={
+                "origin_country": "United States",
+                "destination_country": "Canada",
+                "limit": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+
+        data = response.json()
+        self.assertEqual(data["origin_currency"], "USD")
+        self.assertEqual(data["destination_currency"], "CAD")
+        self.assertEqual(data["exchange_rate"], 0.75)
+        self.assertEqual(data["origin_prices"][0]["price"], 50.0)
+        self.assertEqual(
+            data["destination_prices_in_origin_currency"][0]["price"], 60.0
+        )
+        self.assertEqual(
+            data["destination_prices_in_origin_currency"][0]["currency"], "USD"
+        )
+
+        self.assertEqual(mock_get.call_count, 3)
+        self.assertEqual(mock_get.call_args_list[0].args[0], SERPAPI_SEARCH_URL)
+        self.assertEqual(mock_get.call_args_list[0].kwargs["params"]["gl"], "us")
+        self.assertEqual(mock_get.call_args_list[1].kwargs["params"]["gl"], "ca")
+        self.assertIn("/cad.json", mock_get.call_args_list[2].args[0])
 
 
 class TestReadWeight(unittest.TestCase):

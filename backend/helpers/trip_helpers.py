@@ -1,16 +1,20 @@
 import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import requests
 from fastapi import HTTPException
 
-from app.models import Trip
+from app.google_countries import country_info
+from app.models import ItemPriceResult, Trip
+from app.state.db import items_store
 from constants import (
+    EXCHANGE_API_URLS,
     OPENWEATHER_GEOCODING_URL,
     OPENWEATHER_GEOCODING_USA_URL,
     OPENWEATHERMAP_API_KEY,
     OPENWEATHERMAP_FORECAST_URL,
     OPENWEATHERMAP_HISTORY_URL,
+    SERPAPI_SEARCH_URL,
 )
 
 FORECAST_WINDOW_DAYS = 16
@@ -238,3 +242,124 @@ def _trip_within_forecast_window(start: datetime.date, end: datetime.date) -> bo
     today = datetime.date.today()
     last_forecast_day = today + datetime.timedelta(days=FORECAST_WINDOW_DAYS)
     return today <= start <= last_forecast_day and end <= last_forecast_day
+
+
+def _get_item_name(item_id: str) -> str:
+    item = items_store.get(item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    if not item.cv_result:
+        raise HTTPException(
+            status_code=404,
+            detail="Item has no CV result and name cannot be retrieved",
+        )
+    return item.cv_result.item_name
+
+
+def _get_country_details(country: str) -> Dict[str, str]:
+    try:
+        country_entry = country_info[country.title()]
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=404, detail=f"Country not found: {country}"
+        ) from exc
+
+    country_code = country_entry.get("country_code")
+    currency_code = country_entry.get("currency_code")
+    if not country_code or not currency_code:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Could not retrieve country code or currency code for {country}",
+        )
+
+    return {
+        "country": country.title(),
+        "country_code": country_code,
+        "currency_code": currency_code,
+    }
+
+
+def _fetch_price_results(
+    item_name: str,
+    country_code: str,
+    currency_code: str,
+    limit: int,
+    serpapi_api_key: str,
+) -> List[ItemPriceResult]:
+    params = {
+        "engine": "google_shopping",
+        "q": item_name,
+        "gl": country_code,
+        "hl": "en",
+        "api_key": serpapi_api_key,
+    }
+
+    try:
+        response = requests.get(SERPAPI_SEARCH_URL, params=params, timeout=15)
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail="SerpAPI request failed") from exc
+
+    if not response.ok:
+        raise HTTPException(status_code=502, detail="SerpAPI returned an error")
+
+    try:
+        search_results = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=502, detail="SerpAPI returned invalid JSON"
+        ) from exc
+
+    shopping_results = search_results.get("shopping_results") or []
+    results = []
+
+    for entry in shopping_results:
+        title = entry.get("title")
+        source = entry.get("source")
+        price = entry.get("extracted_price")
+
+        if not title or not source or price is None:
+            continue
+
+        results.append(
+            ItemPriceResult(
+                item_name=title,
+                source=source,
+                price=price,
+                currency=currency_code,
+            )
+        )
+
+        if len(results) >= limit:
+            break
+
+    if not results:
+        raise HTTPException(status_code=404, detail="No price results found")
+
+    return results
+
+
+def _get_exchange_rate(from_currency: str, to_currency: str) -> float:
+    if from_currency == to_currency:
+        return 1.0
+
+    for base_url in EXCHANGE_API_URLS:
+        url = f"{base_url}/{from_currency.lower()}.json"
+        try:
+            response = requests.get(url, timeout=15)
+        except requests.RequestException:
+            continue
+
+        if not response.ok:
+            continue
+
+        try:
+            payload = response.json()
+        except ValueError:
+            continue
+
+        rates = payload.get(from_currency.lower()) or {}
+        rate = rates.get(to_currency.lower())
+        if rate is not None:
+            return float(rate)
+
+    raise HTTPException(status_code=502, detail="Exchange rate request failed")
