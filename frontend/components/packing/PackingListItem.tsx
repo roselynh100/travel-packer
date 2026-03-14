@@ -11,7 +11,8 @@ type PackingListItemProps = {
   item: ItemWithPackingRecommendation;
   checked: boolean;
   onToggle: () => void;
-  onPressRecommendation?: (item: ItemWithPackingRecommendation) => void;
+  onPressRecommendation: (item: ItemWithPackingRecommendation) => void;
+  recommendationDismissed: boolean;
 };
 
 export function PackingListItem({
@@ -19,15 +20,16 @@ export function PackingListItem({
   checked,
   onToggle,
   onPressRecommendation,
+  recommendationDismissed,
 }: PackingListItemProps) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
 
-  const recommendation =
-    "packing_recommendation" in item ? item.packing_recommendation : null;
+  const recommendation = item.packing_recommendation;
+  const shouldShowRecommendation = recommendation && !recommendationDismissed;
 
   const canOpenRecommendation =
-    recommendation &&
+    shouldShowRecommendation &&
     (recommendation.status === "remove" || recommendation.status === "swap");
 
   // ASSUMPTION: Priority is an internal value (should not be shown to user)
@@ -48,20 +50,20 @@ export function PackingListItem({
             label={item.item_name}
             value={checked}
             onValueChange={onToggle}
-            disabled={!("packing_recommendation" in item)}
           />
-          <PackingRecommendationStatus
-            status={recommendation?.status ?? null}
-            onPress={
-              canOpenRecommendation && onPressRecommendation
-                ? () =>
-                    onPressRecommendation(item as ItemWithPackingRecommendation)
-                : undefined
-            }
-          />
+          {shouldShowRecommendation && (
+            <PackingRecommendationStatus
+              status={recommendation.status}
+              onPress={
+                canOpenRecommendation
+                  ? () => onPressRecommendation(item)
+                  : undefined
+              }
+            />
+          )}
         </View>
 
-        {expanded && "packing_recommendation" in item && (
+        {expanded && (
           <View
             className={cn(
               "mt-2 flex-col gap-1",

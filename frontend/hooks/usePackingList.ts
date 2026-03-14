@@ -93,7 +93,7 @@ export function usePackingList(
           );
         }
 
-        setCheckedItems((prev) => new Set(prev).add(itemId));
+        setCheckedItems((prev) => new Set([...prev, itemId]));
 
         if (onTripChanged) {
           await onTripChanged();
@@ -125,11 +125,9 @@ export function usePackingList(
           );
         }
 
-        setCheckedItems((prev) => {
-          const next = new Set(prev);
-          next.delete(itemId);
-          return next;
-        });
+        setCheckedItems(
+          (prev) => new Set([...prev].filter((id) => id !== itemId)),
+        );
 
         if (onTripChanged) {
           await onTripChanged();

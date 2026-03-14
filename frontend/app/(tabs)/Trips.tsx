@@ -17,6 +17,7 @@ import {
 import { averageTemp } from "@/helpers/averageTemp";
 import { useTripInfo } from "@/hooks/useTripInfo";
 import { usePackingList } from "@/hooks/usePackingList";
+import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 
 export default function Trips() {
@@ -42,6 +43,11 @@ export default function Trips() {
     useState<ItemWithPackingRecommendation | null>(
       (currentItem as ItemWithPackingRecommendation) ?? null,
     );
+
+  const {
+    isDismissed: isRecommendationDismissed,
+    dismiss: dismissRecommendation,
+  } = useDismissedRecommendations(tripId);
 
   const { packingDecision } = useLocalSearchParams<{
     packingDecision?: string;
@@ -76,6 +82,9 @@ export default function Trips() {
       }
       // Pack selected item
       void packItem(selectedPackingItem.item_id);
+    }
+    if (selectedPackingItem?.item_id) {
+      dismissRecommendation(selectedPackingItem.item_id);
     }
     setSelectedPackingItem(null);
   };
@@ -162,7 +171,7 @@ export default function Trips() {
                           checked={checkedItems.has(id)}
                           onToggle={() => handleToggleItem(id)}
                           onPressRecommendation={setSelectedPackingItem}
-                          recommendationDismissed={dismissedRecommendationIds.has(
+                          recommendationDismissed={isRecommendationDismissed(
                             item.item_id,
                           )}
                         />
