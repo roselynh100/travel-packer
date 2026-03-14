@@ -75,7 +75,7 @@ class BoundingBox(BaseModel):
 class Dimensions(BaseModel):
     length: float
     width: float
-    height: Optional[float] = None
+    height: float
 
 
 class CVResult(BaseModel):
