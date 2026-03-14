@@ -93,7 +93,7 @@ class Item(BaseModel):
     cv_result: Optional[CVResult] = None
     price_at_origin: Optional[float] = None
     price_at_destination: Optional[float] = None
-    is_liquid: Optional[bool] = None
+    is_liquid: bool = False
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 
@@ -104,6 +104,7 @@ class ItemUpdate(BaseModel):
     cv_result: Optional[CVResult] = None
     price_at_origin: Optional[float] = None
     price_at_destination: Optional[float] = None
+    is_liquid: Optional[bool] = None
 
 
 class DetectResponse(BaseModel):
