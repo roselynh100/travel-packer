@@ -1,10 +1,11 @@
-import unittest
 import sys
+import unittest
 from pathlib import Path
 
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
-from app.models import BoundingBox
+from app.models import BoundingBox, Dimensions
+from computer_vision.constants import HEIGHT_LOOKUP_TABLE, TARGET_CLASSES
 
 
 class TestBoundingBoxValidation(unittest.TestCase):
@@ -84,6 +85,20 @@ class TestBoundingBoxValidation(unittest.TestCase):
         self.assertEqual(bbox.y_max, 20.0)
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestHeightLookupTable(unittest.TestCase):
+    """Height lookup table and volume formula."""
 
+    def test_every_target_class_has_height(self):
+        for class_name in TARGET_CLASSES:
+            self.assertIn(class_name, HEIGHT_LOOKUP_TABLE)
+
+    def test_volume_is_calculated_correctly(self):
+        length, width = 10.0, 5.0
+        height = HEIGHT_LOOKUP_TABLE["tops"]
+        dimensions = Dimensions(length=length, width=width, height=height)
+        volume = dimensions.length * dimensions.width * dimensions.height
+        self.assertEqual(volume, 50.0)
+
+
+if __name__ == "__main__":
+    unittest.main()
