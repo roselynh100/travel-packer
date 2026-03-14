@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
-  PackingListItem as PackingListItemType,
+  ItemWithPackingRecommendation,
   RecommendedItem,
 } from "@/constants/types";
 import { apiFetch } from "@/constants/api";
@@ -14,7 +14,8 @@ type UsePackingListOptions = {
 };
 
 type UsePackingListResult = {
-  items: PackingListItemType[];
+  recommendedItems: RecommendedItem[];
+  scannedItems: ItemWithPackingRecommendation[];
   checkedItems: Set<string>;
   toggleItem: (id: string) => Promise<void>;
   packItem: (itemId: string) => Promise<void>;
@@ -30,19 +31,25 @@ type UsePackingListResult = {
  */
 export function usePackingList(
   tripId: string | null,
-  currentItem: PackingListItemType | null | undefined,
+  currentItem: ItemWithPackingRecommendation | null,
   options: UsePackingListOptions = {},
 ): UsePackingListResult {
   const { onTripChanged } = options;
 
-  const [items, setItems] = useState<PackingListItemType[]>([]);
+  const [recommendedItems, setRecommendedItems] = useState<RecommendedItem[]>(
+    [],
+  );
+  const [scannedItems, setScannedItems] = useState<
+    ItemWithPackingRecommendation[]
+  >([]);
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
 
   // Initial recommendations fetch whenever tripId changes
   useEffect(() => {
     if (!tripId) return;
 
-    setItems([]);
+    setRecommendedItems([]);
+    setScannedItems([]);
     setCheckedItems(new Set());
 
     const fetchRecommendations = async () => {
@@ -57,7 +64,7 @@ export function usePackingList(
         }
 
         const result: RecommendedItem[] = await response.json();
-        setItems(result);
+        setRecommendedItems(result);
         console.log("Fetched recommendations:", result);
       } catch (error) {
         console.error("Error fetching recommendations:", error);
@@ -136,34 +143,22 @@ export function usePackingList(
   );
 
   // Merge currentItem into list when it changes
-  // TODO: might rework this with duplicate items -> quantity
   useEffect(() => {
     if (!currentItem || !("item_id" in currentItem)) return;
 
-    setItems((prev) => {
-      // Overwrite existing items with new info by id
+    setScannedItems((prev) => {
+      // Overwrite existing scanned items with new info by id
       const existingIndexById = prev.findIndex(
-        (item) => "item_id" in item && item.item_id === currentItem.item_id,
+        (item) => item.item_id === currentItem.item_id,
       );
 
       if (existingIndexById !== -1) {
-        const newItems = [...prev];
-        newItems[existingIndexById] = currentItem;
-        return newItems;
+        const next = [...prev];
+        next[existingIndexById] = currentItem;
+        return next;
       }
 
-      // Merge items with the same name (overwrite recommended items with more complete info)
-      const existingIndexByName = prev.findIndex(
-        (item) => item.item_name === currentItem.item_name,
-      );
-
-      if (existingIndexByName !== -1) {
-        const newItems = [...prev];
-        newItems[existingIndexByName] = currentItem;
-        return newItems;
-      }
-
-      // Add new item if not already in list
+      // Add new scanned item if not already in list
       return [...prev, currentItem];
     });
 
@@ -184,5 +179,12 @@ export function usePackingList(
     [checkedItems, packItem, unpackItem],
   );
 
-  return { items, checkedItems, toggleItem, packItem, unpackItem };
+  return {
+    recommendedItems,
+    scannedItems,
+    checkedItems,
+    toggleItem,
+    packItem,
+    unpackItem,
+  };
 }

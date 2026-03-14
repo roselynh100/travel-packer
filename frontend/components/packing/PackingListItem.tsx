@@ -1,17 +1,14 @@
 import { Platform, Pressable, View } from "react-native";
 import { useState } from "react";
 import { ThemedText } from "@/components/ThemedText";
-import {
-  ItemWithPackingRecommendation,
-  PackingListItem as PackingListItemType,
-} from "@/constants/types";
+import { ItemWithPackingRecommendation } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { PackingRecommendationStatus } from "@/components/packing";
 import { cn } from "@/helpers/cn";
 import { useTheme } from "@/theme/useTheme";
 
 type PackingListItemProps = {
-  item: PackingListItemType;
+  item: ItemWithPackingRecommendation;
   checked: boolean;
   onToggle: () => void;
   onPressRecommendation?: (item: ItemWithPackingRecommendation) => void;

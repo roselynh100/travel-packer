@@ -6,11 +6,9 @@ import { ScreenScroll } from "@/components/ScreenScroll";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
 import { useAppContext } from "@/helpers/AppContext";
+import { cn } from "@/helpers/cn";
 import { useTheme } from "@/theme/useTheme";
-import {
-  ItemWithPackingRecommendation,
-  PackingListItem as PackingListItemType,
-} from "@/constants/types";
+import { ItemWithPackingRecommendation } from "@/constants/types";
 import {
   PackingListItem,
   PackingListPill,
@@ -19,6 +17,7 @@ import {
 import { averageTemp } from "@/helpers/averageTemp";
 import { useTripInfo } from "@/hooks/useTripInfo";
 import { usePackingList } from "@/hooks/usePackingList";
+import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 
 export default function Trips() {
   const router = useRouter();
@@ -29,12 +28,13 @@ export default function Trips() {
   const { tripInfo, refetch: refetchTripInfo } = useTripInfo(tripId);
 
   const {
-    items: packingListItems,
+    recommendedItems,
+    scannedItems,
     checkedItems,
     toggleItem: handleToggleItem,
     packItem,
     unpackItem,
-  } = usePackingList(tripId, currentItem as PackingListItemType | null, {
+  } = usePackingList(tripId, currentItem, {
     onTripChanged: refetchTripInfo,
   });
 
@@ -125,33 +125,65 @@ export default function Trips() {
               className="rounded-2xl p-4"
               style={{ backgroundColor: theme.bgNav }}
             >
-              <View className="flex-row items-center justify-between">
-                <ThemedText type="defaultSemiBold">Packing list</ThemedText>
-                <Pressable
-                  className="py-3 px-4 rounded-2xl"
-                  style={{ backgroundColor: theme.primary }}
-                  onPress={() => alert("(display packing optimization score)")}
-                >
-                  <ThemedText className="text-sm" style={{ color: "white" }}>
-                    I&apos;m done packing!
-                  </ThemedText>
-                </Pressable>
-              </View>
+              {/* Scanned items */}
+              {scannedItems.length > 0 && (
+                <>
+                  <View className="flex-row items-center justify-between">
+                    <ThemedText type="defaultSemiBold">
+                      Scanned items
+                    </ThemedText>
+                    <Pressable
+                      className="py-2 px-4 rounded-2xl"
+                      style={{ backgroundColor: theme.primary }}
+                      onPress={() =>
+                        alert("(display packing optimization score)")
+                      }
+                    >
+                      <ThemedText
+                        className="text-xs"
+                        style={{ color: "white" }}
+                      >
+                        I&apos;m done packing!
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                  <View
+                    className={cn(
+                      "mb-4",
+                      Platform.OS === "web" ? "" : "flex-col gap-2 mt-2",
+                    )}
+                  >
+                    {scannedItems.map((item) => {
+                      const id = item.item_id;
+                      return (
+                        <PackingListItem
+                          key={id}
+                          item={item}
+                          checked={checkedItems.has(id)}
+                          onToggle={() => handleToggleItem(id)}
+                          onPressRecommendation={setSelectedPackingItem}
+                          recommendationDismissed={dismissedRecommendationIds.has(
+                            item.item_id,
+                          )}
+                        />
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              {/* Recommended items */}
+              <ThemedText type="defaultSemiBold">Recommended items</ThemedText>
               <View
                 className={Platform.OS === "web" ? "" : "flex-col gap-2 mt-2"}
               >
-                {packingListItems?.map((item, i) => {
-                  const id = "item_id" in item ? item.item_id : String(i);
-                  return (
-                    <PackingListItem
-                      key={i}
-                      item={item}
-                      checked={checkedItems.has(id)}
-                      onToggle={() => handleToggleItem(id)}
-                      onPressRecommendation={setSelectedPackingItem}
-                    />
-                  );
-                })}
+                {recommendedItems.map((item, i) => (
+                  <ThemedCheckbox
+                    key={i}
+                    label={item.item_name}
+                    disabled={true}
+                  />
+                ))}
               </View>
             </View>
           </View>
