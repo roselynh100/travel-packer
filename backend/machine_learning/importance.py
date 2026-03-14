@@ -54,6 +54,9 @@ def extract_features(item: Item, trip: Trip, trip_items: List[Item]) -> List[flo
     # Item Category
     item_category = map_to_cat_id(item.cv_result.item_name if item.cv_result else "")
 
+    # Bring vs. Buy
+    price_less_at_dest = 1 if item.price_at_destination <= item.price_at_origin else 0
+
     # Activity Binary Encoding
     is_work = 1 if Activity.work in trip.activities else 0
     is_beach = 1 if Activity.beach in trip.activities else 0
@@ -106,6 +109,7 @@ def extract_features(item: Item, trip: Trip, trip_items: List[Item]) -> List[flo
         float(precipitation),
         float(duration),
         float(category_count),
+        float(price_less_at_dest),
     ]
 
 
@@ -129,16 +133,20 @@ def get_item_importance(item: Item, trip: Trip, trip_items: List[Item]) -> int:
 
     # Explicit rules with set item importance
 
+    ## If item is unknown, set importance to 0
+    if item_category == 0:
+        return 0
+
     ## If item = electronics and work = 1 then importance = 100
     if item_category == 6 and is_work == 1:
         if cat_count == 1:
             return 100
         # If there's more than one, we continue to the ML model to decide the penalty
     if item_category == 6 and is_work == 0:
-        return 0
+        return 5
 
     ## If item = jacket and temp < 0 then importance = 100
-    if item_category == 7 and low_temp < 0:
+    if item_category == 7 and low_temp <= 0:
         if cat_count == 1:
             return 100
         # If there's more than one, we continue to the ML model to decide the penalty
@@ -162,6 +170,7 @@ def get_item_importance(item: Item, trip: Trip, trip_items: List[Item]) -> int:
         "precipitation",
         "duration",
         "category_count",
+        "price_less_at_dest",
     ]
 
     features_df = pd.DataFrame([features], columns=feature_names)

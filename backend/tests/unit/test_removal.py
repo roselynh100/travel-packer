@@ -28,9 +28,10 @@ class TestPackingAlgorithm(unittest.TestCase):
         name: str,
         weight: float = 0.5,
         volume: float = 100.0,
-        # origin_price: float = 10.0,
-        # dest_price: float = 10.0,
+        origin_price: float = 10.0,
+        dest_price: float = 10.0,
     ) -> Item:
+        """Helper to create a complex Pydantic Item with valid CVResults and Pricing."""
         """Helper to create a complex Pydantic Item with valid CVResults and Pricing."""
 
         # Create valid BoundingBox
@@ -51,8 +52,8 @@ class TestPackingAlgorithm(unittest.TestCase):
             weight_kg=weight,
             estimated_volume_cm3=volume,
             cv_result=cv,
-            # price_at_origin=origin_price,
-            # price_at_destination=dest_price,
+            price_at_origin=origin_price,
+            price_at_destination=dest_price,
         )
 
     def test_laptop_context_logic(self):
@@ -79,7 +80,7 @@ class TestPackingAlgorithm(unittest.TestCase):
             precipitation_percentage=0.1,
             items=[],
         )
-        self.assertEqual(get_item_importance(item, trip_leisure, []), 0)
+        self.assertEqual(get_item_importance(item, trip_leisure, []), 5)
 
         # Case 2: Work
         trip_work = Trip(
