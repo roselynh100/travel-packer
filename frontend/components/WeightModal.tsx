@@ -7,7 +7,7 @@ import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/theme/useTheme";
 
-type WeightModalStatus = "intro" | "pending" | "success";
+type WeightModalStatus = "intro" | "pending" | "success" | "error";
 
 type WeightModalProps = {
   visible: boolean;
@@ -64,17 +64,14 @@ export function WeightModal({
         });
 
         if (!response.ok) {
-          // If weight fails (e.g. scale disconnected), just close the modal
-          // and let the user proceed without weight.
-          onClose();
-          return;
+          throw new Error("Failed to read weight");
         }
 
         const result: Item = await response.json();
         setWeightItem(result);
         setStatus("success");
       } catch {
-        onClose();
+        setStatus("error");
       }
     })();
   }, [visible, status, onClose]);
@@ -119,7 +116,7 @@ export function WeightModal({
               />
             </>
           )}
-          {status !== "intro" && (
+          {status === "pending" && (
             <>
               <ThemedText type="subtitle" className="text-center mb-4">
                 For accurate results, place the item in the middle of the scale.
@@ -129,7 +126,7 @@ export function WeightModal({
                   {countdown}
                 </ThemedText>
               )}
-              {countdown < 0 && status === "pending" && (
+              {countdown < 0 && (
                 <>
                   <ActivityIndicator size="large" color="#fff" />
                   <ThemedText type="subtitle" className="mt-4">
@@ -137,21 +134,29 @@ export function WeightModal({
                   </ThemedText>
                 </>
               )}
-              {status === "success" && weightItem && (
-                <>
-                  <ThemedText type="subtitle" className="mb-2">
-                    Weight:{" "}
-                    {weightItem.weight_kg != null
-                      ? `${weightItem.weight_kg} kg`
-                      : "—"}
-                  </ThemedText>
-                  <ThemedButton
-                    title="Next"
-                    onPress={handleNext}
-                    className="mt-4"
-                  />
-                </>
-              )}
+            </>
+          )}
+          {status === "success" && weightItem && (
+            <>
+              <ThemedText type="subtitle" className="mb-2">
+                Weight:{" "}
+                {weightItem.weight_kg != null
+                  ? `${weightItem.weight_kg} kg`
+                  : "—"}
+              </ThemedText>
+              <ThemedButton
+                title="Next"
+                onPress={handleNext}
+                className="mt-4"
+              />
+            </>
+          )}
+          {status === "error" && (
+            <>
+              <ThemedText type="subtitle" className="text-center mb-4">
+                Failed to read weight.
+              </ThemedText>
+              <ThemedButton title="Continue without scale" onPress={onClose} />
             </>
           )}
         </View>
