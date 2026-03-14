@@ -93,18 +93,18 @@ export default function Trips() {
     <ScreenScroll>
       <ThemedText type="title">Your trip</ThemedText>
 
-      {tripId ? (
+      {tripInfo ? (
         <>
           <View className="mt-6 gap-6">
             <View className="flex-row gap-2">
               <PackingListPill
                 type="weight"
-                value={tripInfo?.total_items_weight || 0}
-                max={tripInfo?.limit_kg}
+                value={tripInfo.total_items_weight || 0}
+                max={tripInfo.limit_kg}
               />
               <PackingListPill
                 type="volume"
-                value={tripInfo?.total_items_volume || 0}
+                value={tripInfo.total_items_volume || 0}
               />
             </View>
 
@@ -116,7 +116,7 @@ export default function Trips() {
               >
                 <ThemedText type="defaultSemiBold">Average temp</ThemedText>
                 <ThemedText type="subtitle" className="text-center mt-2">
-                  {averageTemp(tripInfo?.lowest_temp, tripInfo?.highest_temp)}
+                  {averageTemp(tripInfo.lowest_temp, tripInfo.highest_temp)}
                 </ThemedText>
               </View>
               <View
@@ -125,7 +125,7 @@ export default function Trips() {
               >
                 <ThemedText type="defaultSemiBold">Activities</ThemedText>
                 <ThemedText className="text-sm mt-2">
-                  {tripInfo?.activities?.join(", ") || "No activities planned"}
+                  {tripInfo.activities?.join(", ") || "No activities planned"}
                 </ThemedText>
               </View>
             </View>
