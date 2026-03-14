@@ -142,25 +142,26 @@ export function usePackingList(
     [tripId, onTripChanged],
   );
 
-  // Merge currentItem into list when it changes
+  // Multiples of the same classes are allowed (e.g. two "top" scans)
   useEffect(() => {
-    if (!currentItem || !("item_id" in currentItem)) return;
+    if (!currentItem) return;
 
+    const id = currentItem.item_id;
+    const name = currentItem.item_name;
+
+    // If this item_id is already in scannedItems, update it
     setScannedItems((prev) => {
-      // Overwrite existing scanned items with new info by id
-      const existingIndexById = prev.findIndex(
-        (item) => item.item_id === currentItem.item_id,
-      );
-
-      if (existingIndexById !== -1) {
+      const i = prev.findIndex((item) => item.item_id === id);
+      if (i !== -1) {
         const next = [...prev];
-        next[existingIndexById] = currentItem;
+        next[i] = currentItem;
         return next;
       }
-
-      // Add new scanned item if not already in list
       return [...prev, currentItem];
     });
+
+    // Remove the matching recommendedItem from recommendedItems
+    setRecommendedItems((recs) => recs.filter((rec) => rec.item_name !== name));
 
     if (currentItem.packing_recommendation?.status === "pack") {
       void packItem(currentItem.item_id);
