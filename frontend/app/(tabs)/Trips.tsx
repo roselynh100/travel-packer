@@ -100,6 +100,7 @@ export default function Trips() {
               <PackingListPill
                 type="weight"
                 value={tripInfo?.total_items_weight || 0}
+                max={tripInfo?.limit_kg}
               />
               <PackingListPill
                 type="volume"
