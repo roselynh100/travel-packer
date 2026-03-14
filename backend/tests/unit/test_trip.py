@@ -590,6 +590,80 @@ class TestTripWeatherEndpoint(unittest.TestCase):
         )
 
 
+class TestTripEmissionsEndpoint(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        trips_store.clear()
+
+    def tearDown(self):
+        trips_store.clear()
+
+    def test_emissions_trip_not_found(self):
+        response = self.client.post("/trips/does-not-exist/emissions")
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("Trip not found", response.text)
+
+    @patch("helpers.trip_helpers.MYCLIMATE_API_USERNAME", "test_user")
+    @patch("helpers.trip_helpers.MYCLIMATE_API_PASSWORD", "test_pass")
+    @patch("helpers.trip_helpers.requests.post")
+    def test_emissions_success(self, mock_post):
+        trip = _make_trip(
+            "trip-emissions",
+            datetime.date.today(),
+            datetime.date.today() + datetime.timedelta(days=2),
+        )
+        trip.origin_details.airport_code = "JFK"
+        trip.destination_details.airport_code = "LAX"
+        trips_store[trip.trip_id] = trip
+
+        mock_post.return_value = _MockResponse({"kg": 432.1})
+
+        response = self.client.post(f"/trips/{trip.trip_id}/emissions")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertAlmostEqual(data["emissions_per_kg"], 4.321, places=3)
+        self.assertAlmostEqual(
+            trips_store[trip.trip_id].emissions_per_kg, 4.321, places=3
+        )
+
+        _, kwargs = mock_post.call_args
+        self.assertEqual(kwargs["json"]["from"], "JFK")
+        self.assertEqual(kwargs["json"]["to"], "LAX")
+        self.assertEqual(kwargs["auth"], ("test_user", "test_pass"))
+
+    def test_emissions_missing_credentials(self):
+        trip = _make_trip(
+            "trip-no-creds",
+            datetime.date.today(),
+            datetime.date.today() + datetime.timedelta(days=1),
+        )
+        trips_store[trip.trip_id] = trip
+
+        response = self.client.post(f"/trips/{trip.trip_id}/emissions")
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("myclimate credentials not configured", response.text)
+
+    @patch("helpers.trip_helpers.MYCLIMATE_API_USERNAME", "test_user")
+    @patch("helpers.trip_helpers.MYCLIMATE_API_PASSWORD", "test_pass")
+    @patch("helpers.trip_helpers.requests.post")
+    def test_emissions_rejected_route(self, mock_post):
+        trip = _make_trip(
+            "trip-bad-route",
+            datetime.date.today(),
+            datetime.date.today() + datetime.timedelta(days=1),
+        )
+        trips_store[trip.trip_id] = trip
+
+        mock_post.return_value = _MockResponse(
+            {"errors": [{"detail": "invalid route"}]}
+        )
+
+        response = self.client.post(f"/trips/{trip.trip_id}/emissions")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("myclimate rejected the flight route", response.text)
+
+
 class TestAddItemToTrip(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)

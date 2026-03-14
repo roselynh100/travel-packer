@@ -195,8 +195,8 @@ class Trip(BaseModel):
     doing_laundry: bool
     bag_type: BagType
     airline: Airline
+    emissions_per_kg: Optional[float] = None
     activities: List[Activity] = Field(default_factory=list)
-    items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
     total_liquids_volume: float = 0.0
@@ -204,6 +204,7 @@ class Trip(BaseModel):
     recommendations: List[str] = Field(
         default_factory=list, description="Recommendation IDs"
     )
+    items: List[str] = Field(default_factory=list, description="Item IDs")
 
     def _airline_type(self) -> AirlineType:
         airline_value = (

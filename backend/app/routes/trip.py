@@ -16,6 +16,7 @@ from app.models import (
 )
 from app.state.db import items_store, recommendations_store, trips_store, users_store
 from helpers.trip_helpers import (
+    _calculate_trip_emissions_per_kg,
     _get_forecast_stats,
     _get_historical_stats,
     _get_lat_lon_for_trip,
@@ -307,6 +308,17 @@ def delete_removal_recommendation(trip_id: str, item_id: str, recommendation_id:
     del recommendations_store[recommendation_id]
 
     return recommendation
+
+
+@router.post("/{trip_id}/emissions", response_model=Trip)
+def calculate_trip_emissions(trip_id: str):
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    trip = trips_store[trip_id]
+    trip.emissions_per_kg = _calculate_trip_emissions_per_kg(trip)
+    trips_store[trip_id] = trip
+    return trip
 
 
 @router.get("/{trip_id}/weather", response_model=Trip)
