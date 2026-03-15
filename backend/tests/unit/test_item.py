@@ -164,7 +164,7 @@ class TestDetectEndpoint(unittest.TestCase):
                     bounding_boxes=[
                         BoundingBox(x_min=10.1, y_min=20.2, x_max=50.5, y_max=80.8)
                     ],
-                    dimensions=Dimensions(length=1, width=1),
+                    dimensions=Dimensions(length=1, width=1, height=1),
                 )
             ],
             b"fake_annotated_jpeg_bytes",
@@ -195,7 +195,7 @@ class TestDetectEndpoint(unittest.TestCase):
                     bounding_boxes=[
                         BoundingBox(x_min=0, y_min=0, x_max=100, y_max=100)
                     ],
-                    dimensions=Dimensions(length=1, width=1),
+                    dimensions=Dimensions(length=1, width=1, height=1),
                 )
             ],
             b"fake_annotated",

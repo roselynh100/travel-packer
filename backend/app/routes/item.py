@@ -161,8 +161,11 @@ async def detect_item_from_image(
 
     volume = 0
     if primary_result.dimensions:
-        h = primary_result.dimensions.height or 1
-        volume = primary_result.dimensions.length * primary_result.dimensions.width * h
+        volume = (
+            primary_result.dimensions.length
+            * primary_result.dimensions.width
+            * primary_result.dimensions.height
+        )
 
     if item_id and item_id in items_store:
         item = items_store[item_id]

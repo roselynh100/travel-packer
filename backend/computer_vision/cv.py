@@ -8,6 +8,7 @@ from cv2 import aruco
 from ultralytics import YOLO
 
 from app.models import BoundingBox, CVResult, Dimensions
+from computer_vision.constants import AVERAGE_HEIGHT_CM, TARGET_CLASSES
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 YOLO_MODEL_PATH = os.path.join(BASE_DIR, "model_train", "best.pt")
@@ -66,17 +67,6 @@ def detect_objects_yolo(image_bytes: bytes) -> Tuple[List[CVResult], bytes]:
         imgsz=640,  # Input image size (standard 640x640 for YOLOv8n)
     )
 
-    # Define the list of target class names
-    TARGET_CLASSES = {
-        "container",
-        "electronics",
-        "jackets",
-        "pants",
-        "shoes",
-        "shorts",
-        "tops",
-    }
-
     detections_list: List[CVResult] = []
 
     # YOLO returns a list, but we only pass one image, so we'll only get one result
@@ -95,7 +85,7 @@ def detect_objects_yolo(image_bytes: bytes) -> Tuple[List[CVResult], bytes]:
         class_id = box.cls.item()
         class_name = model.names[int(class_id)]
 
-        # filter by class name
+        # If the class name is not in TARGET_CLASSES, we just skip it
         if class_name in TARGET_CLASSES:
             coords = box.xyxy.tolist()[0]
             x_min = round(coords[0], 2)
@@ -110,18 +100,18 @@ def detect_objects_yolo(image_bytes: bytes) -> Tuple[List[CVResult], bytes]:
                 y_max=y_max,
             )
 
-            dimensions = detect_object_dimensions(image_bytes, bounding_box)
+            length, width = detect_object_dimensions(image_bytes, bounding_box)
+            height = AVERAGE_HEIGHT_CM[class_name]
 
             # Create CVResult object
             cv_result = CVResult(
                 item_name=class_name,
                 confidence_score=round(confidence, 2),
                 bounding_boxes=[bounding_box],
-                dimensions=dimensions,
+                dimensions=Dimensions(length=length, width=width, height=height),
             )
 
             detections_list.append(cv_result)
-        # If the class name is not in TARGET_CLASSES, we just skip it
 
     # For annotation, keep only the highest-confidence box
     if len(result.boxes) > 0:
@@ -137,7 +127,7 @@ def detect_objects_yolo(image_bytes: bytes) -> Tuple[List[CVResult], bytes]:
 
 def detect_object_dimensions(
     image_bytes: bytes, bounding_box: BoundingBox
-) -> Dimensions:
+) -> Tuple[float, float]:
     # Constants based on the marker I chose
     physical_marker_cm = 5.0
     marker_id = 2
@@ -165,12 +155,11 @@ def detect_object_dimensions(
             px_per_cm = marker_width_px / physical_marker_cm
 
     # Taking in bounding box coordinates
-    width_px = bounding_box.x_max - bounding_box.x_min
     length_px = bounding_box.y_max - bounding_box.y_min
+    width_px = bounding_box.x_max - bounding_box.x_min
 
     # Calculate dimensions
-    return Dimensions(
-        width=round(width_px / px_per_cm, 2),
-        length=round(length_px / px_per_cm, 2),
-        height=None,
+    return (
+        round(length_px / px_per_cm, 2),
+        round(width_px / px_per_cm, 2),
     )
