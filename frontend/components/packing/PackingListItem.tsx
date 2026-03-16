@@ -1,12 +1,10 @@
-import { useState } from "react";
-import { Platform, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ItemWithPackingRecommendation } from "@/constants/types";
 import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { PackingRecommendationStatus } from "@/components/packing";
 import { PackingThumbnail } from "@/components/packing/PackingThumbnail";
-import { cn } from "@/helpers/cn";
 import { useTheme } from "@/theme/useTheme";
 
 type PackingListItemProps = {
@@ -27,7 +25,6 @@ export function PackingListItem({
   onQuantityUpdated,
 }: PackingListItemProps) {
   const theme = useTheme();
-  const [expanded, setExpanded] = useState(false);
 
   const recommendation = item.packing_recommendation;
   const shouldShowRecommendation = recommendation && !recommendationDismissed;
@@ -49,26 +46,23 @@ export function PackingListItem({
   // ASSUMPTION: Priority is an internal value (should not be shown to user)
   // Disabled checkbox if packing recommendation is not available ("item" is not an Item in backend)
   return (
-    <>
-      <Pressable
-        onPress={() => setExpanded((prev) => !prev)}
-        style={({ pressed }) => ({
-          paddingTop: 12,
-          paddingBottom: 12,
-          backgroundColor: pressed ? theme.bgNav : "transparent",
-          borderBottomWidth: 1,
-          borderBottomColor: theme.textPlaceholder,
-        })}
-      >
-        <View className="flex-col">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-3">
-              <ThemedCheckbox
-                label={item.item_name}
-                value={checked}
-                onValueChange={onToggle}
-                accessory={<PackingThumbnail photoUri={item.photo_uri} />}
-              />
+    <View
+      className="py-4 border-b"
+      style={{ borderColor: theme.textPlaceholder }}
+    >
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-3 flex-1">
+          <ThemedCheckbox
+            label=""
+            value={checked}
+            onValueChange={onToggle}
+            accessory={<PackingThumbnail photoUri={item.photo_uri} />}
+          />
+          <View className="flex-1">
+            <View className="flex-row items-center gap-2">
+              <ThemedText numberOfLines={1} className="flex-shrink">
+                {item.item_name}
+              </ThemedText>
               {shouldShowRecommendation && (
                 <PackingRecommendationStatus
                   status={recommendation.status}
@@ -80,64 +74,60 @@ export function PackingListItem({
                 />
               )}
             </View>
-            <View className="flex-row items-center">
-              <Pressable
-                onPress={(e) => {
-                  e.stopPropagation();
-                  if (canDecrement) changeQuantity(-1);
-                }}
-                disabled={!canDecrement}
-                style={({ pressed }) => ({
-                  opacity: !canDecrement ? 0.4 : pressed ? 0.7 : 1,
-                })}
-              >
-                <View
-                  className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: theme.bg }}
-                >
-                  <ThemedText type="defaultSemiBold">−</ThemedText>
-                </View>
-              </Pressable>
-              <ThemedText className="mx-2 text-gray-700">{quantity}</ThemedText>
-              <Pressable
-                onPress={(e) => {
-                  e.stopPropagation();
-                  if (canIncrement) changeQuantity(1);
-                }}
-                disabled={!canIncrement}
-                style={({ pressed }) => ({
-                  opacity: !canIncrement ? 0.4 : pressed ? 0.7 : 1,
-                })}
-              >
-                <View
-                  className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: theme.bg }}
-                >
-                  <ThemedText type="defaultSemiBold">+</ThemedText>
-                </View>
-              </Pressable>
-            </View>
+            {(item.weight_kg || item.estimated_volume_cm3) && (
+              <View className="flex-row gap-3 mt-1">
+                {item.weight_kg && (
+                  <ThemedText className="text-xs text-gray-500">
+                    Weight: {item.weight_kg.toFixed(2)} kg
+                  </ThemedText>
+                )}
+                {item.estimated_volume_cm3 && (
+                  <ThemedText className="text-xs text-gray-500">
+                    Volume: {item.estimated_volume_cm3.toFixed(2)} cm³
+                  </ThemedText>
+                )}
+              </View>
+            )}
           </View>
-
-          {expanded && (
-            <View
-              className={cn(
-                "mt-2 flex-col gap-1",
-                Platform.OS === "web" ? "pl-6" : "pl-8",
-              )}
-            >
-              {item.weight_kg && (
-                <ThemedText>Weight: {item.weight_kg.toFixed(2)} kg</ThemedText>
-              )}
-              {item.estimated_volume_cm3 && (
-                <ThemedText>
-                  Volume: {item.estimated_volume_cm3.toFixed(2)} cm³
-                </ThemedText>
-              )}
-            </View>
-          )}
         </View>
-      </Pressable>
-    </>
+        <View className="flex-row items-center">
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              if (canDecrement) changeQuantity(-1);
+            }}
+            disabled={!canDecrement}
+            style={({ pressed }) => ({
+              opacity: !canDecrement ? 0.4 : pressed ? 0.7 : 1,
+            })}
+          >
+            <View
+              className="px-3 py-1 rounded-full"
+              style={{ backgroundColor: theme.bg }}
+            >
+              <ThemedText type="defaultSemiBold">−</ThemedText>
+            </View>
+          </Pressable>
+          <ThemedText className="mx-2 text-gray-700">{quantity}</ThemedText>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              if (canIncrement) changeQuantity(1);
+            }}
+            disabled={!canIncrement}
+            style={({ pressed }) => ({
+              opacity: !canIncrement ? 0.4 : pressed ? 0.7 : 1,
+            })}
+          >
+            <View
+              className="px-3 py-1 rounded-full"
+              style={{ backgroundColor: theme.bg }}
+            >
+              <ThemedText type="defaultSemiBold">+</ThemedText>
+            </View>
+          </Pressable>
+        </View>
+      </View>
+    </View>
   );
 }
