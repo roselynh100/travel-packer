@@ -211,8 +211,8 @@ def get_item_price(
     )
 
 
-@router.get("/{item_id}/price/v2", response_model=ItemPriceComparisonResult)
-def get_item_price_v2(
+@router.get("/{item_id}/price-comparison", response_model=ItemPriceComparisonResult)
+def get_item_price_comparison(
     item_id: str,
     origin_country: str,
     destination_country: str,

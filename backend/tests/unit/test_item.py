@@ -115,7 +115,7 @@ class TestGetItemPrice(unittest.TestCase):
 
     @patch("app.routes.item.SERPAPI_API_KEY", "test_key")
     @patch("helpers.trip_helpers.requests.get")
-    def test_get_item_price_v2_success(self, mock_get):
+    def test_get_item_price_comparison_success(self, mock_get):
         items_store["i1"] = _item_with_cv("i1")
 
         origin_response = Mock()
@@ -157,7 +157,7 @@ class TestGetItemPrice(unittest.TestCase):
         ]
 
         response = self.client.get(
-            "/items/i1/price/v2",
+            "/items/i1/price-comparison",
             params={
                 "origin_country": "United States",
                 "destination_country": "Canada",
