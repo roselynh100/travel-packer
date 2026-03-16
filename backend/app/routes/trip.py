@@ -10,10 +10,11 @@ from app.models import (
     Location,
     RecommendedItem,
     RemovalRecommendation,
+    RemovalRecommendationUpdate,
     Trip,
     TripUpdate,
 )
-from app.state.db import items_store, trips_store, users_store
+from app.state.db import items_store, recommendations_store, trips_store, users_store
 from helpers.trip_helpers import (
     _get_forecast_stats,
     _get_historical_stats,
@@ -240,7 +241,83 @@ def get_packing_decision(trip_id: str, item_id: str):
 
     items = get_trip_items(trip_id)
 
-    return packing_decision_algorithm(item, trip, items)
+    recommendation = packing_decision_algorithm(item, trip, items)
+    recommendations_store[recommendation.recommendation_id] = recommendation
+
+    add_recommendation_to_item(trip_id, item_id, recommendation.recommendation_id)
+
+    return recommendation
+
+
+@router.patch(
+    "/{trip_id}/recommendations/{recommendation_id}",
+    response_model=RemovalRecommendation,
+)
+def update_removal_recommendation(
+    trip_id: str, recommendation_id: str, update: RemovalRecommendationUpdate
+):
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    if recommendation_id not in recommendations_store:
+        raise HTTPException(status_code=404, detail="Recommendation not found")
+
+    existing = recommendations_store[recommendation_id]
+    patch_data = update.model_dump(exclude_unset=True)
+    updated = existing.model_copy(update=patch_data)
+    recommendations_store[recommendation_id] = updated
+    return updated
+
+
+@router.post(
+    "/{trip_id}/item/{item_id}/recommendations/{recommendation_id}",
+    response_model=Item,
+)
+def add_recommendation_to_item(trip_id: str, item_id: str, recommendation_id: str):
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    if item_id not in items_store:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    if recommendation_id not in recommendations_store:
+        raise HTTPException(status_code=404, detail="Recommendation not found")
+
+    trip = trips_store[trip_id]
+    item = items_store[item_id]
+
+    if item_id not in trip.items:
+        raise HTTPException(status_code=404, detail="Item not found in trip")
+
+    item.recommendation = recommendation_id
+
+    return item
+
+
+@router.delete(
+    "/{trip_id}/item/{item_id}/recommendations/{recommendation_id}",
+    response_model=Item,
+)
+def remove_recommendation_from_item(trip_id: str, item_id: str, recommendation_id: str):
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    if item_id not in items_store:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    trip = trips_store[trip_id]
+    item = items_store[item_id]
+
+    if item_id not in trip.items:
+        raise HTTPException(status_code=404, detail="Item not found in trip")
+
+    if item.recommendation != recommendation_id:
+        raise HTTPException(
+            status_code=404, detail="Recommendation not attached to item"
+        )
+
+    item.recommendation = None
+    return item
 
 
 @router.get("/{trip_id}/weather", response_model=Trip)

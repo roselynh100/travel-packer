@@ -9,8 +9,19 @@ from fastapi.testclient import TestClient
 sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 
 from app.main import app
-from app.models import Activity, Airline, BagType, Item, Location, RecommendedItem, Trip
-from app.state.db import items_store, trips_store
+from app.models import (
+    Activity,
+    Airline,
+    BagType,
+    Item,
+    Location,
+    RecommendedItem,
+    RemovalRecommendation,
+    RemovalRecommendationReason,
+    RemovalRecommendationStatus,
+    Trip,
+)
+from app.state.db import items_store, recommendations_store, trips_store
 
 
 def _minimal_trip(
@@ -47,10 +58,12 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
         items_store.clear()
+        recommendations_store.clear()
         trips_store.clear()
 
     def tearDown(self):
         items_store.clear()
+        recommendations_store.clear()
         trips_store.clear()
 
     def test_removal_recommendation_success(self):
@@ -99,6 +112,40 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
 
         response = self.client.get("/trips/t1/item/nope/packing-decision")
         self.assertEqual(response.status_code, 404)
+
+    @patch("app.routes.trip.packing_decision_algorithm")
+    def test_removal_recommendation_attaches_to_item(self, mock_algorithm):
+        trip = _minimal_trip(
+            trip_id="t1",
+            destination="Rome",
+            duration_days=3,
+            doing_laundry=False,
+            items=["i1"],
+        )
+        trips_store["t1"] = trip
+
+        item = Item(item_id="i1", weight_kg=5.0)
+        item.trips.append("t1")
+        items_store["i1"] = item
+
+        recommendation = RemovalRecommendation(
+            recommendation_id="r-pack-1",
+            status=RemovalRecommendationStatus.remove,
+            reason=RemovalRecommendationReason.overweight,
+        )
+        mock_algorithm.return_value = recommendation
+
+        response = self.client.get("/trips/t1/item/i1/packing-decision")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["recommendation_id"], "r-pack-1")
+        self.assertEqual(items_store["i1"].recommendation, "r-pack-1")
+        self.assertIs(recommendations_store["r-pack-1"], recommendation)
+
+        called_item, called_trip, called_items = mock_algorithm.call_args[0]
+        self.assertEqual(called_item.item_id, "i1")
+        self.assertEqual(called_trip.trip_id, "t1")
+        self.assertEqual([trip_item.item_id for trip_item in called_items], ["i1"])
 
 
 class TestTripRecommendationsEndpoint(unittest.TestCase):
@@ -201,6 +248,89 @@ class TestTripRecommendationsEndpoint(unittest.TestCase):
         self.assertEqual(t.duration_days, 4)
         self.assertEqual(t.doing_laundry, False)
         self.assertEqual(t.activities, [Activity.hiking])
+
+
+class TestRemovalRecommendationEndpoints(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        items_store.clear()
+        recommendations_store.clear()
+        trips_store.clear()
+
+        self.trip = _minimal_trip(
+            trip_id="t1",
+            destination="Rome",
+            duration_days=3,
+            doing_laundry=False,
+            items=["i1"],
+        )
+        trips_store[self.trip.trip_id] = self.trip
+
+        self.item = Item(item_id="i1")
+        self.item.trips.append("t1")
+        items_store[self.item.item_id] = self.item
+
+        self.recommendation = RemovalRecommendation(
+            recommendation_id="r1",
+            status=RemovalRecommendationStatus.remove,
+            reason=RemovalRecommendationReason.overweight,
+        )
+        recommendations_store[self.recommendation.recommendation_id] = (
+            self.recommendation
+        )
+
+    def tearDown(self):
+        items_store.clear()
+        recommendations_store.clear()
+        trips_store.clear()
+
+    def test_update_removal_recommendation(self):
+        response = self.client.patch(
+            "/trips/t1/recommendations/r1",
+            json={
+                "status": RemovalRecommendationStatus.pack.value,
+                "is_accepted": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], RemovalRecommendationStatus.pack.value)
+        self.assertTrue(data["is_accepted"])
+        self.assertEqual(
+            recommendations_store["r1"].status, RemovalRecommendationStatus.pack.value
+        )
+
+    def test_update_removal_recommendation_not_found(self):
+        response = self.client.patch(
+            "/trips/t1/recommendations/missing",
+            json={"is_accepted": True},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("Recommendation not found", response.text)
+
+    def test_add_recommendation_to_item(self):
+        response = self.client.post("/trips/t1/item/i1/recommendations/r1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["recommendation"], "r1")
+        self.assertEqual(items_store["i1"].recommendation, "r1")
+
+    def test_remove_recommendation_from_item(self):
+        items_store["i1"].recommendation = "r1"
+
+        response = self.client.delete("/trips/t1/item/i1/recommendations/r1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["recommendation"])
+        self.assertIsNone(items_store["i1"].recommendation)
+
+    def test_remove_recommendation_from_item_not_attached(self):
+        response = self.client.delete("/trips/t1/item/i1/recommendations/r1")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("Recommendation not attached to item", response.text)
 
 
 class TestUpdatingTrip(unittest.TestCase):
