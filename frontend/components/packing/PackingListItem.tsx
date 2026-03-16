@@ -10,7 +10,6 @@ import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { PackingRecommendationStatus } from "@/components/packing";
 import { cn } from "@/helpers/cn";
 import { useTheme } from "@/theme/useTheme";
-import { QuantityModal } from "@/components/QuantityModal";
 
 type PackingListItemProps = {
   item: PackingListItemType;
@@ -29,22 +28,20 @@ export function PackingListItem({
 }: PackingListItemProps) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
-  const [quantityModalVisible, setQuantityModalVisible] = useState(false);
-  const [isSavingQuantity, setIsSavingQuantity] = useState(false);
 
+  // TODO: change this when we make item =
   const itemId = "item_id" in item ? item.item_id : null;
   const quantity = "quantity" in item ? (item.quantity ?? 1) : 1;
 
-  const handleConfirmQuantity = async (nextQuantity: number) => {
-    if (!itemId) return;
-    setIsSavingQuantity(true);
+  const canDecrement = itemId && quantity > 1;
+  const canIncrement = itemId && quantity < 99;
 
-    try {
-      onQuantityUpdated(itemId, nextQuantity);
-      setQuantityModalVisible(false);
-    } finally {
-      setIsSavingQuantity(false);
-    }
+  const changeQuantity = (delta: number) => {
+    if (!itemId) return;
+
+    const nextQuantity = Math.min(99, Math.max(1, quantity + delta));
+    if (nextQuantity === quantity) return;
+    onQuantityUpdated(itemId, nextQuantity);
   };
 
   const recommendation =
@@ -67,42 +64,65 @@ export function PackingListItem({
       })}
     >
       <View className="flex-col">
-        <View className="flex-row items-center gap-4">
-          <ThemedCheckbox
-            label={item.item_name}
-            value={checked}
-            onValueChange={onToggle}
-            disabled={!("packing_recommendation" in item)}
-          />
-
+        <View className="flex-row items-center justify-between gap-4">
+          <View className="flex-row items-center gap-3">
+            <ThemedCheckbox
+              label={item.item_name}
+              value={checked}
+              onValueChange={onToggle}
+              disabled={!("packing_recommendation" in item)}
+            />
+            <PackingRecommendationStatus
+              status={recommendation?.status ?? null}
+              onPress={
+                canOpenRecommendation
+                  ? () =>
+                      onPressRecommendation(
+                        item as ItemWithPackingRecommendation,
+                      )
+                  : undefined
+              }
+            />
+          </View>
           {itemId && (
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation();
-                if (!isSavingQuantity) setQuantityModalVisible(true);
-              }}
-              style={({ pressed }) => ({
-                opacity: isSavingQuantity ? 0.5 : pressed ? 0.7 : 1,
-              })}
-            >
-              <View
-                className="px-3 py-1 rounded-full"
-                style={{ backgroundColor: theme.bg }}
+            <View className="flex-row items-center">
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (canDecrement) changeQuantity(-1);
+                }}
+                disabled={!canDecrement}
+                style={({ pressed }) => ({
+                  opacity: !canDecrement ? 0.4 : pressed ? 0.7 : 1,
+                })}
               >
-                <ThemedText className="text-gray-500">x{quantity}</ThemedText>
-              </View>
-            </Pressable>
+                <View
+                  className="px-3 py-1 rounded-full"
+                  style={{ backgroundColor: theme.bg }}
+                >
+                  <ThemedText type="defaultSemiBold">−</ThemedText>
+                </View>
+              </Pressable>
+              <ThemedText className="mx-2 text-gray-700">{quantity}</ThemedText>
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (canIncrement) changeQuantity(1);
+                }}
+                disabled={!canIncrement}
+                style={({ pressed }) => ({
+                  opacity: !canIncrement ? 0.4 : pressed ? 0.7 : 1,
+                })}
+              >
+                <View
+                  className="px-3 py-1 rounded-full"
+                  style={{ backgroundColor: theme.bg }}
+                >
+                  <ThemedText type="defaultSemiBold">+</ThemedText>
+                </View>
+              </Pressable>
+            </View>
           )}
-
-          <PackingRecommendationStatus
-            status={recommendation?.status ?? null}
-            onPress={
-              canOpenRecommendation
-                ? () =>
-                    onPressRecommendation(item as ItemWithPackingRecommendation)
-                : undefined
-            }
-          />
         </View>
 
         {expanded && "packing_recommendation" in item && (
@@ -122,16 +142,6 @@ export function PackingListItem({
               </ThemedText>
             )}
           </View>
-        )}
-
-        {itemId && (
-          <QuantityModal
-            visible={quantityModalVisible}
-            itemName={item.item_name}
-            initialQuantity={quantity}
-            onCancel={() => setQuantityModalVisible(false)}
-            onConfirm={handleConfirmQuantity}
-          />
         )}
       </View>
     </Pressable>
