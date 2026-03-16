@@ -261,6 +261,7 @@ export function useScanning(weightItem: Item | null) {
               item_name: best.cvResult.item_name,
               cv_result: best.cvResult,
               packing_recommendation: null,
+              photo_uri: squareUri,
             };
             setCurrentItem(bestItem);
           }
@@ -285,6 +286,7 @@ export function useScanning(weightItem: Item | null) {
               ...item,
               item_name: item.cv_result!.item_name,
               packing_recommendation: null,
+              photo_uri: squareUri,
             };
             setCurrentItem(updatedItem);
 
@@ -329,6 +331,7 @@ export function useScanning(weightItem: Item | null) {
               item_name: updatedCv.item_name,
               cv_result: updatedCv,
               packing_recommendation: null,
+              photo_uri: squareUri,
             });
 
             await getPackingRecommendation(updatedItem.item_id);
@@ -404,6 +407,7 @@ export function useScanning(weightItem: Item | null) {
           item_name: selectedItemName,
           cv_result: updatedCv,
           packing_recommendation: null,
+          photo_uri: scanResult.photoUri,
         });
         await getPackingRecommendation(currentItem.item_id);
         router.push("/Trips");
@@ -419,8 +423,9 @@ export function useScanning(weightItem: Item | null) {
     [
       currentItem,
       scanResult?.cvResult,
-      getPackingRecommendation,
+      scanResult?.photoUri,
       setCurrentItem,
+      getPackingRecommendation,
       router,
     ],
   );

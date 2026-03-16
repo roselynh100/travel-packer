@@ -56,6 +56,7 @@ export type Item = {
   estimated_volume_cm3: number | null;
   weight_kg: number | null;
   quantity?: number;
+  photo_uri?: string;
   cv_result: CVResult;
   trips: string[];
 };

@@ -7,6 +7,7 @@ import { useTheme } from "@/theme/useTheme";
 export type ThemedCheckboxProps = CheckboxProps & {
   size?: "small" | "medium";
   label: string;
+  accessory?: React.ReactNode;
 };
 
 export function ThemedCheckbox({
@@ -14,6 +15,7 @@ export function ThemedCheckbox({
   value,
   onValueChange,
   label,
+  accessory,
   className,
   ...rest
 }: ThemedCheckboxProps) {
@@ -38,6 +40,7 @@ export function ThemedCheckbox({
           {...rest}
         />
       </Pressable>
+      {accessory}
       <ThemedText type={text}>{label}</ThemedText>
     </View>
   );
