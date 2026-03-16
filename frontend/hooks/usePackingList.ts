@@ -6,6 +6,22 @@ import {
 } from "@/constants/types";
 import { apiFetch } from "@/constants/api";
 
+function removeNRecommendedItemsByName(
+  recs: RecommendedItem[],
+  itemName: string,
+  n: number,
+): RecommendedItem[] {
+  if (n <= 0) return recs;
+  let remaining = n;
+  return recs.filter((rec) => {
+    if (remaining > 0 && rec.item_name === itemName) {
+      remaining -= 1;
+      return false;
+    }
+    return true;
+  });
+}
+
 /**
  * Pass in a callback to refresh trip totals after packing/unpacking.
  */
@@ -148,7 +164,7 @@ export function usePackingList(
     const id = currentItem.item_id;
     const name = currentItem.item_name;
 
-    // If this item_id is already in scannedItems, update it
+    // If this item_id is already in scannedItems, update it; otherwise append
     setScannedItems((prev) => {
       const i = prev.findIndex((item) => item.item_id === id);
       if (i !== -1) {
@@ -159,8 +175,14 @@ export function usePackingList(
       return [...prev, currentItem];
     });
 
-    // Remove the matching recommendedItem from recommendedItems
-    setRecommendedItems((recs) => recs.filter((rec) => rec.item_name !== name));
+    // New scan of this class should consume ONE recommendation entry (if present)
+    setRecommendedItems((recs) => {
+      const idx = recs.findIndex((rec) => rec.item_name === name);
+      if (idx === -1) return recs;
+      const next = [...recs];
+      next.splice(idx, 1);
+      return next;
+    });
 
     if (currentItem.packing_recommendation?.status === "pack") {
       void packItem(currentItem.item_id);
@@ -182,6 +204,11 @@ export function usePackingList(
   const updateItemQuantity = useCallback(
     async (itemId: string, quantity: number) => {
       if (!tripId) return;
+
+      // Find previous quantity and item name for this scanned item
+      const prevItem = scannedItems.find((i) => i.item_id === itemId);
+      const prevQty = prevItem?.quantity ?? 1;
+      const itemName = prevItem?.item_name;
 
       try {
         const response = await apiFetch(
@@ -209,6 +236,14 @@ export function usePackingList(
           ),
         );
 
+        // If quantity increased, consume that many recommendations of the same name
+        if (itemName && quantity > prevQty) {
+          const delta = quantity - prevQty;
+          setRecommendedItems((recs) =>
+            removeNRecommendedItemsByName(recs, itemName, delta),
+          );
+        }
+
         if (onTripChanged) {
           await onTripChanged();
         }
@@ -217,7 +252,7 @@ export function usePackingList(
         throw error;
       }
     },
-    [tripId, onTripChanged],
+    [tripId, onTripChanged, scannedItems],
   );
 
   return {

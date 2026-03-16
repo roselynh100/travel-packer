@@ -196,9 +196,18 @@ export default function Trips() {
               <View
                 className={Platform.OS === "web" ? "" : "flex-col gap-2 mt-2"}
               >
-                {recommendedItems.map((item, i) => (
-                  <ThemedText key={i}>
-                    • {formatItemName(item.item_name)}
+                {Object.entries(
+                  recommendedItems.reduce<Record<string, number>>(
+                    (acc, item) => {
+                      acc[item.item_name] = (acc[item.item_name] ?? 0) + 1;
+                      return acc;
+                    },
+                    {},
+                  ),
+                ).map(([name, count]) => (
+                  <ThemedText key={name}>
+                    • {formatItemName(name)}
+                    {count > 1 ? ` x${count}` : ""}
                   </ThemedText>
                 ))}
               </View>
