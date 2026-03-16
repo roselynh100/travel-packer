@@ -317,14 +317,12 @@ class _MockResponse:
 def _make_trip(trip_id: str, start: datetime.date, end: datetime.date) -> Trip:
     start_dt = datetime.datetime.combine(start, datetime.time(hour=9))
     end_dt = datetime.datetime.combine(end, datetime.time(hour=17))
-    duration_days = (end - start).days + 1
     return Trip(
         trip_id=trip_id,
         origin_details=Location(city="Home", country="US", airport_code="JFK"),
         destination_details=Location(
             city="Test City", country="US", airport_code="JFK"
         ),
-        duration_days=duration_days,
         start_date=start_dt,
         end_date=end_dt,
         doing_laundry=False,
@@ -348,7 +346,7 @@ class TestTripWeatherEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertIn("Trip not found", response.text)
 
-    @patch("app.routes.trip.requests.get")
+    @patch("helpers.trip_helpers.requests.get")
     def test_weather_within_forecast_window(self, mock_get):
         today = datetime.date.today()
         start = today + datetime.timedelta(days=1)
@@ -398,7 +396,7 @@ class TestTripWeatherEndpoint(unittest.TestCase):
             data["precipitation_percentage"], (2 / 3) * 100.0, places=2
         )
 
-    @patch("app.routes.trip.requests.get")
+    @patch("helpers.trip_helpers.requests.get")
     def test_weather_outside_forecast_window_uses_history(self, mock_get):
         today = datetime.date.today()
         start = today + datetime.timedelta(days=25)
@@ -541,6 +539,102 @@ class TestRecalculateTripTotals(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["total_weight"], 5.0)
         self.assertEqual(data["total_volume"], 15.0)
+
+    def test_recalculate_totals_includes_only_liquid_item_volume_in_liquid_total(self):
+        trips_store["t1"] = _minimal_trip(
+            trip_id="t1",
+            destination="Test",
+            duration_days=2,
+            doing_laundry=False,
+            items=["i1", "i2", "i3"],
+        )
+
+        items_store["i1"] = Item(
+            item_id="i1",
+            weight_kg=2.0,
+            estimated_volume_cm3=10,
+            is_liquid=True,
+        )
+        items_store["i2"] = Item(
+            item_id="i2",
+            weight_kg=3.0,
+            estimated_volume_cm3=5,
+            is_liquid=False,
+        )
+        items_store["i3"] = Item(
+            item_id="i3",
+            weight_kg=1.0,
+            estimated_volume_cm3=7,
+            is_liquid=True,
+        )
+
+        response = self.client.post("/trips/t1/recalculate-totals")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["total_liquids_volume"], 17.0)
+        self.assertEqual(trips_store["t1"].total_liquids_volume, 17.0)
+
+
+class TestAirlineWeightLimits(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        trips_store.clear()
+
+    def tearDown(self):
+        trips_store.clear()
+
+    def _trip_payload(self, airline: str) -> dict:
+        start = datetime.datetime(2026, 6, 1, 9, 0, 0)
+        end = datetime.datetime(2026, 6, 5, 9, 0, 0)
+        return {
+            "origin_details": {
+                "city": "New York",
+                "country": "United States",
+                "airport_code": "JFK",
+            },
+            "destination_details": {
+                "city": "Toronto",
+                "country": "Canada",
+                "airport_code": "YYZ",
+            },
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "doing_laundry": False,
+            "bag_type": "Carry-on",
+            "airline": airline,
+            "activities": [],
+            "items": [],
+        }
+
+    def test_create_trip_sets_regular_limits(self):
+        response = self.client.post("/trips/", json=self._trip_payload("Air Canada"))
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["limit_kg"], 10.0)
+
+    def test_create_trip_sets_budget_limits(self):
+        response = self.client.post("/trips/", json=self._trip_payload("Porter"))
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["limit_kg"], 8.0)
+
+    def test_update_airline_recomputes_limits(self):
+        create_response = self.client.post(
+            "/trips/", json=self._trip_payload("Air Canada")
+        )
+        self.assertEqual(create_response.status_code, 200)
+        trip_id = create_response.json()["trip_id"]
+
+        update_response = self.client.put(
+            f"/trips/{trip_id}",
+            json={"airline": "Porter"},
+        )
+        self.assertEqual(update_response.status_code, 200)
+        data = update_response.json()
+        self.assertEqual(data["limit_kg"], 8.0)
 
 
 if __name__ == "__main__":

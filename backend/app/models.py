@@ -30,6 +30,18 @@ class Airline(str, Enum):
     westjet = "Westjet"
 
 
+class AirlineType(str, Enum):
+    budget = "budget"
+    regular = "regular"
+
+
+AIRLINE_TYPES = {
+    Airline.air_canada.value: AirlineType.regular,
+    Airline.porter.value: AirlineType.budget,
+    Airline.westjet.value: AirlineType.regular,
+}
+
+
 class BagType(str, Enum):
     carry_on = "Carry-on"
     checked = "Checked"
@@ -63,7 +75,7 @@ class BoundingBox(BaseModel):
 class Dimensions(BaseModel):
     length: float
     width: float
-    height: Optional[float] = None
+    height: float
 
 
 class CVResult(BaseModel):
@@ -82,6 +94,7 @@ class Item(BaseModel):
     price_at_origin: Optional[float] = None
     price_at_destination: Optional[float] = None
     quantity: int = Field(default=1, ge=1, le=99)
+    is_liquid: bool = False
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 
@@ -93,6 +106,7 @@ class ItemUpdate(BaseModel):
     quantity: Optional[int] = None
     price_at_origin: Optional[float] = None
     price_at_destination: Optional[float] = None
+    is_liquid: Optional[bool] = None
 
 
 class DetectResponse(BaseModel):
@@ -160,12 +174,44 @@ class Trip(BaseModel):
     doing_laundry: bool
     bag_type: BagType
     airline: Airline
-    # probably going to create a map for this internal field?
-    # airline_type: Optional[AirlineType] = AirlineType.budget
     activities: List[Activity] = Field(default_factory=list)
     items: List[str] = Field(default_factory=list, description="Item IDs")
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
+    total_liquids_volume: float = 0.0
+
+    def _airline_type(self) -> AirlineType:
+        airline_value = (
+            self.airline.value if isinstance(self.airline, Airline) else self.airline
+        )
+        return AIRLINE_TYPES[airline_value]
+
+    def _bag_type(self) -> BagType:
+        return (
+            self.bag_type
+            if isinstance(self.bag_type, BagType)
+            else BagType(self.bag_type)
+        )
+
+    @computed_field
+    @property
+    def limit_kg(self) -> float:
+        if (
+            self._airline_type() == AirlineType.budget
+            and self._bag_type() == BagType.carry_on
+        ):
+            return 8.0
+        elif (
+            self._airline_type() == AirlineType.regular
+            and self._bag_type() == BagType.carry_on
+        ):
+            return 10.0
+        elif (
+            self._airline_type() == AirlineType.budget
+            and self._bag_type() == BagType.checked
+        ):
+            return 20.0
+        return 23.0
 
     @computed_field
     @property

@@ -28,9 +28,10 @@ class TestPackingAlgorithm(unittest.TestCase):
         name: str,
         weight: float = 0.5,
         volume: float = 100.0,
-        # origin_price: float = 10.0,
-        # dest_price: float = 10.0,
+        origin_price: float = 10.0,
+        dest_price: float = 10.0,
     ) -> Item:
+        """Helper to create a complex Pydantic Item with valid CVResults and Pricing."""
         """Helper to create a complex Pydantic Item with valid CVResults and Pricing."""
 
         # Create valid BoundingBox
@@ -51,8 +52,8 @@ class TestPackingAlgorithm(unittest.TestCase):
             weight_kg=weight,
             estimated_volume_cm3=volume,
             cv_result=cv,
-            # price_at_origin=origin_price,
-            # price_at_destination=dest_price,
+            price_at_origin=origin_price,
+            price_at_destination=dest_price,
         )
 
     def test_laptop_context_logic(self):
@@ -79,7 +80,7 @@ class TestPackingAlgorithm(unittest.TestCase):
             precipitation_percentage=0.1,
             items=[],
         )
-        self.assertEqual(get_item_importance(item, trip_leisure, []), 0)
+        self.assertEqual(get_item_importance(item, trip_leisure, []), 5)
 
         # Case 2: Work
         trip_work = Trip(
@@ -132,7 +133,7 @@ class TestPackingAlgorithm(unittest.TestCase):
 
     def test_overweight_remove(self):
         """
-        Trip is full (19.9kg).
+        Trip is full (22.9kg).
         New Item is 'tops', Weight 0.5kg.
         Existing Item is 'jackets'.
         Expect: REMOVE (New item isn't important enough to displace existing).
@@ -158,7 +159,7 @@ class TestPackingAlgorithm(unittest.TestCase):
             highest_temp=0.0,
             precipitation_percentage=0.1,
             doing_laundry=False,
-            total_items_weight=19.9,
+            total_items_weight=22.9,
             items=[existing_jacket.item_id],  # <-- Linked existing item
         )
 
@@ -174,7 +175,7 @@ class TestPackingAlgorithm(unittest.TestCase):
 
     def test_overweight_swap(self):
         """
-        Trip is full (19.5kg).
+        Trip is full (22.5kg).
         Existing Item is 'Snack' (Importance 20), Weight 2.0kg.
         New Item is 'Laptop' (Importance 80 - Work), Weight 1.0kg.
         Expect: SWAP (Remove Snack to fit Laptop).
@@ -200,7 +201,7 @@ class TestPackingAlgorithm(unittest.TestCase):
             lowest_temp=5.0,
             highest_temp=15.0,
             precipitation_percentage=0.0,
-            total_items_weight=19.5,
+            total_items_weight=22.5,
             items=[tops.item_id],
         )
 
