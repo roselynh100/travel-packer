@@ -6,6 +6,7 @@ import { ThemedCheckbox } from "@/components/ThemedCheckbox";
 import { PackingRecommendationStatus } from "@/components/packing";
 import { PackingThumbnail } from "@/components/packing/PackingThumbnail";
 import { useTheme } from "@/theme/useTheme";
+import { formatItemName } from "@/helpers/formatItemName";
 
 type PackingListItemProps = {
   item: ItemWithPackingRecommendation;
@@ -60,8 +61,7 @@ export function PackingListItem({
           <View className="flex-1">
             <View className="flex-row items-center gap-2">
               <ThemedText numberOfLines={1} className="flex-shrink">
-                {item.item_name.charAt(0).toUpperCase() +
-                  item.item_name.slice(1)}
+                {formatItemName(item.item_name)}
               </ThemedText>
               {shouldShowRecommendation && (
                 <PackingRecommendationStatus

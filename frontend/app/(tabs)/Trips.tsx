@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Platform, Pressable, View } from "react-native";
+import { Platform, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { ScreenScroll } from "@/components/ScreenScroll";
@@ -18,7 +18,7 @@ import { averageTemp } from "@/helpers/averageTemp";
 import { useTripInfo } from "@/hooks/useTripInfo";
 import { usePackingList } from "@/hooks/usePackingList";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
-import { ThemedCheckbox } from "@/components/ThemedCheckbox";
+import { formatItemName } from "@/helpers/formatItemName";
 
 export default function Trips() {
   const router = useRouter();
@@ -197,14 +197,8 @@ export default function Trips() {
                 className={Platform.OS === "web" ? "" : "flex-col gap-2 mt-2"}
               >
                 {recommendedItems.map((item, i) => (
-                  <ThemedText
-                    key={i}
-                    // label={item.item_name}
-                    // disabled={true}
-                  >
-                    •{" "}
-                    {item.item_name.charAt(0).toUpperCase() +
-                      item.item_name.slice(1)}
+                  <ThemedText key={i}>
+                    • {formatItemName(item.item_name)}
                   </ThemedText>
                 ))}
               </View>
