@@ -75,7 +75,7 @@ class BoundingBox(BaseModel):
 class Dimensions(BaseModel):
     length: float
     width: float
-    height: Optional[float] = None
+    height: float
 
 
 class CVResult(BaseModel):
@@ -93,6 +93,7 @@ class Item(BaseModel):
     cv_result: Optional[CVResult] = None
     price_at_origin: Optional[float] = None
     price_at_destination: Optional[float] = None
+    quantity: int = Field(default=1, ge=1, le=99)
     is_liquid: bool = False
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
@@ -102,6 +103,7 @@ class ItemUpdate(BaseModel):
     weight_kg: Optional[float] = None
     estimated_volume_cm3: Optional[float] = None
     cv_result: Optional[CVResult] = None
+    quantity: Optional[int] = None
     price_at_origin: Optional[float] = None
     price_at_destination: Optional[float] = None
     is_liquid: Optional[bool] = None

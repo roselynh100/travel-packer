@@ -20,6 +20,7 @@ type UsePackingListResult = {
   toggleItem: (id: string) => Promise<void>;
   packItem: (itemId: string) => Promise<void>;
   unpackItem: (itemId: string) => Promise<void>;
+  updateItemQuantity: (itemId: string, quantity: number) => Promise<void>;
 };
 
 /**
@@ -178,6 +179,47 @@ export function usePackingList(
     [checkedItems, packItem, unpackItem],
   );
 
+  const updateItemQuantity = useCallback(
+    async (itemId: string, quantity: number) => {
+      if (!tripId) return;
+
+      try {
+        const response = await apiFetch(
+          `/items/${encodeURIComponent(itemId)}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ quantity }),
+          },
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `API error (${response.status}): ${errorText || response.statusText}`,
+          );
+        }
+
+        // Keep local list in sync
+        setScannedItems((prev) =>
+          prev.map((item) =>
+            item.item_id === itemId ? { ...item, quantity } : item,
+          ),
+        );
+
+        if (onTripChanged) {
+          await onTripChanged();
+        }
+      } catch (error) {
+        console.error("Error updating item quantity:", error);
+        throw error;
+      }
+    },
+    [tripId, onTripChanged],
+  );
+
   return {
     recommendedItems,
     scannedItems,
@@ -185,5 +227,6 @@ export function usePackingList(
     toggleItem,
     packItem,
     unpackItem,
+    updateItemQuantity,
   };
 }

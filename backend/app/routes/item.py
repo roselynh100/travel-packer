@@ -83,6 +83,11 @@ def patch_item(item_id: str, patch: ItemUpdate):
     updated = existing.model_copy(update=patch_data)
     items_store[item_id] = updated
 
+    if {"weight_kg", "estimated_volume_cm3", "quantity"} & set(patch_data.keys()):
+        for trip_id in updated.trips:
+            if trip_id in trips_store:
+                recalculate_trip_totals(trip_id)
+
     return updated
 
 
@@ -161,8 +166,11 @@ async def detect_item_from_image(
 
     volume = 0
     if primary_result.dimensions:
-        h = primary_result.dimensions.height or 1
-        volume = primary_result.dimensions.length * primary_result.dimensions.width * h
+        volume = (
+            primary_result.dimensions.length
+            * primary_result.dimensions.width
+            * primary_result.dimensions.height
+        )
 
     if item_id and item_id in items_store:
         item = items_store[item_id]
