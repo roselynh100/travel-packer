@@ -289,8 +289,7 @@ def add_recommendation_to_item(trip_id: str, item_id: str, recommendation_id: st
     if item_id not in trip.items:
         raise HTTPException(status_code=404, detail="Item not found in trip")
 
-    if recommendation_id not in item.recommendations:
-        item.recommendations.append(recommendation_id)
+    item.recommendation = recommendation_id
 
     return item
 
@@ -312,12 +311,12 @@ def remove_recommendation_from_item(trip_id: str, item_id: str, recommendation_i
     if item_id not in trip.items:
         raise HTTPException(status_code=404, detail="Item not found in trip")
 
-    if recommendation_id not in item.recommendations:
+    if item.recommendation != recommendation_id:
         raise HTTPException(
             status_code=404, detail="Recommendation not attached to item"
         )
 
-    item.recommendations.remove(recommendation_id)
+    item.recommendation = None
     return item
 
 

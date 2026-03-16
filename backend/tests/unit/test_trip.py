@@ -139,7 +139,7 @@ class TestRemovalRecommendationEndpoint(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["recommendation_id"], "r-pack-1")
-        self.assertIn("r-pack-1", items_store["i1"].recommendations)
+        self.assertEqual(items_store["i1"].recommendation, "r-pack-1")
         self.assertIs(recommendations_store["r-pack-1"], recommendation)
 
         called_item, called_trip, called_items = mock_algorithm.call_args[0]
@@ -314,17 +314,17 @@ class TestRemovalRecommendationEndpoints(unittest.TestCase):
         response = self.client.post("/trips/t1/item/i1/recommendations/r1")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["recommendations"], ["r1"])
-        self.assertEqual(items_store["i1"].recommendations, ["r1"])
+        self.assertEqual(response.json()["recommendation"], "r1")
+        self.assertEqual(items_store["i1"].recommendation, "r1")
 
     def test_remove_recommendation_from_item(self):
-        items_store["i1"].recommendations.append("r1")
+        items_store["i1"].recommendation = "r1"
 
         response = self.client.delete("/trips/t1/item/i1/recommendations/r1")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["recommendations"], [])
-        self.assertEqual(items_store["i1"].recommendations, [])
+        self.assertIsNone(response.json()["recommendation"])
+        self.assertIsNone(items_store["i1"].recommendation)
 
     def test_remove_recommendation_from_item_not_attached(self):
         response = self.client.delete("/trips/t1/item/i1/recommendations/r1")

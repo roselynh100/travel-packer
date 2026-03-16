@@ -95,9 +95,7 @@ class Item(BaseModel):
     price_at_destination: Optional[float] = None
     quantity: int = Field(default=1, ge=1, le=99)
     is_liquid: bool = False
-    recommendations: List[str] = Field(
-        default_factory=list, description="Recommendation IDs"
-    )
+    recommendation: Optional[str] = None  # recommendation id
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 
