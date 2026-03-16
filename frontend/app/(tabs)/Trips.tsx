@@ -150,7 +150,7 @@ export default function Trips() {
                     <ThemedText type="defaultSemiBold">
                       Scanned items
                     </ThemedText>
-                    <Pressable
+                    {/* <Pressable
                       className="py-2 px-4 rounded-2xl"
                       style={{ backgroundColor: theme.primary }}
                       onPress={() =>
@@ -161,9 +161,9 @@ export default function Trips() {
                         className="text-xs"
                         style={{ color: "white" }}
                       >
-                        I&apos;m done packing!
+                        See my optimization score
                       </ThemedText>
-                    </Pressable>
+                    </Pressable> */}
                   </View>
                   <View
                     className={cn(
@@ -197,11 +197,15 @@ export default function Trips() {
                 className={Platform.OS === "web" ? "" : "flex-col gap-2 mt-2"}
               >
                 {recommendedItems.map((item, i) => (
-                  <ThemedCheckbox
+                  <ThemedText
                     key={i}
-                    label={item.item_name}
-                    disabled={true}
-                  />
+                    // label={item.item_name}
+                    // disabled={true}
+                  >
+                    •{" "}
+                    {item.item_name.charAt(0).toUpperCase() +
+                      item.item_name.slice(1)}
+                  </ThemedText>
                 ))}
               </View>
             </View>

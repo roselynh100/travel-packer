@@ -53,7 +53,6 @@ export function PackingListItem({
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-3 flex-1">
           <ThemedCheckbox
-            label=""
             value={checked}
             onValueChange={onToggle}
             accessory={<PackingThumbnail photoUri={item.photo_uri} />}
@@ -61,7 +60,8 @@ export function PackingListItem({
           <View className="flex-1">
             <View className="flex-row items-center gap-2">
               <ThemedText numberOfLines={1} className="flex-shrink">
-                {item.item_name}
+                {item.item_name.charAt(0).toUpperCase() +
+                  item.item_name.slice(1)}
               </ThemedText>
               {shouldShowRecommendation && (
                 <PackingRecommendationStatus
@@ -75,14 +75,14 @@ export function PackingListItem({
               )}
             </View>
             {(item.weight_kg || item.estimated_volume_cm3) && (
-              <View className="flex-row gap-3 mt-1">
+              <View className="flex-col gap-1">
                 {item.weight_kg && (
-                  <ThemedText className="text-xs text-gray-500">
+                  <ThemedText className="text-xs">
                     Weight: {item.weight_kg.toFixed(2)} kg
                   </ThemedText>
                 )}
                 {item.estimated_volume_cm3 && (
-                  <ThemedText className="text-xs text-gray-500">
+                  <ThemedText className="text-xs">
                     Volume: {item.estimated_volume_cm3.toFixed(2)} cm³
                   </ThemedText>
                 )}
