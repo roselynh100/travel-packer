@@ -122,6 +122,14 @@ class ItemPriceResult(BaseModel):
     currency: Optional[str] = None
 
 
+class ItemPriceComparisonResult(BaseModel):
+    origin_currency: str
+    destination_currency: str
+    exchange_rate: float
+    origin_prices: List[ItemPriceResult]
+    destination_prices_in_origin_currency: List[ItemPriceResult]
+
+
 class RecommendedItem(BaseModel):
     item_name: str
     reason: Optional[str] = None
