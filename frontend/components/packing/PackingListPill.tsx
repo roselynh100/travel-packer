@@ -13,7 +13,7 @@ type PackingListPillProps = {
 // Used when trip does not provide max
 const FALLBACK_CAPACITY = {
   weight: 23, // kg
-  volume: 40000, // cm3
+  volume: 50000, // cm3
 };
 
 type PillStatus = "success" | "warning" | "error";
