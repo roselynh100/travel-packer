@@ -43,7 +43,7 @@ def get_dynamic_clothes(trip: Trip) -> List[RecommendedItem]:
     requires_pants = Activity.work in (trip.activities or []) or Activity.formal in (
         trip.activities or []
     )
-    is_warm = trip.lowest_temp is not None and gt(trip.lowest_temp, 18)
+    is_warm = trip.highest_temp is not None and gt(trip.highest_temp, 18)
 
     if is_warm:
         if requires_pants:
