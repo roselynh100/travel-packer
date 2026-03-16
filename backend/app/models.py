@@ -95,6 +95,9 @@ class Item(BaseModel):
     price_at_destination: Optional[float] = None
     quantity: int = Field(default=1, ge=1, le=99)
     is_liquid: bool = False
+    recommendations: List[str] = Field(
+        default_factory=list, description="Recommendation IDs"
+    )
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 
@@ -139,9 +142,21 @@ class RemovalRecommendationReason(str, Enum):
 
 
 class RemovalRecommendation(BaseModel):
+    recommendation_id: str = Field(default_factory=lambda: str(uuid4()))
     status: RemovalRecommendationStatus
     reason: Optional[RemovalRecommendationReason] = None
     swap_candidates: Optional[List[Item]] = None
+    is_accepted: bool = False
+
+    class Config:
+        use_enum_values = True
+
+
+class RemovalRecommendationUpdate(BaseModel):
+    status: Optional[RemovalRecommendationStatus] = None
+    reason: Optional[RemovalRecommendationReason] = None
+    swap_candidates: Optional[List[Item]] = None
+    is_accepted: Optional[bool] = None
 
     class Config:
         use_enum_values = True
