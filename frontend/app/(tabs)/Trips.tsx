@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
@@ -34,6 +34,7 @@ export default function Trips() {
     toggleItem: handleToggleItem,
     packItem,
     unpackItem,
+    updateItemQuantity,
   } = usePackingList(tripId, currentItem as PackingListItemType | null, {
     onTripChanged: refetchTripInfo,
   });
@@ -55,6 +56,13 @@ export default function Trips() {
 
     router.setParams({ packingDecision: undefined });
   }, [packingDecision, currentItem, router]);
+
+  const handleQuantityUpdated = useCallback(
+    async (itemId: string, quantity: number) => {
+      await updateItemQuantity(itemId, quantity);
+    },
+    [updateItemQuantity],
+  );
 
   const secondaryAction = () => {
     if (!selectedPackingItem?.item_id) return;
@@ -149,6 +157,7 @@ export default function Trips() {
                       checked={checkedItems.has(id)}
                       onToggle={() => handleToggleItem(id)}
                       onPressRecommendation={setSelectedPackingItem}
+                      onQuantityUpdated={handleQuantityUpdated}
                     />
                   );
                 })}
