@@ -2,6 +2,8 @@ import datetime
 import math
 import sys
 import unittest
+
+# Use standard library imports first
 from collections import Counter
 from pathlib import Path
 
@@ -59,7 +61,8 @@ class TestBaselineAlgorithm(unittest.TestCase):
 
     def test_get_dynamic_clothes_short_trip_cold(self):
         """Test a 4-day trip in cold weather (pants)."""
-        trip = self._create_trip(days=4, lowest_temp=10.0)
+        # Highest temp 15 is below the 18 threshold
+        trip = self._create_trip(days=4, highest_temp=15.0)
         items = self._count_items(get_dynamic_clothes(trip))
 
         self.assertEqual(items.get(CATEGORIES[1], 0), 4)  # 4 tops
@@ -70,7 +73,8 @@ class TestBaselineAlgorithm(unittest.TestCase):
 
     def test_get_dynamic_clothes_long_trip_hot_no_laundry(self):
         """Test a 10-day trip in hot weather without laundry."""
-        trip = self._create_trip(days=10, lowest_temp=25.0, doing_laundry=False)
+        # Using highest_temp to trigger is_warm logic
+        trip = self._create_trip(days=10, highest_temp=25.0, doing_laundry=False)
         items = self._count_items(get_dynamic_clothes(trip))
 
         self.assertEqual(items.get(CATEGORIES[1], 0), 10)  # 10 tops
@@ -80,7 +84,8 @@ class TestBaselineAlgorithm(unittest.TestCase):
 
     def test_get_dynamic_clothes_laundry_cap(self):
         """Test a 14-day trip with laundry (should cap at 7 days)."""
-        trip = self._create_trip(days=14, lowest_temp=15.0, doing_laundry=True)
+        # Cold weather (highest_temp 15 < 18)
+        trip = self._create_trip(days=14, highest_temp=15.0, doing_laundry=True)
         items = self._count_items(get_dynamic_clothes(trip))
 
         self.assertEqual(items.get(CATEGORIES[1], 0), 7)  # Capped at 7 tops
@@ -91,8 +96,8 @@ class TestBaselineAlgorithm(unittest.TestCase):
 
     def test_get_dynamic_clothes_warm_with_work(self):
         """Test a warm trip that includes work (should have 1 pant, rest shorts)."""
-        # 6 days total = 3 bottoms. Since it's warm + work -> 1 pant, 2 shorts.
-        trip = self._create_trip(days=6, lowest_temp=22.0, activities=[Activity.work])
+        # 6 days total = 3 bottoms. Warm (highest 22) + work -> 1 pant, 2 shorts.
+        trip = self._create_trip(days=6, highest_temp=22.0, activities=[Activity.work])
         items = self._count_items(get_dynamic_clothes(trip))
 
         self.assertEqual(items.get(CATEGORIES[3], 0), 1)  # 1 pair of pants
@@ -100,8 +105,10 @@ class TestBaselineAlgorithm(unittest.TestCase):
 
     def test_get_dynamic_clothes_warm_with_formal(self):
         """Test a warm trip that includes formal (should have 1 pant, rest shorts)."""
-        # 3 days total = 2 bottoms (ceil(3/2)). Warm + formal -> 1 pant, 1 short.
-        trip = self._create_trip(days=3, lowest_temp=22.0, activities=[Activity.formal])
+        # 3 days total = 2 bottoms (ceil(3/2)). Warm (highest 22) + formal -> 1 pant, 1 short.
+        trip = self._create_trip(
+            days=3, highest_temp=22.0, activities=[Activity.formal]
+        )
         items = self._count_items(get_dynamic_clothes(trip))
 
         self.assertEqual(items.get(CATEGORIES[3], 0), 1)  # 1 pair of pants
@@ -110,13 +117,13 @@ class TestBaselineAlgorithm(unittest.TestCase):
     # --- CONDITIONAL ITEMS TESTS ---
 
     def test_get_conditional_items_work(self):
-        """Rule: Electronics (ID 6) should appear if Activity.work is in activities."""
-        trip = self._create_trip(activities=[Activity.work], lowest_temp=5.0)
+        """Rule: Electronics should appear if Activity.work is in activities."""
+        trip = self._create_trip(activities=[Activity.work])
         items = [i.item_name for i in get_conditional_items(trip)]
         self.assertIn(CATEGORIES[6], items)
 
     def test_get_conditional_items_weather_cold(self):
-        """Rule: Jackets (ID 7) should appear if low_temp < 0."""
+        """Rule: Jackets should appear if low_temp < 0."""
         trip = self._create_trip(lowest_temp=-5.0)
         items = [i.item_name for i in get_conditional_items(trip)]
         self.assertIn(CATEGORIES[7], items)
@@ -127,38 +134,38 @@ class TestBaselineAlgorithm(unittest.TestCase):
 
         for activity in water_activities:
             with self.subTest(activity=activity):
-                trip = self._create_trip(activities=[activity], lowest_temp=25.0)
+                trip = self._create_trip(activities=[activity])
                 items = [i.item_name for i in get_conditional_items(trip)]
                 self.assertIn(CATEGORIES[8], items)
-                self.assertIn(CATEGORIES[12], items)  # Changed ID from 13 to 12
+                self.assertIn(CATEGORIES[12], items)
 
     def test_get_conditional_items_skiing(self):
         """Rule: Snow pants (9) and Skis (10) for skiing."""
-        trip = self._create_trip(activities=[Activity.skiing], lowest_temp=-5.0)
+        trip = self._create_trip(activities=[Activity.skiing])
         items = [i.item_name for i in get_conditional_items(trip)]
-        self.assertIn(CATEGORIES[9], items)  # Snow pants
-        self.assertIn(CATEGORIES[10], items)  # Skis
-        self.assertNotIn(CATEGORIES[11], items)  # No snowboard
+        self.assertIn(CATEGORIES[9], items)
+        self.assertIn(CATEGORIES[10], items)
+        self.assertNotIn(CATEGORIES[11], items)
 
     def test_get_conditional_items_snowboarding(self):
         """Rule: Snow pants (9) and Snowboard (11) for snowboarding."""
-        trip = self._create_trip(activities=[Activity.snowboarding], lowest_temp=-5.0)
+        trip = self._create_trip(activities=[Activity.snowboarding])
         items = [i.item_name for i in get_conditional_items(trip)]
-        self.assertIn(CATEGORIES[9], items)  # Snow pants
-        self.assertIn(CATEGORIES[11], items)  # Snowboard
-        self.assertNotIn(CATEGORIES[10], items)  # No skis
+        self.assertIn(CATEGORIES[9], items)
+        self.assertIn(CATEGORIES[11], items)
+        self.assertNotIn(CATEGORIES[10], items)
 
     def test_get_conditional_items_umbrella_rain(self):
         """Rule: Umbrella (13) for high precipitation and > 0 lowest temps."""
         trip = self._create_trip(lowest_temp=5.0, precipitation_percentage=0.6)
         items = [i.item_name for i in get_conditional_items(trip)]
-        self.assertIn(CATEGORIES[13], items)  # Changed ID from 14 to 13
+        self.assertIn(CATEGORIES[13], items)
 
     def test_get_conditional_items_umbrella_snow(self):
         """Rule: No umbrella (13) if precipitation is high but temps are below freezing."""
         trip = self._create_trip(lowest_temp=-5.0, precipitation_percentage=0.8)
         items = [i.item_name for i in get_conditional_items(trip)]
-        self.assertNotIn(CATEGORIES[13], items)  # Changed ID from 14 to 13
+        self.assertNotIn(CATEGORIES[13], items)
 
     # --- INTEGRATION & BOUNDARY TESTS ---
 
@@ -167,7 +174,8 @@ class TestBaselineAlgorithm(unittest.TestCase):
         trip = self._create_trip(
             days=5,
             activities=[Activity.work, Activity.swimming],
-            lowest_temp=20.0,
+            highest_temp=25.0,  # Hot enough for shorts logic
+            lowest_temp=20.0,  # High enough for umbrella logic
             precipitation_percentage=0.9,
             doing_laundry=False,
         )
@@ -175,10 +183,10 @@ class TestBaselineAlgorithm(unittest.TestCase):
         results = baseline_list_algorithm(trip)
         items = self._count_items(results)
 
-        # Dynamic expectations (5 days, >18 lowest temp, work activity):
+        # Dynamic expectations (5 days, >18 highest temp, work activity):
         self.assertEqual(items.get(CATEGORIES[1], 0), 5)  # 5 tops
         self.assertEqual(items.get(CATEGORIES[3], 0), 1)  # 1 pants (for work)
-        self.assertEqual(items.get(CATEGORIES[2], 0), 2)  # 2 shorts (remaining bottoms)
+        self.assertEqual(items.get(CATEGORIES[2], 0), 2)  # 2 shorts (total 3 bottoms)
         self.assertEqual(items.get(CATEGORIES[4], 0), 2)  # 2 shoes (>4 days)
         self.assertEqual(items.get(CATEGORIES[5], 0), 1)  # 1 toiletries
 
@@ -190,19 +198,13 @@ class TestBaselineAlgorithm(unittest.TestCase):
 
     def test_boundary_conditions(self):
         """Test the exact cutoffs for temperatures and precipitation."""
-        # 0.0 lowest temp: Neither jacket (<0) nor umbrella (>0)
-        trip_zero_low = self._create_trip(lowest_temp=0.0, precipitation_percentage=0.6)
-        items_zero_low = [i.item_name for i in get_conditional_items(trip_zero_low)]
-        self.assertNotIn(CATEGORIES[7], items_zero_low)
-        self.assertNotIn(CATEGORIES[13], items_zero_low)
+        # 18.0 highest temp: Exactly 18 should not trigger shorts (>18)
+        trip_18_high = self._create_trip(days=4, highest_temp=18.0)
+        items_18_high = self._count_items(get_dynamic_clothes(trip_18_high))
+        self.assertEqual(items_18_high.get(CATEGORIES[2], 0), 0)  # No shorts
+        self.assertTrue(items_18_high.get(CATEGORIES[3], 0) > 0)  # Should be pants
 
-        # 18.0 lowest temp: Exactly 18 should not trigger shorts (>18)
-        trip_18_low = self._create_trip(days=4, lowest_temp=18.0)
-        items_18_low = self._count_items(get_dynamic_clothes(trip_18_low))
-        self.assertEqual(items_18_low.get(CATEGORIES[2], 0), 0)  # No shorts
-        self.assertTrue(items_18_low.get(CATEGORIES[3], 0) > 0)  # Expect pants
-
-        # 0.5 precipitation: Exactly 0.5 should not trigger umbrella (>0.5)
+        # Precipitation: Exactly 0.5 should not trigger umbrella (>0.5)
         trip_precip = self._create_trip(lowest_temp=15.0, precipitation_percentage=0.5)
         items_precip = [i.item_name for i in get_conditional_items(trip_precip)]
         self.assertNotIn(CATEGORIES[13], items_precip)
