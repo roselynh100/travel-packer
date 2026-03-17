@@ -14,7 +14,7 @@ from app.models import (
 from machine_learning.helpers import over_limit
 from machine_learning.importance import get_item_importance
 
-VOLUME_LIMIT_CM3 = 50000.0
+VOLUME_LIMIT_CM3 = 75000.0
 
 
 def packing_decision_algorithm(
