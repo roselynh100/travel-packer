@@ -278,6 +278,7 @@ class TestRemovalRecommendationEndpoints(unittest.TestCase):
         recommendations_store[self.recommendation.recommendation_id] = (
             self.recommendation
         )
+        self.trip.recommendations.append(self.recommendation.recommendation_id)
 
     def tearDown(self):
         items_store.clear()
@@ -310,24 +311,19 @@ class TestRemovalRecommendationEndpoints(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertIn("Recommendation not found", response.text)
 
-    def test_add_recommendation_to_item(self):
-        response = self.client.post("/trips/t1/item/i1/recommendations/r1")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["recommendation"], "r1")
-        self.assertEqual(items_store["i1"].recommendation, "r1")
-
-    def test_remove_recommendation_from_item(self):
+    def test_delete_removal_recommendation(self):
         items_store["i1"].recommendation = "r1"
 
-        response = self.client.delete("/trips/t1/item/i1/recommendations/r1")
+        response = self.client.delete("/trips/t1/item/i1/removal-recommendations/r1")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.json()["recommendation"])
+        self.assertEqual(response.json()["recommendation_id"], "r1")
         self.assertIsNone(items_store["i1"].recommendation)
+        self.assertNotIn("r1", trips_store["t1"].recommendations)
+        self.assertNotIn("r1", recommendations_store)
 
-    def test_remove_recommendation_from_item_not_attached(self):
-        response = self.client.delete("/trips/t1/item/i1/recommendations/r1")
+    def test_delete_removal_recommendation_not_attached(self):
+        response = self.client.delete("/trips/t1/item/i1/removal-recommendations/r1")
 
         self.assertEqual(response.status_code, 404)
         self.assertIn("Recommendation not attached to item", response.text)
