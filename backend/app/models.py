@@ -200,10 +200,10 @@ class Trip(BaseModel):
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
     total_liquids_volume: float = 0.0
+    total_items_weight: float = 0.0
     recommendations: List[str] = Field(
         default_factory=list, description="Recommendation IDs"
     )
-    total_items_weight: float = 0.0
 
     def _airline_type(self) -> AirlineType:
         airline_value = (
