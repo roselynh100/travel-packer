@@ -3,11 +3,13 @@ import sys
 import unittest
 from pathlib import Path
 from typing import Dict, List
+from unittest.mock import patch
 
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.models import (
+    Activity,
     Airline,
     BagType,
     BoundingBox,
@@ -15,200 +17,194 @@ from app.models import (
     Dimensions,
     Item,
     Location,
+    RecommendedItem,
     RemovalRecommendation,
     Trip,
 )
 from app.state.db import items_store, recommendations_store
+from machine_learning.generator import baseline_list_algorithm
 from machine_learning.packing_score import get_user_packing_score
 
 
-class TestPackingScoringExpanded(unittest.TestCase):
+class TestScoringFullCoverage(unittest.TestCase):
     test_results = []
+    # This dictionary bridges the gap between IDs and Names for the Mock
+    rec_id_to_name_map = {}
 
     def setUp(self):
         items_store.clear()
         recommendations_store.clear()
+        self.rec_id_to_name_map.clear()
         self.default_loc = Location(
             city="Toronto", country="Canada", airport_code="YYZ"
         )
-        self.base_date = datetime.datetime(2026, 2, 14)
+        self.base_date = datetime.datetime(2026, 3, 17)
 
     def _create_cv(self, name: str) -> CVResult:
         return CVResult(
             item_name=name,
-            confidence_score=0.95,
+            confidence_score=0.99,
             bounding_boxes=[BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10)],
-            dimensions=Dimensions(length=20, width=20, height=10),
+            dimensions=Dimensions(length=20, width=20, height=5),
         )
+
+    def dynamic_generator_mock(self, trip):
+        """Mock generator that uses our local map to find item names by ID."""
+        recs = []
+        for rid in trip.recommendations:
+            rec_obj = recommendations_store.get(rid)
+            # Only 'pack' status recommendations are part of the baseline list
+            if rec_obj and rec_obj.status == "pack":
+                name = self.rec_id_to_name_map.get(rid, "Unknown Item")
+                recs.append(RecommendedItem(item_name=name))
+        return recs
 
     def _setup_scenario(
         self,
-        scenario_name: str,
-        packed_items: List[
-            dict
-        ],  # [{"name": str, "qty": int, "weight": float, "vol": float, "linked": bool}]
-        recs_list: List[dict],  # [{"name": str, "accepted": bool}]
-        total_weight: float,
-        total_volume: float,
-    ) -> Trip:
-        name_to_rec_id = {}
-        trip_item_ids = []
-        trip_rec_ids = []
-
-        # 1. Setup Recommendations
-        for r_data in recs_list:
-            rec = RemovalRecommendation(status="pack", is_accepted=r_data["accepted"])
-            rec.__dict__["item_name"] = r_data["name"]
-            recommendations_store[rec.recommendation_id] = rec
-            trip_rec_ids.append(rec.recommendation_id)
-            name_to_rec_id[r_data["name"]] = rec.recommendation_id
-
-        # 2. Setup Items
-        for i_data in packed_items:
-            r_id = name_to_rec_id.get(i_data["name"]) if i_data.get("linked") else None
-            item = Item(
-                quantity=i_data["qty"],
-                cv_result=self._create_cv(i_data["name"]),
-                recommendation=r_id,
-                weight_kg=i_data.get("weight", 0.5),
-                estimated_volume_cm3=i_data.get("vol", 1000.0),
-            )
-            items_store[item.item_id] = item
-            trip_item_ids.append(item.item_id)
-
-        # 3. Trip Configuration (Regular + Checked = 23kg limit)
+        match_ratio: float,  # % of recommended items packed
+        extra_qty: int,  # Items packed NOT on the list
+        weight_kg: float,
+        vol_cm3: float,
+        removal_recs: List[dict],  # [{"status": "remove"/"swap", "accepted": bool}]
+    ):
         trip = Trip(
             origin_details=self.default_loc,
             destination_details=self.default_loc,
             start_date=self.base_date,
-            end_date=self.base_date + datetime.timedelta(days=10),
-            doing_laundry=True,
+            end_date=self.base_date + datetime.timedelta(days=4),
+            doing_laundry=False,
             bag_type=BagType.checked,
             airline=Airline.air_canada,
-            items=trip_item_ids,
-            recommendations=trip_rec_ids,
-            total_items_weight=total_weight,
-            total_items_volume=total_volume,
+            activities=[Activity.work],
+            highest_temp=20,
+            lowest_temp=10,
+            precipitation_percentage=0.1,
         )
 
-        score = get_user_packing_score(trip)
+        # 1. Setup 'Pack' recommendations
+        golden_recs = baseline_list_algorithm(trip)
+        trip_rec_ids = []
+        trip_item_ids = []
+
+        num_to_pack = int(len(golden_recs) * match_ratio)
+
+        for i, rec_item in enumerate(golden_recs):
+            rec = RemovalRecommendation(status="pack", is_accepted=True)
+            # Store the ID -> Name relationship in our local test map
+            self.rec_id_to_name_map[rec.recommendation_id] = rec_item.item_name
+
+            recommendations_store[rec.recommendation_id] = rec
+            trip_rec_ids.append(rec.recommendation_id)
+
+            if i < num_to_pack:
+                item = Item(
+                    quantity=1,
+                    cv_result=self._create_cv(rec_item.item_name),
+                    recommendation=rec.recommendation_id,
+                )
+                items_store[item.item_id] = item
+                trip_item_ids.append(item.item_id)
+
+        # 2. Setup Manual Extras (Unlinked)
+        for _ in range(extra_qty):
+            item = Item(
+                quantity=1, cv_result=self._create_cv("Extra"), recommendation=None
+            )
+            items_store[item.item_id] = item
+            trip_item_ids.append(item.item_id)
+
+        # 3. Setup Correction Recommendations (For Delta)
+        for r_data in removal_recs:
+            r_rec = RemovalRecommendation(
+                status=r_data["status"], is_accepted=r_data["accepted"]
+            )
+            r_rec.__dict__["type"] = "RemovalRecommendation"
+            recommendations_store[r_rec.recommendation_id] = r_rec
+            trip_rec_ids.append(r_rec.recommendation_id)
+
+        trip.items = trip_item_ids
+        trip.recommendations = trip_rec_ids
+        trip.total_items_weight = weight_kg
+        trip.total_items_volume = vol_cm3
+
+        with patch(
+            "machine_learning.packing_score.baseline_list_algorithm",
+            side_effect=self.dynamic_generator_mock,
+        ):
+            score = get_user_packing_score(trip)
+
+        # Generate Parameter Description for the table
+        removals_desc = "None"
+        if removal_recs:
+            acc = sum(1 for r in removal_recs if r["accepted"])
+            removals_desc = f"{acc}/{len(removal_recs)} Acc"
 
         self.test_results.append(
             {
-                "Scenario": scenario_name,
-                "Weight": f"{total_weight}/{trip.limit_kg}kg",
-                "Volume": f"{int(total_volume)}/75k",
+                "Match": f"{int(match_ratio*100)}%",
+                "Extras": extra_qty,
+                "Weight": f"{weight_kg}kg",
+                "Vol": f"{int(vol_cm3/1000)}k",
+                "Removals": removals_desc,
                 "Score": round(score, 2),
             }
         )
-        return trip
 
-    def test_expanded_scenarios(self):
-        # --- Scenario A: The Ultimate Optimized Pro ---
-        # Usage: 18.4kg / 23kg = 80% (Safe Zone Max)
-        # Volume: 60,000 / 75,000 = 80% (Safe Zone Max)
-        # Recommendation Match: 100%
-        # Acceptance Rate: 100% (Delta = +5.0)
-        # Expected Score: 100.0 (Clipped from 105.0)
-
+    def test_parameter_coverage(self):
+        # --- HIGH RANGE (80 - 100) ---
+        # Case 1: THE BEST POSSIBLE SCORE
         self._setup_scenario(
-            "Ultimate Optimized Pro",
-            packed_items=[
-                {
-                    "name": "Laptop",
-                    "qty": 1,
-                    "weight": 2.5,
-                    "vol": 2000,
-                    "linked": True,
-                },
-                {
-                    "name": "Winter Coat",
-                    "qty": 1,
-                    "weight": 3.0,
-                    "vol": 15000,
-                    "linked": True,
-                },
-                {"name": "Boots", "qty": 1, "weight": 2.5, "vol": 8000, "linked": True},
-                {
-                    "name": "Jeans",
-                    "qty": 4,
-                    "weight": 4.0,
-                    "vol": 15000,
-                    "linked": True,
-                },
-                {
-                    "name": "T-shirt",
-                    "qty": 8,
-                    "weight": 6.4,
-                    "vol": 20000,
-                    "linked": True,
-                },
-            ],
-            recs_list=[
-                {"name": "Laptop", "accepted": True},
-                {"name": "Winter Coat", "accepted": True},
-                {"name": "Boots", "accepted": True},
-                {"name": "Jeans", "accepted": True},
-                {"name": "Jeans", "accepted": True},
-                {"name": "Jeans", "accepted": True},
-                {"name": "Jeans", "accepted": True},
-                {"name": "T-shirt", "accepted": True},
-                {"name": "T-shirt", "accepted": True},
-                {"name": "T-shirt", "accepted": True},
-                {"name": "T-shirt", "accepted": True},
-                {"name": "T-shirt", "accepted": True},
-                {"name": "T-shirt", "accepted": True},
-                {"name": "T-shirt", "accepted": True},
-                {"name": "T-shirt", "accepted": True},
-            ],
-            total_weight=18.4,  # Exactly 80% of 23kg
-            total_volume=60000.0,  # Exactly 80% of 75k
+            1.0, 0, 18.4, 60000, [{"status": "swap", "accepted": True}]
         )
 
-        # --- Scenario B: The 'Danger Zone' Packer ---
-        # Usage: 95% (Between 0.8 and 1.0)
-        # Should see a slight drop in score compared to the Pro.
+        # Case 2: THE "GOOD ENOUGH" (100% Match, at the 23kg limit)
+        self._setup_scenario(1.0, 0, 23.0, 75000, [])
+
+        # --- MID RANGE (40 - 70) ---
+        # Case 3: THE FORGETFUL MINIMALIST (Packs only 20% of list, but very light bag)
+        # S_list = 20. S_weight = 100. S_vol = 100.
+        # Math: (0.5 * 20) + 25 + 25 = 60.0
+        self._setup_scenario(0.2, 0, 5.0, 10000, [])
+
+        # Case 4: THE MANUAL HOARDER (100% Match, but 40 UNLINKED EXTRAS)
+        # Penalty: 10 * (40/10 recs) = -40. S_list = 60.
+        # Math: (0.5 * 60) + 25 + 25 = 80.0 (Drops lower if weight increases)
+        self._setup_scenario(1.0, 40, 22.0, 70000, [])
+
+        # Case 5: THE STUBBORN ROGUE (0% Match, Packs 20 items AI didn't ask for)
+        # S_list = 0. S_weight = 100. S_vol = 100. Delta = -5 (Rejected 1 removal).
+        # Math: 0 + 25 + 25 - 5 = 45.0
         self._setup_scenario(
-            "Danger Zone (95%)",
-            packed_items=[{"name": "Heavy Gear", "qty": 1, "linked": True}],
-            recs_list=[{"name": "Heavy Gear", "accepted": True}],
-            total_weight=21.85,  # 95% of 23kg
-            total_volume=71250.0,  # 95% of 75k
+            0.0, 20, 15.0, 40000, [{"status": "remove", "accepted": False}]
         )
 
-        # --- Scenario C: The Volume Buster ---
-        # Under weight, but over volume (too many fluffy sweaters).
+        # --- LOW RANGE (0 - 30) ---
+        # Case 6: THE DISASTER (20% Match, 30kg Weight, Rejected Advice)
+        # S_list = 20. S_weight = 20. S_vol = 20. Delta = -5.
+        # Math: (0.5 * 20) + (0.25 * 20) + (0.25 * 20) - 5 = 10 + 5 + 5 - 5 = 15.0
         self._setup_scenario(
-            "Volume Violation",
-            packed_items=[{"name": "Pillow", "qty": 4, "linked": True}],
-            recs_list=[{"name": "Pillow", "accepted": True}] * 4,
-            total_weight=10.0,
-            total_volume=85000.0,  # Limit is 75k
+            0.2, 0, 30.0, 90000, [{"status": "remove", "accepted": False}]
         )
 
-        # --- Scenario D: Total Rebel Chaos ---
-        # Exceeds weight, volume, and ignored all recommendations.
+        # Case 7: TOTAL SYSTEMS FAILURE (0% Match, 40kg Weight, 120k Vol, Delta -10)
+        # Everything is 0 or negative.
         self._setup_scenario(
-            "Chaos Rebel",
-            packed_items=[{"name": "Random Box", "qty": 5, "linked": False}],
-            recs_list=[{"name": "Essential Kit", "accepted": False}],
-            total_weight=28.0,
-            total_volume=90000.0,
+            0.0, 50, 40.0, 120000, [{"status": "remove", "accepted": False}] * 5
         )
 
     @classmethod
     def tearDownClass(cls):
-        print("\n" + "=" * 70)
-        print(f"{'ADVANCED SCORING SUMMARY (Limit: 23kg / 75k Vol)':^70}")
-        print("=" * 70)
-        header = f"{'Scenario':<20} | {'Weight':<12} | {'Volume':<12} | {'Score':<8}"
+        print("\n" + "=" * 95)
+        print(f"{'FULL PARAMETER SCORING ANALYSIS (Weight Limit: 23kg)':^95}")
+        print("=" * 95)
+        header = f"{'Match %':<8} | {'Extras':<7} | {'Weight':<8} | {'Vol':<6} | {'Removals':<12} | {'Score':<8}"
         print(header)
         print("-" * len(header))
         for res in cls.test_results:
             print(
-                f"{res['Scenario']:<20} | {res['Weight']:<12} | {res['Volume']:<12} | {res['Score']:<8}"
+                f"{res['Match']:<8} | {res['Extras']:<7} | {res['Weight']:<8} | {res['Vol']:<6} | {res['Removals']:<12} | {res['Score']:<8}"
             )
-        print("=" * 70 + "\n")
+        print("=" * 95 + "\n")
 
 
 if __name__ == "__main__":
