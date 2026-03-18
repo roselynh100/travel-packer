@@ -58,6 +58,9 @@ def calc_optimization_score(current: float, maximum: float) -> float:
 
 def calc_acceptance_factor(accepted_recs: int, given_recs: int) -> float:
     """Calculates the Recommendation Acceptance Factor (Delta)."""
+    if given_recs == 0:
+        return 0.0
+
     # r = acceptance rate
     r = accepted_recs / max(1, given_recs)
 
@@ -116,15 +119,21 @@ def get_user_packing_score(trip: Trip) -> float:
             )
 
     # 3. Calculate Acceptance Stats (for Delta)
-    # We use the full list of recommendation IDs stored on the trip
-    total_recs_given = len(trip.recommendations)
-
-    # Count how many of those recommendations are marked as is_accepted = True
+    # Filter for RemovalRecommendations where status is not 'pack'
+    total_recs_given = 0
     accepted_recs_count = 0
+
     for rec_id in trip.recommendations:
         rec = recommendations_store.get(rec_id)
-        if rec and rec.is_accepted:
-            accepted_recs_count += 1
+        # Assuming 'type' or similar attribute identifies it as a RemovalRecommendation
+        if (
+            rec
+            and getattr(rec, "type", None) == "RemovalRecommendation"
+            and rec.status != "pack"
+        ):
+            total_recs_given += 1
+            if rec.is_accepted:
+                accepted_recs_count += 1
 
     # 4. Final Calculation
     return calculate_final_score(
