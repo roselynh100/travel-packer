@@ -5,6 +5,7 @@ import { apiFetch } from "@/constants/api";
 import { Item } from "@/constants/types";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
+import { ModalCloseButton } from "@/components/ModalCloseButton";
 import { useTheme } from "@/theme/useTheme";
 
 type WeightModalStatus = "intro" | "pending" | "success" | "error";
@@ -102,6 +103,7 @@ export function WeightModal({
           className="rounded-2xl p-12 items-center"
           style={{ backgroundColor: theme.bgNav }}
         >
+          <ModalCloseButton onPress={onClose} />
           {status === "intro" && (
             <>
               <ThemedText type="subtitle" className="text-center mb-4">

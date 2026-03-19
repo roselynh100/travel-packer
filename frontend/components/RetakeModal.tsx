@@ -2,6 +2,7 @@ import { Modal, View } from "react-native";
 
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
+import { ModalCloseButton } from "@/components/ModalCloseButton";
 import { useTheme } from "@/theme/useTheme";
 
 type RetakeModalProps = {
@@ -24,6 +25,7 @@ export function RetakeModal({ visible, onConfirm }: RetakeModalProps) {
           className="rounded-2xl p-12 items-center max-w-md w-full"
           style={{ backgroundColor: theme.bgNav }}
         >
+          <ModalCloseButton onPress={onConfirm} />
           <ThemedText type="subtitle" className="text-center mb-8">
             Let us make sure we correctly identified your item.
           </ThemedText>

@@ -2,6 +2,7 @@ import { Modal, View } from "react-native";
 
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
+import { ModalCloseButton } from "@/components/ModalCloseButton";
 import { useTheme } from "@/theme/useTheme";
 import type { ItemWithPackingRecommendation } from "@/constants/types";
 
@@ -49,6 +50,7 @@ export function PackingRecommendationModal({
           className="rounded-2xl pt-16 pb-12 px-8 w-full max-w-md"
           style={{ backgroundColor: theme.bgNav }}
         >
+          <ModalCloseButton onPress={onSecondary} />
           <ThemedText type="subtitle" className="text-center mb-3">
             {title}
           </ThemedText>
