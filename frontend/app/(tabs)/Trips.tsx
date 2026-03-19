@@ -17,7 +17,6 @@ import {
 import { averageTemp } from "@/helpers/averageTemp";
 import { useTripInfo } from "@/hooks/useTripInfo";
 import { usePackingList } from "@/hooks/usePackingList";
-import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { formatItemName } from "@/helpers/formatItemName";
 
 export default function Trips() {
@@ -36,6 +35,7 @@ export default function Trips() {
     packItem,
     unpackItem,
     updateItemQuantity,
+    setRecommendationAccepted,
   } = usePackingList(tripId, currentItem, {
     onTripChanged: refreshTotals,
   });
@@ -44,11 +44,6 @@ export default function Trips() {
     useState<ItemWithPackingRecommendation | null>(
       (currentItem as ItemWithPackingRecommendation) ?? null,
     );
-
-  const {
-    isDismissed: isRecommendationDismissed,
-    dismiss: dismissRecommendation,
-  } = useDismissedRecommendations(tripId);
 
   const { packingDecision } = useLocalSearchParams<{
     packingDecision?: string;
@@ -92,7 +87,10 @@ export default function Trips() {
       void packItem(selectedPackingItem.item_id);
     }
     if (selectedPackingItem?.item_id) {
-      dismissRecommendation(selectedPackingItem.item_id);
+      const recId = selectedPackingItem.packing_recommendation?.recommendation_id;
+      if (tripId && recId) {
+        void setRecommendationAccepted(selectedPackingItem.item_id, recId, true);
+      }
     }
     setSelectedPackingItem(null);
   };
@@ -180,9 +178,6 @@ export default function Trips() {
                           checked={checkedItems.has(id)}
                           onToggle={() => handleToggleItem(id)}
                           onPressRecommendation={setSelectedPackingItem}
-                          recommendationDismissed={isRecommendationDismissed(
-                            item.item_id,
-                          )}
                           onQuantityUpdated={handleQuantityUpdated}
                         />
                       );

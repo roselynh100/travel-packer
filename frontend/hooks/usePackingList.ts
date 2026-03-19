@@ -37,6 +37,11 @@ type UsePackingListResult = {
   packItem: (itemId: string) => Promise<void>;
   unpackItem: (itemId: string) => Promise<void>;
   updateItemQuantity: (itemId: string, quantity: number) => Promise<void>;
+  setRecommendationAccepted: (
+    itemId: string,
+    recommendationId: string,
+    isAccepted: boolean,
+  ) => Promise<void>;
 };
 
 /**
@@ -157,6 +162,48 @@ export function usePackingList(
     [tripId, onTripChanged],
   );
 
+  const setRecommendationAccepted = useCallback(
+    async (itemId: string, recommendationId: string, isAccepted: boolean) => {
+      if (!tripId) return;
+      try {
+        const response = await apiFetch(
+          `/trips/${tripId}/recommendations/${encodeURIComponent(recommendationId)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_accepted: isAccepted }),
+          },
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `API error (${response.status}): ${errorText || response.statusText}`,
+          );
+        }
+
+        // Update local scannedItems so pill hides/shows immediately
+        setScannedItems((prev) =>
+          prev.map((item) =>
+            item.item_id === itemId && item.packing_recommendation
+              ? {
+                  ...item,
+                  packing_recommendation: {
+                    ...item.packing_recommendation,
+                    is_accepted: isAccepted,
+                  },
+                }
+              : item,
+          ),
+        );
+      } catch (error) {
+        console.error("Error updating recommendation acceptance:", error);
+        throw error;
+      }
+    },
+    [tripId],
+  );
+
   // Multiples of the same classes are allowed (e.g. two "top" scans)
   useEffect(() => {
     if (!currentItem) return;
@@ -191,6 +238,13 @@ export function usePackingList(
 
   const toggleItem = useCallback(
     async (id: string) => {
+      // Undo acceptance on any pack/unpack toggle so the pill can reappear
+      const item = scannedItems.find((i) => i.item_id === id);
+      const rec = item?.packing_recommendation;
+      if (tripId && rec?.is_accepted && rec.recommendation_id) {
+        await setRecommendationAccepted(id, rec.recommendation_id, false);
+      }
+
       const isChecked = checkedItems.has(id);
       if (isChecked) {
         await unpackItem(id);
@@ -198,7 +252,14 @@ export function usePackingList(
         await packItem(id);
       }
     },
-    [checkedItems, packItem, unpackItem],
+    [
+      checkedItems,
+      packItem,
+      scannedItems,
+      setRecommendationAccepted,
+      tripId,
+      unpackItem,
+    ],
   );
 
   const updateItemQuantity = useCallback(
@@ -263,5 +324,6 @@ export function usePackingList(
     packItem,
     unpackItem,
     updateItemQuantity,
+    setRecommendationAccepted,
   };
 }

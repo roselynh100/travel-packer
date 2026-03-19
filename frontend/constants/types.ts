@@ -89,9 +89,11 @@ export type Dimensions = {
 export type PackingRecommendationStatus = "pack" | "remove" | "swap";
 
 export type PackingRecommendation = {
+  recommendation_id: string;
   status: PackingRecommendationStatus;
   reason?: string;
   swap_candidates?: Item[];
+  is_accepted: boolean;
 };
 
 export type ItemWithPackingRecommendation = Item & {

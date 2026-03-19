@@ -156,6 +156,9 @@ export function useScanning(weightItem: Item | null) {
       const result: PackingRecommendation = await response.json();
       console.log("Packing recommendation received:", result);
 
+      const nextRecommendation: PackingRecommendation =
+        result.status === "pack" ? { ...result, is_accepted: true } : result;
+
       setCurrentItem((prevItem) => {
         if (!prevItem || prevItem.item_id !== itemId) {
           return prevItem;
@@ -163,11 +166,21 @@ export function useScanning(weightItem: Item | null) {
         const typedPrev = prevItem as ItemWithPackingRecommendation;
         return {
           ...typedPrev,
-          packing_recommendation: result,
+          packing_recommendation: nextRecommendation,
         };
       });
 
       if (result.status === "pack") {
+        // There's no modal/primary action for PACK recommendations, so accept immediately.
+        void apiFetch(
+          `/trips/${tripId}/recommendations/${encodeURIComponent(result.recommendation_id)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_accepted: true }),
+          },
+        );
+
         setInfoBanner({
           type: "success",
           source: "recommendation",

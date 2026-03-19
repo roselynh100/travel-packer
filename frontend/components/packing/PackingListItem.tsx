@@ -13,7 +13,6 @@ type PackingListItemProps = {
   checked: boolean;
   onToggle: () => void;
   onPressRecommendation: (item: ItemWithPackingRecommendation) => void;
-  recommendationDismissed: boolean;
   onQuantityUpdated: (itemId: string, quantity: number) => void;
 };
 
@@ -22,16 +21,16 @@ export function PackingListItem({
   checked,
   onToggle,
   onPressRecommendation,
-  recommendationDismissed,
   onQuantityUpdated,
 }: PackingListItemProps) {
   const theme = useTheme();
 
   const recommendation = item.packing_recommendation;
-  const shouldShowRecommendation = recommendation && !recommendationDismissed;
-  const canOpenRecommendation =
-    shouldShowRecommendation &&
+  const shouldShowRecommendation =
+    recommendation &&
+    !recommendation.is_accepted &&
     (recommendation.status === "remove" || recommendation.status === "swap");
+  const canOpenRecommendation = shouldShowRecommendation;
 
   const quantity = item.quantity ?? 1;
 
