@@ -4,9 +4,12 @@ import { useTheme } from "@/theme/useTheme";
 
 export type ThemedBannerType = "success" | "warning" | "error";
 
+export type ThemedBannerSource = "api" | "recommendation";
+
 export type ThemedBannerProps = {
   message: string;
   type: ThemedBannerType;
+  source?: ThemedBannerSource;
   /**
    * Optional action button on the right. If not provided, the button is hidden.
    */

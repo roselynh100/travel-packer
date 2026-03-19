@@ -118,9 +118,11 @@ export default function ScanningScreen() {
       {scanResult && !isProcessing && (
         <View className="w-full absolute bottom-8 items-center">
           <ThemedButton
-            title={infoBanner?.type === "error" ? "Try again" : "Wrong item?"}
+            title={infoBanner?.source === "api" ? "Try again" : "Wrong item?"}
             onPress={
-              infoBanner?.type === "error" ? clearScanResult : openCorrectionModal
+              infoBanner?.source === "api"
+                ? clearScanResult
+                : openCorrectionModal
             }
           />
         </View>

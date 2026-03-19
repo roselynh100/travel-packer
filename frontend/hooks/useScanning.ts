@@ -35,13 +35,19 @@ function setBannerFromApiError(
   if (apiError.status === 500) {
     setInfoBanner({
       type: "error",
+      source: "api",
       message: "YOLO error - object not in target list",
     });
   } else if (apiError.status === 404) {
-    setInfoBanner({ type: "error", message: "App error - trip not found" });
+    setInfoBanner({
+      type: "error",
+      source: "api",
+      message: "App error - trip not found",
+    });
   } else {
     setInfoBanner({
       type: "error",
+      source: "api",
       message: error instanceof Error ? error.message : "Failed to scan item",
     });
   }
@@ -164,6 +170,7 @@ export function useScanning(weightItem: Item | null) {
       if (result.status === "pack") {
         setInfoBanner({
           type: "success",
+          source: "recommendation",
           message: "This item should be packed!",
           actionLabel: "View",
           onActionPress: () => {
@@ -173,6 +180,7 @@ export function useScanning(weightItem: Item | null) {
       } else if (result.status === "remove") {
         setInfoBanner({
           type: "error",
+          source: "recommendation",
           message: "This item should be left behind!",
           actionLabel: "View",
           onActionPress: () => {
@@ -185,6 +193,7 @@ export function useScanning(weightItem: Item | null) {
       } else if (result.status === "swap") {
         setInfoBanner({
           type: "warning",
+          source: "recommendation",
           message: "This item should be swapped!",
           actionLabel: "Details",
           onActionPress: () => {
