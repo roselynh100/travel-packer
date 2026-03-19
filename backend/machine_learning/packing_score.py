@@ -45,15 +45,6 @@ def calc_optimization_score(current: float, maximum: float) -> float:
     else:
         # Penalty for being over
         return max(0.0, 80.0 - 200.0 * (usage_ratio - 1.0))
-    # if maximum <= 0:
-    #     return 0.0 if current > 0 else 100.0 # Guard against division by zero
-
-    # if current <= maximum:
-    #     return 100.0 * (1 - (current / maximum))
-    # else:
-    #     # Penalty for exceeding the limit
-    #     penalty_score = 100.0 - 200.0 * ((current - maximum) / maximum)
-    #     return max(0.0, penalty_score)
 
 
 def calc_acceptance_factor(accepted_recs: int, given_recs: int) -> float:
