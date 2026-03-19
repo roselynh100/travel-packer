@@ -6,16 +6,34 @@ import { useTheme } from "@/theme/useTheme";
 import { useEffect, useRef, useState } from "react";
 import { View, Pressable, ScrollView } from "react-native";
 
+function formatLocationResult(location: LocationResult): string {
+  const parts = [location.city, location.state, location.country].filter(
+    (p) => p && p.trim().length > 0,
+  );
+  return parts.join(", ");
+}
+
 export function LocationInput({
   onSelect,
+  value,
 }: {
   onSelect: (location: LocationResult) => void;
+  value?: LocationResult;
 }) {
   const theme = useTheme();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const isSelectingRef = useRef(false);
+
+  // Keep displayed text in sync with external value (e.g. demo data)
+  useEffect(() => {
+    if (!value) return;
+    const display = formatLocationResult(value);
+    if (display && !isSelectingRef.current) {
+      setQuery(display);
+    }
+  }, [value]);
 
   useEffect(() => {
     // Skip search if user just selected something

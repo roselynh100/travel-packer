@@ -44,7 +44,6 @@ export function PackingListItem({
   };
 
   // ASSUMPTION: Priority is an internal value (should not be shown to user)
-  // Disabled checkbox if packing recommendation is not available ("item" is not an Item in backend)
   return (
     <View
       className="py-4 border-b"
@@ -57,8 +56,8 @@ export function PackingListItem({
             onValueChange={onToggle}
             accessory={<PackingThumbnail photoUri={item.photo_uri} />}
           />
-          <View className="flex-1">
-            <View className="flex-row items-center gap-2">
+          <View className="flex-1 flex-col gap-1">
+            <View className="flex-row gap-2 items-center">
               <ThemedText numberOfLines={1} className="flex-shrink">
                 {formatItemName(item.item_name)}
               </ThemedText>

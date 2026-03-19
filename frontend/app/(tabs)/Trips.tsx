@@ -87,9 +87,14 @@ export default function Trips() {
       void packItem(selectedPackingItem.item_id);
     }
     if (selectedPackingItem?.item_id) {
-      const recId = selectedPackingItem.packing_recommendation?.recommendation_id;
+      const recId =
+        selectedPackingItem.packing_recommendation?.recommendation_id;
       if (tripId && recId) {
-        void setRecommendationAccepted(selectedPackingItem.item_id, recId, true);
+        void setRecommendationAccepted(
+          selectedPackingItem.item_id,
+          recId,
+          true,
+        );
       }
     }
     setSelectedPackingItem(null);
@@ -208,6 +213,14 @@ export default function Trips() {
               </View>
             </View>
           </View>
+          {scannedItems.length === 0 && (
+            <ThemedButton
+              title="Start scanning items"
+              onPress={() => router.push("/Scan")}
+              className="mt-6"
+            />
+          )}
+
           <PackingRecommendationModal
             visible={selectedPackingItem !== null}
             item={selectedPackingItem}

@@ -201,7 +201,7 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
         <ThemedText type="title">Create your trip</ThemedText>
         <View className="gap-2">
           <RequiredLabel>Origin</RequiredLabel>
-          <LocationInput onSelect={onChangeOrigin} />
+          <LocationInput onSelect={onChangeOrigin} value={origin} />
         </View>
 
         <View className="gap-2">
@@ -225,7 +225,7 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
 
         <View className="gap-2">
           <RequiredLabel>Destination</RequiredLabel>
-          <LocationInput onSelect={onChangeDestination} />
+          <LocationInput onSelect={onChangeDestination} value={destination} />
         </View>
 
         <View className="gap-2">
