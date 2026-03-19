@@ -316,10 +316,10 @@ class TestPackingAlgorithm(unittest.TestCase):
         )
         current_items = []
 
-        # Setup New Item that exceeds the 50000.0cm3 volume limit by itself
+        # Setup New Item that exceeds the 75000.0cm3 volume limit by itself
         # Make sure weight is low so it doesn't fail the weight check first
         massive_volume_item = self.create_dummy_item(
-            "beanbag", weight=1.0, volume=60000.0
+            "beanbag", weight=1.0, volume=78000.0
         )
 
         result = packing_decision_algorithm(massive_volume_item, trip, current_items)

@@ -14,8 +14,6 @@ from app.models import (
 from machine_learning.helpers import over_limit
 from machine_learning.importance import get_item_importance
 
-VOLUME_LIMIT_CM3 = 50000.0
-
 
 def packing_decision_algorithm(
     new_item: Item, trip: Trip, current_items: List[Item]
@@ -35,6 +33,7 @@ def packing_decision_algorithm(
         min_item_importance = min(i.item_importance for i in current_items)
 
     weight_limit_kg = trip.limit_kg
+    volume_limit_cm3 = trip.limit_cm3
 
     # Check Weight
     if over_limit(
@@ -80,7 +79,7 @@ def packing_decision_algorithm(
     if over_limit(
         current=trip.total_items_volume,
         additional=new_item.estimated_volume_cm3,
-        limit=VOLUME_LIMIT_CM3,
+        limit=volume_limit_cm3,
     ):
         if not current_items:
             return RemovalRecommendation(
@@ -93,7 +92,7 @@ def packing_decision_algorithm(
             # Order by importance ASC and add items to list until overflow is fixed
             volume_overflow = (
                 trip.total_items_volume + new_item.estimated_volume_cm3
-            ) - VOLUME_LIMIT_CM3
+            ) - volume_limit_cm3
             candidates = []
             volume_cleared = 0.0
             for i in sorted(current_items, key=lambda x: x.item_importance):

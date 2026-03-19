@@ -39,6 +39,7 @@ export type Trip = {
   trip_id?: string;
   lowest_temp?: number;
   highest_temp?: number;
+  limit_cm3?: number;
   total_items_weight?: number;
   total_items_volume?: number;
   limit_kg?: number;
