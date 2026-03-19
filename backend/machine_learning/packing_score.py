@@ -142,7 +142,7 @@ def get_user_packing_score(trip: Trip) -> float:
         total_weight=trip.total_items_weight,
         max_weight=trip.limit_kg,
         total_volume=trip.total_items_volume,
-        max_volume=75000.0,
+        max_volume=trip.limit_cm3,
         accepted_recs=accepted_recs_count,
         given_recs=total_recs_given,
     )
