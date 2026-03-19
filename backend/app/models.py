@@ -240,6 +240,14 @@ class Trip(BaseModel):
 
     @computed_field
     @property
+    def limit_cm3(self) -> float:
+        if self._bag_type() == BagType.carry_on:
+            return 46000.0
+        elif self._bag_type() == BagType.checked:
+            return 75000.0
+
+    @computed_field
+    @property
     def duration_days(self) -> int:
         return (self.end_date - self.start_date).days + 1
 
