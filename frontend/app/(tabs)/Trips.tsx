@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Platform, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { ScreenScroll } from "@/components/ScreenScroll";
@@ -13,6 +13,7 @@ import {
   PackingListItem,
   PackingListPill,
   PackingRecommendationModal,
+  PackingScoreModal,
 } from "@/components/packing";
 import { averageTemp } from "@/helpers/averageTemp";
 import { useTripInfo } from "@/hooks/useTripInfo";
@@ -44,6 +45,9 @@ export default function Trips() {
     useState<ItemWithPackingRecommendation | null>(
       (currentItem as ItemWithPackingRecommendation) ?? null,
     );
+
+  const [packingScoreModalVisible, setPackingScoreModalVisible] =
+    useState(false);
 
   const { packingDecision } = useLocalSearchParams<{
     packingDecision?: string;
@@ -154,12 +158,10 @@ export default function Trips() {
                     <ThemedText type="defaultSemiBold">
                       Scanned items
                     </ThemedText>
-                    {/* <Pressable
+                    <Pressable
                       className="py-2 px-4 rounded-2xl"
                       style={{ backgroundColor: theme.primary }}
-                      onPress={() =>
-                        alert("(display packing optimization score)")
-                      }
+                      onPress={() => setPackingScoreModalVisible(true)}
                     >
                       <ThemedText
                         className="text-xs"
@@ -167,7 +169,7 @@ export default function Trips() {
                       >
                         See my optimization score
                       </ThemedText>
-                    </Pressable> */}
+                    </Pressable>
                   </View>
                   <View
                     className={cn(
@@ -227,6 +229,12 @@ export default function Trips() {
             item={selectedPackingItem}
             onSecondary={secondaryAction}
             onPrimary={primaryAction}
+          />
+
+          <PackingScoreModal
+            visible={packingScoreModalVisible}
+            tripId={tripId}
+            onClose={() => setPackingScoreModalVisible(false)}
           />
         </>
       ) : (
