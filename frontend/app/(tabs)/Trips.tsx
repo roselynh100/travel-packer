@@ -116,6 +116,7 @@ export default function Trips() {
               <PackingListPill
                 type="volume"
                 value={tripInfo.total_items_volume || 0}
+                max={tripInfo.limit_cm3}
               />
             </View>
 
