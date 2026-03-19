@@ -3,16 +3,27 @@ import json
 import re
 from typing import List, Optional, Tuple
 
-import requests
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
-from app.google_countries import country_info
-from app.models import CVResult, DetectResponse, Item, ItemPriceResult, ItemUpdate
+from app.models import (
+    CVResult,
+    DetectResponse,
+    Item,
+    ItemPriceComparisonResult,
+    ItemPriceResult,
+    ItemUpdate,
+)
 from app.routes.trip import recalculate_trip_totals
 from app.state.db import items_store, trips_store
 from computer_vision.cv import detect_objects_yolo
-from constants import SERPAPI_API_KEY, SERPAPI_SEARCH_URL
+from constants import SERPAPI_API_KEY
 from hardware.readscale import get_weight
+from helpers.trip_helpers import (
+    _fetch_price_results,
+    _get_country_details,
+    _get_exchange_rate,
+    _get_item_name,
+)
 
 router = APIRouter()
 
@@ -197,77 +208,64 @@ def get_item_price(
     if SERPAPI_API_KEY == "KEY":
         raise HTTPException(status_code=500, detail="SerpAPI key not configured")
 
-    item = get_item(item_id)
-    if not item.cv_result:
-        raise HTTPException(
-            status_code=404,
-            detail="Item has no CV result and name cannot be retrieved",
+    item_name = _get_item_name(item_id)
+    country_details = _get_country_details(country)
+    return _fetch_price_results(
+        item_name,
+        country_details["country_code"],
+        country_details["currency_code"],
+        limit,
+        SERPAPI_API_KEY,
+    )
+
+
+@router.get("/{item_id}/price-comparison", response_model=ItemPriceComparisonResult)
+def get_item_price_comparison(
+    item_id: str,
+    origin_country: str,
+    destination_country: str,
+    limit: int = Query(5, ge=1, le=20),
+):
+    if SERPAPI_API_KEY == "KEY":
+        raise HTTPException(status_code=500, detail="SerpAPI key not configured")
+
+    item_name = _get_item_name(item_id)
+    origin = _get_country_details(origin_country)
+    destination = _get_country_details(destination_country)
+
+    origin_prices = _fetch_price_results(
+        item_name,
+        origin["country_code"],
+        origin["currency_code"],
+        limit,
+        SERPAPI_API_KEY,
+    )
+    destination_prices = _fetch_price_results(
+        item_name,
+        destination["country_code"],
+        destination["currency_code"],
+        limit,
+        SERPAPI_API_KEY,
+    )
+    exchange_rate = _get_exchange_rate(
+        destination["currency_code"],
+        origin["currency_code"],
+    )
+
+    destination_prices_in_origin_currency = [
+        ItemPriceResult(
+            item_name=result.item_name,
+            source=result.source,
+            price=round(result.price * exchange_rate, 2),
+            currency=origin["currency_code"],
         )
-    item_name = item.cv_result.item_name
+        for result in destination_prices
+    ]
 
-    try:
-        country_entry = country_info[country.title()]
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail="Country not found") from exc
-
-    country_code = country_entry.get("country_code")
-    currency_code = country_entry.get("currency_code")
-    if not country_code or not currency_code:
-        raise HTTPException(
-            status_code=404,
-            detail="Could not retrieve country code or currency code",
-        )
-
-    params = {
-        "engine": "google_shopping",
-        "q": item_name,
-        "gl": country_code,
-        "hl": "en",
-        "api_key": SERPAPI_API_KEY,
-    }
-
-    try:
-        response = requests.get(SERPAPI_SEARCH_URL, params=params, timeout=15)
-    except requests.RequestException as exc:
-        raise HTTPException(status_code=502, detail="SerpAPI request failed") from exc
-
-    if not response.ok:
-        raise HTTPException(status_code=502, detail="SerpAPI returned an error")
-
-    try:
-        search_results = response.json()
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=502, detail="SerpAPI returned invalid JSON"
-        ) from exc
-
-    shopping_results = search_results.get("shopping_results") or []
-    results = []
-
-    for entry in shopping_results:
-        title = entry.get("title")
-        if not title:
-            continue
-
-        source = entry.get("source")
-        if not source:
-            continue
-
-        price = entry.get("extracted_price")
-
-        if price is None:
-            continue
-
-        results.append(
-            ItemPriceResult(
-                item_name=title, source=source, price=price, currency=currency_code
-            )
-        )
-
-        if len(results) >= limit:
-            break
-
-    if not results:
-        raise HTTPException(status_code=404, detail="No price results found")
-
-    return results
+    return ItemPriceComparisonResult(
+        origin_currency=origin["currency_code"],
+        destination_currency=destination["currency_code"],
+        exchange_rate=exchange_rate,
+        origin_prices=origin_prices,
+        destination_prices_in_origin_currency=destination_prices_in_origin_currency,
+    )

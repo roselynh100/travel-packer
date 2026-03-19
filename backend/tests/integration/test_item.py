@@ -11,6 +11,7 @@ sys.path.insert(1, str(Path(__file__).parent.parent.parent))
 from app.main import app
 from app.models import BoundingBox, CVResult, Dimensions, Item
 from app.state.db import items_store
+from helpers.trip_helpers import _get_exchange_rate
 
 
 def _item_with_cv(item_id: str) -> Item:
@@ -163,6 +164,15 @@ class TestSerpApiIntegration(unittest.TestCase):
         self.assertIsInstance(data[0]["source"], str)
         self.assertIsInstance(data[0]["price"], (int, float))
         self.assertEqual(data[0]["currency"], "USD")
+
+
+class TestExchangeApiIntegration(unittest.TestCase):
+    """Integration test using the real exchange-rate API."""
+
+    def test_get_exchange_rate_hits_exchange_api(self):
+        rate = _get_exchange_rate("CAD", "USD")
+
+        self.assertIsInstance(rate, float)
 
 
 if __name__ == "__main__":

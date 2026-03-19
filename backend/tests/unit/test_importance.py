@@ -60,16 +60,20 @@ def run_tests():
     print(
         f"\n{'ITEM SCANNED':<15} | {'TEST CONTEXT':<28} | {'EXPECTED SCORE':<25} | {'ACTUAL SCORE'}"
     )
-    print("-" * 90)
+    print("-" * 100)
 
     # 1. Mock Items
-    new_top_cheaper_dest = create_mock_item("tops", 20, 10)  # price_less_at_dest = 1
-    new_top_expensive_dest = create_mock_item("tops", 10, 50)  # price_less_at_dest = 0
+    new_top_cheaper_dest = create_mock_item("tops", 20, 10)
+    new_top_expensive_dest = create_mock_item("tops", 10, 50)
     existing_tops_in_suitcase = [create_mock_item("tops", 10, 15) for _ in range(4)]
 
     mock_laptop = create_mock_item("electronics", 500, 400)
     mock_jacket = create_mock_item("jackets", 600, 100)
     unknown_item = create_mock_item("plumbus", 100, 100)
+
+    # New items for cold weather testing
+    mock_pants = create_mock_item("pants", 40, 40)
+    mock_shorts = create_mock_item("shorts", 25, 25)
 
     # 2. Mock Destinations
     mock_bali = create_mock_destination("Bali", "Indonesia")
@@ -163,14 +167,19 @@ def run_tests():
             "Cheaper at Dest",
             "ML - Lower than above",
         ),
+        # Temperature Comparison Test (Pants vs Shorts)
+        (mock_pants, ski_trip, [], "Cold Weather (Pants)", "ML - > Shorts Score"),
+        (mock_shorts, ski_trip, [], "Cold Weather (Shorts)", "ML - < Pants Score"),
     ]
+
+    scores = {}
 
     for item, trip, item_list, context, expected in test_cases:
         try:
             score = get_item_importance(item, trip, item_list)
-            # work = "Yes" if Activity.work in trip.activities else "No"
+            scores[f"{item.cv_result.item_name}_{context}"] = score
             print(
-                f"{item.cv_result.item_name:<15} | {context:<28} | {expected:<25} | {score}"
+                f"{item.cv_result.item_name:<15} | {context:<28} | {str(expected):<25} | {score}"
             )
         except Exception as e:
             print(f"Error testing {item.cv_result.item_name}: {str(e)}")

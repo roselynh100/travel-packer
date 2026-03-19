@@ -13,3 +13,9 @@ OPENWEATHERMAP_HISTORY_URL = "https://history.openweathermap.org/data/2.5/histor
 SERPAPI_API_KEY = "KEY"
 
 SERPAPI_SEARCH_URL = "https://serpapi.com/search.json"
+
+# Exchange API
+EXCHANGE_API_URLS = [
+    "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies",
+    "https://latest.currency-api.pages.dev/v1/currencies",
+]

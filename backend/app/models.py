@@ -95,6 +95,7 @@ class Item(BaseModel):
     price_at_destination: Optional[float] = None
     quantity: int = Field(default=1, ge=1, le=99)
     is_liquid: bool = False
+    recommendation: Optional[str] = None  # recommendation id
     trips: List[str] = Field(default_factory=list, description="Trip IDs")
 
 
@@ -121,6 +122,14 @@ class ItemPriceResult(BaseModel):
     currency: Optional[str] = None
 
 
+class ItemPriceComparisonResult(BaseModel):
+    origin_currency: str
+    destination_currency: str
+    exchange_rate: float
+    origin_prices: List[ItemPriceResult]
+    destination_prices_in_origin_currency: List[ItemPriceResult]
+
+
 class RecommendedItem(BaseModel):
     item_name: str
     reason: Optional[str] = None
@@ -139,9 +148,21 @@ class RemovalRecommendationReason(str, Enum):
 
 
 class RemovalRecommendation(BaseModel):
+    recommendation_id: str = Field(default_factory=lambda: str(uuid4()))
     status: RemovalRecommendationStatus
     reason: Optional[RemovalRecommendationReason] = None
     swap_candidates: Optional[List[Item]] = None
+    is_accepted: bool = False
+
+    class Config:
+        use_enum_values = True
+
+
+class RemovalRecommendationUpdate(BaseModel):
+    status: Optional[RemovalRecommendationStatus] = None
+    reason: Optional[RemovalRecommendationReason] = None
+    swap_candidates: Optional[List[Item]] = None
+    is_accepted: Optional[bool] = None
 
     class Config:
         use_enum_values = True
@@ -179,6 +200,10 @@ class Trip(BaseModel):
     total_items_weight: float = 0.0
     total_items_volume: float = 0.0
     total_liquids_volume: float = 0.0
+    total_items_weight: float = 0.0
+    recommendations: List[str] = Field(
+        default_factory=list, description="Recommendation IDs"
+    )
 
     def _airline_type(self) -> AirlineType:
         airline_value = (
