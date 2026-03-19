@@ -11,7 +11,7 @@ from app.models import BoundingBox, CVResult, Dimensions
 from computer_vision.constants import AVERAGE_HEIGHT_CM, TARGET_CLASSES
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-YOLO_MODEL_PATH = os.path.join(BASE_DIR, "model_train", "best.pt")
+YOLO_MODEL_PATH = os.path.join(BASE_DIR, "models", "post-albumentations.pt")
 
 DEBUG_SAVE_CV_IMAGES = True
 DEBUG_IMAGES_DIR = "debug_images"
