@@ -622,9 +622,14 @@ class TestTripEmissionsEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertAlmostEqual(data["emissions_per_kg"], 4.321, places=3)
+        expected_emissions_per_kg = 432.1 / 84.096025
         self.assertAlmostEqual(
-            trips_store[trip.trip_id].emissions_per_kg, 4.321, places=3
+            data["emissions_per_kg"], expected_emissions_per_kg, places=3
+        )
+        self.assertAlmostEqual(
+            trips_store[trip.trip_id].emissions_per_kg,
+            expected_emissions_per_kg,
+            places=3,
         )
 
         _, kwargs = mock_post.call_args
@@ -632,6 +637,8 @@ class TestTripEmissionsEndpoint(unittest.TestCase):
         self.assertEqual(kwargs["json"]["to"], "LAX")
         self.assertEqual(kwargs["auth"], ("test_user", "test_pass"))
 
+    @patch("helpers.trip_helpers.MYCLIMATE_API_USERNAME", "KEY")
+    @patch("helpers.trip_helpers.MYCLIMATE_API_PASSWORD", "KEY")
     def test_emissions_missing_credentials(self):
         trip = _make_trip(
             "trip-no-creds",

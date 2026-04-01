@@ -21,6 +21,7 @@ from constants import (
 )
 
 FORECAST_WINDOW_DAYS = 16
+AVERAGE_PASSENGER_WEIGHT_KG = 84.096025
 
 
 def _kelvin_to_celsius(temp_k: float) -> float:
@@ -52,7 +53,9 @@ def _calculate_trip_emissions_per_kg(trip: Trip) -> float:
         raise HTTPException(status_code=502, detail="myclimate request failed") from exc
 
     if not response.ok:
-        raise HTTPException(status_code=502, detail="myclimate returned an error")
+        raise HTTPException(
+            status_code=response.status_code, detail="myclimate returned an error"
+        )
 
     try:
         response_data = response.json()
@@ -72,7 +75,7 @@ def _calculate_trip_emissions_per_kg(trip: Trip) -> float:
             status_code=502, detail="myclimate response missing kg value"
         )
 
-    return float(emission_kg) / 100.0
+    return float(emission_kg) / AVERAGE_PASSENGER_WEIGHT_KG
 
 
 def _safe_prev_year_date(d: datetime.date) -> datetime.date:
