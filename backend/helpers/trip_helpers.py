@@ -9,6 +9,9 @@ from app.models import ItemPriceResult, Trip
 from app.state.db import items_store
 from constants import (
     EXCHANGE_API_URLS,
+    MYCLIMATE_API_PASSWORD,
+    MYCLIMATE_API_URL,
+    MYCLIMATE_API_USERNAME,
     OPENWEATHER_GEOCODING_URL,
     OPENWEATHER_GEOCODING_USA_URL,
     OPENWEATHERMAP_API_KEY,
@@ -18,10 +21,61 @@ from constants import (
 )
 
 FORECAST_WINDOW_DAYS = 16
+AVERAGE_PASSENGER_WEIGHT_KG = 84.096025
 
 
 def _kelvin_to_celsius(temp_k: float) -> float:
     return temp_k - 273.15
+
+
+def _calculate_trip_emissions_per_kg(trip: Trip) -> float:
+    if MYCLIMATE_API_USERNAME in {"", "KEY"} or MYCLIMATE_API_PASSWORD in {"", "KEY"}:
+        raise HTTPException(
+            status_code=500, detail="myclimate credentials not configured"
+        )
+
+    payload = {
+        "from": trip.origin_details.airport_code,
+        "to": trip.destination_details.airport_code,
+        "flight_class": "economy",
+        "passengers": 1,
+        "roundtrip": False,
+    }
+
+    try:
+        response = requests.post(
+            MYCLIMATE_API_URL,
+            json=payload,
+            auth=(MYCLIMATE_API_USERNAME, MYCLIMATE_API_PASSWORD),
+            timeout=15,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail="myclimate request failed") from exc
+
+    if not response.ok:
+        raise HTTPException(
+            status_code=response.status_code, detail="myclimate returned an error"
+        )
+
+    try:
+        response_data = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=502, detail="myclimate returned invalid JSON"
+        ) from exc
+
+    if response_data.get("errors"):
+        raise HTTPException(
+            status_code=400, detail="myclimate rejected the flight route"
+        )
+
+    emission_kg = response_data.get("kg")
+    if not isinstance(emission_kg, (int, float)):
+        raise HTTPException(
+            status_code=502, detail="myclimate response missing kg value"
+        )
+
+    return float(emission_kg) / AVERAGE_PASSENGER_WEIGHT_KG
 
 
 def _safe_prev_year_date(d: datetime.date) -> datetime.date:

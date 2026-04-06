@@ -19,3 +19,8 @@ EXCHANGE_API_URLS = [
     "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies",
     "https://latest.currency-api.pages.dev/v1/currencies",
 ]
+
+# myclimate API
+MYCLIMATE_API_URL = "https://api.myclimate.org/v2/flight_calculators.json"
+MYCLIMATE_API_USERNAME = "USERNAME"
+MYCLIMATE_API_PASSWORD = "PASSWORD"
