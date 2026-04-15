@@ -106,16 +106,16 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
   // DEV MODE ONLY TODO: REMOVE FOR PROD
   const fillDemoData = () => {
     onChangeOrigin({
-      city: "New York",
-      state: "New York",
-      country: "United States",
-      airport_code: "JFK",
-    });
-    onChangeDestination({
       city: "Toronto",
       state: "Ontario",
       country: "Canada",
       airport_code: "YYZ",
+    });
+    onChangeDestination({
+      city: "Los Angeles",
+      state: "California",
+      country: "United States",
+      airport_code: "LAX",
     });
     setStartDate("2026-06-01");
     setEndDate("2026-06-06");
