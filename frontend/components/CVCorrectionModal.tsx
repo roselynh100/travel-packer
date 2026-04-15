@@ -6,6 +6,7 @@ import { CV_CLASSES } from "@/constants/cv";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedDropdown } from "@/components/ThemedDropdown";
+import { ModalCloseButton } from "@/components/ModalCloseButton";
 import { useTheme } from "@/theme/useTheme";
 
 type CVCorrectionModalProps = {
@@ -57,6 +58,7 @@ export function CVCorrectionModal({
           className="rounded-2xl p-6 w-full max-w-sm"
           style={{ backgroundColor: theme.bgNav }}
         >
+          <ModalCloseButton onPress={onDismiss} />
           <ThemedText type="subtitle" className="text-center mb-4">
             What did you just scan?
           </ThemedText>

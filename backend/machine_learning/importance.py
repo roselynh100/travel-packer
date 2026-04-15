@@ -54,8 +54,12 @@ def extract_features(item: Item, trip: Trip, trip_items: List[Item]) -> List[flo
     # Item Category
     item_category = map_to_cat_id(item.cv_result.item_name if item.cv_result else "")
 
-    # Bring vs. Buy
-    price_less_at_dest = 1 if item.price_at_destination <= item.price_at_origin else 0
+    # Bring vs. Buy (use 0 when no price available)
+    price_less_at_dest = (
+        1
+        if default(item.price_at_destination, 0) <= default(item.price_at_origin, 0)
+        else 0
+    )
 
     # Activity Binary Encoding
     is_work = 1 if Activity.work in trip.activities else 0

@@ -26,6 +26,7 @@ const MAPPING = {
   gauge: "monitor-weight",
   "cube.box.fill": "archive",
   "info.circle": "info-outline",
+  xmark: "close",
 } as IconMapping;
 
 /**

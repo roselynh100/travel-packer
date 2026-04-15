@@ -16,24 +16,12 @@ export function PackingRecommendationStatus({
 
   switch (status) {
     case "pack":
-      return (
-        <ThemedText
-          className="rounded-2xl px-3 py-1"
-          style={{
-            borderColor: theme.success.border,
-            backgroundColor: theme.success.bg,
-            borderWidth: 2,
-            fontSize: 14,
-          }}
-        >
-          ✅ PACK
-        </ThemedText>
-      );
+      return null;
     case "remove":
       return (
         <Pressable onPress={onPress} hitSlop={8}>
           <ThemedText
-            className="rounded-2xl px-3 py-1"
+            className="rounded-2xl px-3 py-0.5"
             style={{
               borderColor: theme.error.border,
               backgroundColor: theme.error.bg,
@@ -49,7 +37,7 @@ export function PackingRecommendationStatus({
       return (
         <Pressable onPress={onPress} hitSlop={8}>
           <ThemedText
-            className="rounded-2xl px-3 py-1"
+            className="rounded-2xl px-3 py-0.5"
             style={{
               borderColor: theme.warning.border,
               backgroundColor: theme.warning.bg,

@@ -24,6 +24,7 @@ from helpers.trip_helpers import (
 )
 from machine_learning.generator import baseline_list_algorithm
 from machine_learning.optimizer import packing_decision_algorithm
+from machine_learning.packing_score import get_user_packing_score
 
 router = APIRouter()
 
@@ -359,3 +360,13 @@ def get_weather(trip_id: str):
 
     trips_store[trip_id] = trip
     return trip
+
+
+@router.get("/{trip_id}/packing-score", response_model=float)
+def get_packing_score(trip_id: str):
+    if trip_id not in trips_store:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    trip = trips_store[trip_id]
+
+    return get_user_packing_score(trip)

@@ -14,7 +14,6 @@ import { ThemedBanner } from "@/components/ThemedBanner";
 import { ThemedLoading } from "@/components/ThemedLoading";
 import { useScanning } from "@/hooks/useScanning";
 
-// TODO: Merge CVResult and currentItem???
 export default function ScanningScreen() {
   const [permission, requestPermission] = useCameraPermissions();
 
@@ -118,7 +117,14 @@ export default function ScanningScreen() {
       <ThemedLoading isLoading={isProcessing} message="Processing..." />
       {scanResult && !isProcessing && (
         <View className="w-full absolute bottom-8 items-center">
-          <ThemedButton title="Wrong item?" onPress={openCorrectionModal} />
+          <ThemedButton
+            title={infoBanner?.source === "api" ? "Try again" : "Wrong item?"}
+            onPress={
+              infoBanner?.source === "api"
+                ? clearScanResult
+                : openCorrectionModal
+            }
+          />
         </View>
       )}
     </View>

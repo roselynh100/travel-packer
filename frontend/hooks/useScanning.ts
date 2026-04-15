@@ -35,13 +35,19 @@ function setBannerFromApiError(
   if (apiError.status === 500) {
     setInfoBanner({
       type: "error",
+      source: "api",
       message: "YOLO error - object not in target list",
     });
   } else if (apiError.status === 404) {
-    setInfoBanner({ type: "error", message: "App error - trip not found" });
+    setInfoBanner({
+      type: "error",
+      source: "api",
+      message: "App error - trip not found",
+    });
   } else {
     setInfoBanner({
       type: "error",
+      source: "api",
       message: error instanceof Error ? error.message : "Failed to scan item",
     });
   }
@@ -150,6 +156,9 @@ export function useScanning(weightItem: Item | null) {
       const result: PackingRecommendation = await response.json();
       console.log("Packing recommendation received:", result);
 
+      const nextRecommendation: PackingRecommendation =
+        result.status === "pack" ? { ...result, is_accepted: true } : result;
+
       setCurrentItem((prevItem) => {
         if (!prevItem || prevItem.item_id !== itemId) {
           return prevItem;
@@ -157,13 +166,24 @@ export function useScanning(weightItem: Item | null) {
         const typedPrev = prevItem as ItemWithPackingRecommendation;
         return {
           ...typedPrev,
-          packing_recommendation: result,
+          packing_recommendation: nextRecommendation,
         };
       });
 
       if (result.status === "pack") {
+        // There's no modal/primary action for PACK recommendations, so accept immediately.
+        void apiFetch(
+          `/trips/${tripId}/recommendations/${encodeURIComponent(result.recommendation_id)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_accepted: true }),
+          },
+        );
+
         setInfoBanner({
           type: "success",
+          source: "recommendation",
           message: "This item should be packed!",
           actionLabel: "View",
           onActionPress: () => {
@@ -173,6 +193,7 @@ export function useScanning(weightItem: Item | null) {
       } else if (result.status === "remove") {
         setInfoBanner({
           type: "error",
+          source: "recommendation",
           message: "This item should be left behind!",
           actionLabel: "View",
           onActionPress: () => {
@@ -185,6 +206,7 @@ export function useScanning(weightItem: Item | null) {
       } else if (result.status === "swap") {
         setInfoBanner({
           type: "warning",
+          source: "recommendation",
           message: "This item should be swapped!",
           actionLabel: "Details",
           onActionPress: () => {
@@ -261,6 +283,7 @@ export function useScanning(weightItem: Item | null) {
               item_name: best.cvResult.item_name,
               cv_result: best.cvResult,
               packing_recommendation: null,
+              photo_uri: squareUri,
             };
             setCurrentItem(bestItem);
           }
@@ -285,6 +308,7 @@ export function useScanning(weightItem: Item | null) {
               ...item,
               item_name: item.cv_result!.item_name,
               packing_recommendation: null,
+              photo_uri: squareUri,
             };
             setCurrentItem(updatedItem);
 
@@ -329,6 +353,7 @@ export function useScanning(weightItem: Item | null) {
               item_name: updatedCv.item_name,
               cv_result: updatedCv,
               packing_recommendation: null,
+              photo_uri: squareUri,
             });
 
             await getPackingRecommendation(updatedItem.item_id);
@@ -404,6 +429,7 @@ export function useScanning(weightItem: Item | null) {
           item_name: selectedItemName,
           cv_result: updatedCv,
           packing_recommendation: null,
+          photo_uri: scanResult.photoUri,
         });
         await getPackingRecommendation(currentItem.item_id);
         router.push("/Trips");
@@ -419,8 +445,9 @@ export function useScanning(weightItem: Item | null) {
     [
       currentItem,
       scanResult?.cvResult,
-      getPackingRecommendation,
+      scanResult?.photoUri,
       setCurrentItem,
+      getPackingRecommendation,
       router,
     ],
   );

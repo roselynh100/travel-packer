@@ -39,9 +39,10 @@ export type Trip = {
   trip_id?: string;
   lowest_temp?: number;
   highest_temp?: number;
-  limit_cm3?: number;
   total_items_weight?: number;
   total_items_volume?: number;
+  limit_kg?: number;
+  limit_cm3?: number;
 };
 
 export type RecommendedItem = {
@@ -56,6 +57,7 @@ export type Item = {
   estimated_volume_cm3: number | null;
   weight_kg: number | null;
   quantity?: number;
+  photo_uri?: string;
   cv_result: CVResult;
   trips: string[];
 };
@@ -88,15 +90,14 @@ export type Dimensions = {
 export type PackingRecommendationStatus = "pack" | "remove" | "swap";
 
 export type PackingRecommendation = {
+  recommendation_id: string;
   status: PackingRecommendationStatus;
   reason?: string;
   swap_candidates?: Item[];
+  is_accepted: boolean;
 };
 
 export type ItemWithPackingRecommendation = Item & {
   item_name: string;
   packing_recommendation: PackingRecommendation | null;
 };
-
-// Union type for packing list items
-export type PackingListItem = RecommendedItem | ItemWithPackingRecommendation;

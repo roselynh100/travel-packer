@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Image, View, useWindowDimensions } from "react-native";
 import { CameraView } from "expo-camera";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
@@ -45,14 +45,25 @@ export function CameraCaptureView({ onCaptured }: Props) {
   const cameraRef = useRef<CameraView>(null);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const size = Math.min(screenWidth, screenHeight);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   async function handleCapturePress() {
+    if (isCapturing) return;
     if (!cameraRef.current) return;
 
-    const photo = await cameraRef.current.takePictureAsync();
-    if (!photo?.uri) throw new Error("Failed to take picture");
-    const squareUri = await cropToCenterSquare(photo.uri);
-    onCaptured(squareUri);
+    setIsCapturing(true);
+    try {
+      const photo = await cameraRef.current.takePictureAsync();
+      if (!photo?.uri) {
+        throw new Error("Failed to take picture");
+      }
+      const squareUri = await cropToCenterSquare(photo.uri);
+      onCaptured(squareUri);
+    } catch {
+      // Don't show any error messages to the user
+    } finally {
+      setIsCapturing(false);
+    }
   }
 
   return (

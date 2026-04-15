@@ -1,5 +1,5 @@
+import { createContext, useContext, useCallback, useState } from "react";
 import { ItemWithPackingRecommendation } from "@/constants/types";
-import { createContext, useContext, useEffect, useState } from "react";
 
 type AppContextType = {
   userId: string;
@@ -21,14 +21,14 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [userId, setUserId] = useState("");
-  const [tripId, setTripId] = useState<string | null>(null);
+  const [tripId, setTripIdState] = useState<string | null>(null);
   const [currentItem, setCurrentItem] =
     useState<ItemWithPackingRecommendation | null>(null);
 
-  // New trip = fresh app: no currently scanned item
-  useEffect(() => {
+  const setTripId = useCallback((v: string | null) => {
+    setTripIdState(v);
     setCurrentItem(null);
-  }, [tripId]);
+  }, []);
 
   return (
     <AppContext.Provider

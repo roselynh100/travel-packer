@@ -1,7 +1,8 @@
-import { Modal, View } from "react-native";
+import { View } from "react-native";
 
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
+import { ModalCloseButton } from "@/components/ModalCloseButton";
 import { useTheme } from "@/theme/useTheme";
 
 type RetakeModalProps = {
@@ -12,18 +13,26 @@ type RetakeModalProps = {
 export function RetakeModal({ visible, onConfirm }: RetakeModalProps) {
   const theme = useTheme();
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onConfirm}
+    <View
+      style={{
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        backgroundColor: "rgba(0,0,0,0.7)",
+        zIndex: 999,
+      }}
     >
-      <View className="flex-1 justify-center items-center bg-black/70 px-6">
+      <View className="flex-1 justify-center items-center px-6">
         <View
-          className="rounded-2xl p-12 items-center max-w-md w-full"
+          className="relative rounded-2xl p-12 items-center max-w-md w-full"
           style={{ backgroundColor: theme.bgNav }}
         >
+          <ModalCloseButton onPress={onConfirm} />
           <ThemedText type="subtitle" className="text-center mb-8">
             Let us make sure we correctly identified your item.
           </ThemedText>
@@ -38,6 +47,6 @@ export function RetakeModal({ visible, onConfirm }: RetakeModalProps) {
           />
         </View>
       </View>
-    </Modal>
+    </View>
   );
 }

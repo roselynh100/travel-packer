@@ -7,22 +7,19 @@ import { useTheme } from "@/theme/useTheme";
 type PackingListPillProps = {
   type: "weight" | "volume";
   value: number;
+  max?: number;
 };
 
-// TODO: replace with real capacity limits
-const CAPACITY = {
+// Used when trip does not provide max
+const FALLBACK_CAPACITY = {
   weight: 23, // kg
-  volume: 40000, // cm3
+  volume: 50000, // cm3
 };
 
 type PillStatus = "success" | "warning" | "error";
 
-function convertToPercentFilled(
-  value: number,
-  type: PackingListPillProps["type"],
-) {
-  const max = CAPACITY[type];
-  if (!Number.isFinite(value) || value <= 0) return 0;
+function convertToPercentFilled(value: number, max: number) {
+  if (!Number.isFinite(max) || !Number.isFinite(value) || value <= 0) return 0;
   return value / max;
 }
 
@@ -33,17 +30,21 @@ function statusFromPercentFilled(percentFilled: number): PillStatus {
   return "success";
 }
 
-export function PackingListPill({ type, value }: PackingListPillProps) {
+export function PackingListPill({
+  type,
+  value,
+  max: maxOverride,
+}: PackingListPillProps) {
   const theme = useTheme();
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
 
-  const percentFilled = convertToPercentFilled(value, type);
+  const max = maxOverride ?? FALLBACK_CAPACITY[type];
+  const percentFilled = convertToPercentFilled(value, max);
   const status = statusFromPercentFilled(percentFilled);
   const colors = theme[status];
 
   const label = type === "weight" ? "Weight" : "Volume";
   const unit = type === "weight" ? "kg" : "cm³";
-  const max = CAPACITY[type];
 
   const displayValue =
     type === "weight" ? value.toFixed(1) : Math.round(value).toString();

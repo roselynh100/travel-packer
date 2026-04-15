@@ -106,16 +106,16 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
   // DEV MODE ONLY TODO: REMOVE FOR PROD
   const fillDemoData = () => {
     onChangeOrigin({
-      city: "New York",
-      state: "New York",
-      country: "United States",
-      airport_code: "JFK",
-    });
-    onChangeDestination({
       city: "Toronto",
       state: "Ontario",
       country: "Canada",
       airport_code: "YYZ",
+    });
+    onChangeDestination({
+      city: "Los Angeles",
+      state: "California",
+      country: "United States",
+      airport_code: "LAX",
     });
     setStartDate("2026-06-01");
     setEndDate("2026-06-06");
@@ -158,10 +158,7 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
         doing_laundry: laundry,
       };
 
-      const savedTrip = await saveToAPI(trip);
-      if (savedTrip.trip_id) {
-        await fetchWeather(savedTrip.trip_id);
-      }
+      await saveToAPI(trip);
       await delay(3000);
 
       onContinue();
@@ -198,27 +195,13 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
     return result;
   }
 
-  async function fetchWeather(tripId: string) {
-    const response = await apiFetch(`/trips/${tripId}/weather`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `API error (${response.status}): ${errorText || response.statusText}`,
-      );
-    }
-
-    const result: Trip = await response.json();
-    console.log("Fetched weather:", result);
-  }
-
   return (
     <ScreenScroll>
       <View className="gap-6">
         <ThemedText type="title">Create your trip</ThemedText>
         <View className="gap-2">
           <RequiredLabel>Origin</RequiredLabel>
-          <LocationInput onSelect={onChangeOrigin} />
+          <LocationInput onSelect={onChangeOrigin} value={origin} />
         </View>
 
         <View className="gap-2">
@@ -242,7 +225,7 @@ export function TripCreation({ onContinue }: { onContinue: () => void }) {
 
         <View className="gap-2">
           <RequiredLabel>Destination</RequiredLabel>
-          <LocationInput onSelect={onChangeDestination} />
+          <LocationInput onSelect={onChangeDestination} value={destination} />
         </View>
 
         <View className="gap-2">

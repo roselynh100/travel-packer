@@ -27,8 +27,6 @@ from helpers.trip_helpers import (
 
 router = APIRouter()
 
-CONFIDENCE_THRESHOLD = 0.5
-
 
 @router.post("/", response_model=Item)
 def create_item(item: Item, trip_id: Optional[str] = Query(None)):

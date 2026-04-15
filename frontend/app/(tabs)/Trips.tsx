@@ -6,19 +6,19 @@ import { ScreenScroll } from "@/components/ScreenScroll";
 import { ThemedButton } from "@/components/ThemedButton";
 import { ThemedText } from "@/components/ThemedText";
 import { useAppContext } from "@/helpers/AppContext";
+import { cn } from "@/helpers/cn";
 import { useTheme } from "@/theme/useTheme";
-import {
-  ItemWithPackingRecommendation,
-  PackingListItem as PackingListItemType,
-} from "@/constants/types";
+import { ItemWithPackingRecommendation } from "@/constants/types";
 import {
   PackingListItem,
   PackingListPill,
   PackingRecommendationModal,
+  PackingScoreModal,
 } from "@/components/packing";
 import { averageTemp } from "@/helpers/averageTemp";
 import { useTripInfo } from "@/hooks/useTripInfo";
 import { usePackingList } from "@/hooks/usePackingList";
+import { formatItemName } from "@/helpers/formatItemName";
 
 export default function Trips() {
   const router = useRouter();
@@ -26,23 +26,28 @@ export default function Trips() {
 
   const { tripId, currentItem } = useAppContext();
 
-  const { tripInfo, refetch: refetchTripInfo } = useTripInfo(tripId);
+  const { tripInfo, refreshTotals } = useTripInfo(tripId);
 
   const {
-    items: packingListItems,
+    recommendedItems,
+    scannedItems,
     checkedItems,
     toggleItem: handleToggleItem,
     packItem,
     unpackItem,
     updateItemQuantity,
-  } = usePackingList(tripId, currentItem as PackingListItemType | null, {
-    onTripChanged: refetchTripInfo,
+    setRecommendationAccepted,
+  } = usePackingList(tripId, currentItem, {
+    onTripChanged: refreshTotals,
   });
 
   const [selectedPackingItem, setSelectedPackingItem] =
     useState<ItemWithPackingRecommendation | null>(
       (currentItem as ItemWithPackingRecommendation) ?? null,
     );
+
+  const [packingScoreModalVisible, setPackingScoreModalVisible] =
+    useState(false);
 
   const { packingDecision } = useLocalSearchParams<{
     packingDecision?: string;
@@ -85,6 +90,17 @@ export default function Trips() {
       // Pack selected item
       void packItem(selectedPackingItem.item_id);
     }
+    if (selectedPackingItem?.item_id) {
+      const recId =
+        selectedPackingItem.packing_recommendation?.recommendation_id;
+      if (tripId && recId) {
+        void setRecommendationAccepted(
+          selectedPackingItem.item_id,
+          recId,
+          true,
+        );
+      }
+    }
     setSelectedPackingItem(null);
   };
 
@@ -92,17 +108,19 @@ export default function Trips() {
     <ScreenScroll>
       <ThemedText type="title">Your trip</ThemedText>
 
-      {tripId ? (
+      {tripInfo ? (
         <>
           <View className="mt-6 gap-6">
             <View className="flex-row gap-2">
               <PackingListPill
                 type="weight"
-                value={tripInfo?.total_items_weight || 0}
+                value={tripInfo.total_items_weight || 0}
+                max={tripInfo.limit_kg}
               />
               <PackingListPill
                 type="volume"
-                value={tripInfo?.total_items_volume || 0}
+                value={tripInfo.total_items_volume || 0}
+                max={tripInfo.limit_cm3}
               />
             </View>
 
@@ -114,7 +132,7 @@ export default function Trips() {
               >
                 <ThemedText type="defaultSemiBold">Average temp</ThemedText>
                 <ThemedText type="subtitle" className="text-center mt-2">
-                  {averageTemp(tripInfo?.lowest_temp, tripInfo?.highest_temp)}
+                  {averageTemp(tripInfo.lowest_temp, tripInfo.highest_temp)}
                 </ThemedText>
               </View>
               <View
@@ -123,7 +141,7 @@ export default function Trips() {
               >
                 <ThemedText type="defaultSemiBold">Activities</ThemedText>
                 <ThemedText className="text-sm mt-2">
-                  {tripInfo?.activities?.join(", ") || "No activities planned"}
+                  {tripInfo.activities?.join(", ") || "No activities planned"}
                 </ThemedText>
               </View>
             </View>
@@ -133,42 +151,90 @@ export default function Trips() {
               className="rounded-2xl p-4"
               style={{ backgroundColor: theme.bgNav }}
             >
-              <View className="flex-row items-center justify-between">
-                <ThemedText type="defaultSemiBold">Packing list</ThemedText>
-                <Pressable
-                  className="py-3 px-4 rounded-2xl"
-                  style={{ backgroundColor: theme.primary }}
-                  onPress={() => alert("(display packing optimization score)")}
-                >
-                  <ThemedText className="text-sm" style={{ color: "white" }}>
-                    I&apos;m done packing!
-                  </ThemedText>
-                </Pressable>
-              </View>
+              {/* Scanned items */}
+              {scannedItems.length > 0 && (
+                <>
+                  <View className="flex-row items-center justify-between">
+                    <ThemedText type="defaultSemiBold">
+                      Scanned items
+                    </ThemedText>
+                    <Pressable
+                      className="py-2 px-4 rounded-2xl"
+                      style={{ backgroundColor: theme.primary }}
+                      onPress={() => setPackingScoreModalVisible(true)}
+                    >
+                      <ThemedText
+                        className="text-xs"
+                        style={{ color: "white" }}
+                      >
+                        See my optimization score
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                  <View
+                    className={cn(
+                      "mb-4",
+                      Platform.OS === "web" ? "" : "flex-col gap-2 mt-2",
+                    )}
+                  >
+                    {scannedItems.map((item) => {
+                      const id = item.item_id;
+                      return (
+                        <PackingListItem
+                          key={id}
+                          item={item}
+                          checked={checkedItems.has(id)}
+                          onToggle={() => handleToggleItem(id)}
+                          onPressRecommendation={setSelectedPackingItem}
+                          onQuantityUpdated={handleQuantityUpdated}
+                        />
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              {/* Recommended items */}
+              <ThemedText type="defaultSemiBold">Recommended items</ThemedText>
               <View
                 className={Platform.OS === "web" ? "" : "flex-col gap-2 mt-2"}
               >
-                {packingListItems?.map((item, i) => {
-                  const id = "item_id" in item ? item.item_id : String(i);
-                  return (
-                    <PackingListItem
-                      key={i}
-                      item={item}
-                      checked={checkedItems.has(id)}
-                      onToggle={() => handleToggleItem(id)}
-                      onPressRecommendation={setSelectedPackingItem}
-                      onQuantityUpdated={handleQuantityUpdated}
-                    />
-                  );
-                })}
+                {Object.entries(
+                  recommendedItems.reduce<Record<string, number>>(
+                    (acc, item) => {
+                      acc[item.item_name] = (acc[item.item_name] ?? 0) + 1;
+                      return acc;
+                    },
+                    {},
+                  ),
+                ).map(([name, count]) => (
+                  <ThemedText key={name}>
+                    • {formatItemName(name)}
+                    {count > 1 ? ` x${count}` : ""}
+                  </ThemedText>
+                ))}
               </View>
             </View>
           </View>
+          {scannedItems.length === 0 && (
+            <ThemedButton
+              title="Start scanning items"
+              onPress={() => router.push("/Scan")}
+              className="mt-6"
+            />
+          )}
+
           <PackingRecommendationModal
             visible={selectedPackingItem !== null}
             item={selectedPackingItem}
             onSecondary={secondaryAction}
             onPrimary={primaryAction}
+          />
+
+          <PackingScoreModal
+            visible={packingScoreModalVisible}
+            tripId={tripId}
+            onClose={() => setPackingScoreModalVisible(false)}
           />
         </>
       ) : (
